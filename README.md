@@ -11,5 +11,6 @@
 - Питомцы: [docs/tamed-creatures.md](docs/tamed-creatures.md)
 - Реплики налётчиков: [docs/raiders-dialogs.md](docs/raiders-dialogs.md)
 - Турели: [docs/turrets.md](docs/turrets.md)
+- Механик Братства и силовая броня: [docs/power-armor.md](docs/power-armor.md)
 - Экономика: [docs/economy.md](docs/economy.md)
 - Все квесты: [docs/quests.md](docs/quests.md)
