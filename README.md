@@ -11,3 +11,4 @@
 - Питомцы: [docs/tamed-creatures.md](docs/tamed-creatures.md)
 - Реплики налётчиков: [docs/raiders-dialogs.md](docs/raiders-dialogs.md)
 - Турели: [docs/turrets.md](docs/turrets.md)
+- Экономика: [docs/economy.md](docs/economy.md)
