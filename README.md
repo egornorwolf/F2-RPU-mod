@@ -10,3 +10,4 @@
 - События и пасхалки: [docs/events.md](docs/events.md)
 - Питомцы: [docs/tamed-creatures.md](docs/tamed-creatures.md)
 - Реплики налётчиков: [docs/raiders-dialogs.md](docs/raiders-dialogs.md)
+- Турели: [docs/turrets.md](docs/turrets.md)
