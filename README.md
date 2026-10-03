@@ -12,5 +12,7 @@
 - Реплики налётчиков: [docs/raiders-dialogs.md](docs/raiders-dialogs.md)
 - Турели: [docs/turrets.md](docs/turrets.md)
 - Механик Братства и силовая броня: [docs/power-armor.md](docs/power-armor.md)
+- Охрана: численность, броня, оружие: [docs/guards.md](docs/guards.md)
+- Фразы жителей: [docs/resident-phrases.md](docs/resident-phrases.md)
 - Экономика: [docs/economy.md](docs/economy.md)
 - Все квесты: [docs/quests.md](docs/quests.md)
