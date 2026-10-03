@@ -4,3 +4,4 @@
 
 - Дизайн-документ: [docs/design.md](docs/design.md)
 - План карты: [docs/map-plan.md](docs/map-plan.md)
+- Рост и цены: [docs/growth.md](docs/growth.md)
