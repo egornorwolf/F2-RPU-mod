@@ -17,7 +17,13 @@ if [ ! -f "$DEPS/sfall/artifacts/scripting/headers/sfall.h" ]; then
   git clone -q --depth 1 --filter=blob:none --sparse https://github.com/sfall-team/sfall.git "$DEPS/sfall"
   git -C "$DEPS/sfall" sparse-checkout set artifacts/scripting
 fi
+# Заголовки RPU (только читаем, не меняем)
+if [ ! -f "$DEPS/rpu/scripts_src/headers/define.h" ]; then
+  git clone -q --depth 1 --filter=blob:none --sparse https://github.com/BGforgeNet/Fallout2_Restoration_Project.git "$DEPS/rpu"
+  git -C "$DEPS/rpu" sparse-checkout set scripts_src/headers scripts_src/sfall
+fi
 SSLC="$DEPS/sslc/build/bin/sslc"
+RPU_HEADERS="$DEPS/rpu/scripts_src/headers"
 HEADERS="$DEPS/sfall/artifacts/scripting/headers"
 
 rm -rf "$OUT"
@@ -27,7 +33,7 @@ mkdir -p "$OUT/tmp" "$OUT/data/scripts"
 for src in "$ROOT"/scripts_src/*.ssl; do
   name="$(basename "$src" .ssl)"
   iconv -f UTF-8 -t CP1251 "$src" > "$OUT/tmp/$name.ssl"
-  (cd "$OUT/tmp" && "$SSLC" -q -l -p -O2 -I"$HEADERS" -I"$ROOT/scripts_src" "$name.ssl" -o "$OUT/data/scripts/$name.int")
+  (cd "$OUT/tmp" && "$SSLC" -q -l -p -O2 -I"$HEADERS" -I"$RPU_HEADERS" -I"$ROOT/scripts_src" "$name.ssl" -o "$OUT/data/scripts/$name.int")
 done
 
 python3 "$ROOT/tools/dat2.py" pack "$OUT/data" "$OUT/f2mod.dat"
