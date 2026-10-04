@@ -22,6 +22,8 @@
 #define CARAVAN_DONE        (1)
 #define CARAVAN_MIN_LEVEL   (10)
 #define CARAVAN_PRICE       (500)
+#define CARAVAN_XP_TALK     (500)   // опыт за координаты уговором
+#define CARAVAN_XP_BUY      (200)   // опыт за купленные координаты
 
 // Отладочные сообщения в окне игры (на время тестов)
 #define F2MOD_DEBUG

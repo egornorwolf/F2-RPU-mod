@@ -89,6 +89,7 @@ end
 
 procedure Node003 begin
    call give_coords;
+   give_exp_points(CARAVAN_XP_TALK);
    Reply(130);
    NOption(131, Node999, 4);
    NLowOption(132, Node999);
@@ -113,6 +114,7 @@ procedure Node006 begin
    item_caps_adjust(dude_obj, -CARAVAN_PRICE);
    item_caps_adjust(self_obj, CARAVAN_PRICE);
    call give_coords;
+   give_exp_points(CARAVAN_XP_BUY);
    Reply(160);
    NOption(161, Node999, 4);
    NLowOption(132, Node999);
