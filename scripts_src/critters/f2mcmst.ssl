@@ -1,5 +1,5 @@
 // Караванщик Тед Бёрнс: встреча «Хорошее место». Даёт координаты лагеря бесплатно
-// (Красноречие 75% или Харизма 7) или за 500 крышек.
+// (Красноречие 75% или Привлекательность 7) или за 500 крышек.
 #define SCRIPT_REALNAME "f2mcmst"
 #include "define.h"
 #include "f2mod.h"
@@ -26,6 +26,9 @@ procedure Node999;
 procedure give_coords;
 
 variable said_hello;
+
+// Бесплатно: Красноречие от 75% или Привлекательность от 7
+#define free_coords   ((has_skill(dude_obj, SKILL_SPEECH) >= 75) or (get_critter_stat(dude_obj, STAT_ch) >= 7))
 
 procedure start begin
 end
@@ -80,7 +83,7 @@ end
 
 procedure Node002 begin
    Reply(120);
-   if (has_skill(dude_obj, SKILL_SPEECH) >= 75 or dude_charisma >= 7) then
+   if (free_coords) then
       GOption(121, Node003, 4);
    NOption(122, Node004, 4);
    NOption(123, Node005, 4);
@@ -97,6 +100,8 @@ end
 
 procedure Node004 begin
    Reply(140);
+   if (free_coords) then
+      GOption(144, Node003, 4);
    if (dude_caps >= CARAVAN_PRICE) then
       NOption(141, Node006, 4);
    NOption(142, Node005, 4);
