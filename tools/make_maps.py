@@ -22,7 +22,7 @@ def script_index(name):
 def make(src, dst, script):
     data = bytearray(open(f"{base}/maps/{src}.map", "rb").read())
     data[4:20] = f"{dst.upper()}.MAP".encode("ascii").ljust(16, b"\0")
-    struct.pack_into(">i", data, 28, script_index(script))
+    struct.pack_into(">i", data, 36, script_index(script))  # 20 вход, 24 уровень, 28 поворот, 32 число переменных, 36 скрипт
     open(f"{out}/maps/{dst}.map", "wb").write(data)
     shutil.copy(f"{base}/maps/{src}.edg", f"{out}/maps/{dst}.edg")
 
