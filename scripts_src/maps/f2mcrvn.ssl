@@ -43,6 +43,7 @@ procedure map_enter_p_proc begin
    // На эту карту попадаем только через встречу, пока координаты не получены
    if (not is_loading_game and get_sfall_global_int(GV_CARAVAN) == CARAVAN_NONE
        and not tile_contains_pid_obj(tile_num_in_direction(START_HEX, 1, 7), 0, PID_AVERAGE_MERCHANT_MALE)) then begin
+      set_sfall_global(GV_CARAVAN_HOSTILE, 0);
       obj := put_critter(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, 1, 7);
       critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
       item_caps_adjust(obj, random(50, 150));

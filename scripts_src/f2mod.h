@@ -25,6 +25,13 @@
 #define GV_ESCORT_MOVING    "f2mescmv"  // 1 = караван сам переходит на следующую карту
 #define GV_ESCORT_LOSSES    "f2mesclo"  // 1 = в пути погибли охранник и брамин
 #define GV_CAMP_CARAVAN     "f2mcmpcv"  // 1 = караван уже поставлен в лагере
+#define GV_CARAVAN_HOSTILE  "f2mcrvhs"  // 1 = караван воюет с героем (прицельный выстрел или убитый охранник)
+
+// Массив случайных попаданий по каравану: объект -> 1, если по нему попали не прицельно
+#define ARR_CARAVAN_HITS    "f2mhits"
+
+// Свой герою: сам герой или его спутник
+#define is_dude_side(x)     ((x) == dude_obj or obj_in_party(x))
 #define GV_CARAVAN_REFUSED  "f2mcrvrf"  // сколько раз герой отказал каравану
 
 #define CARAVAN_NONE        (0)

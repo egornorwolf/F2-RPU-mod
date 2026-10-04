@@ -1,10 +1,12 @@
 /*
    Мод поселения F2mod: главный глобальный скрипт.
    М0: пишет в окно сообщений, что мод загружен.
-   М2: подменяет случайную встречу встречей с караваном «Хорошее место».
+   М2: подменяет случайную встречу встречей с караваном «Хорошее место»;
+       отмечает случайные (не прицельные) попадания героя и спутников по каравану.
 */
 
 #include "sfall.h"
+#include "define_extra.h"
 #define SCRIPT_REALNAME "gl_f2mod"
 #include "define.h"
 #include "command.h"
@@ -14,10 +16,12 @@
 
 procedure start;
 procedure encounter_handler;
+procedure combatdamage_handler;
 
 procedure start begin
    if (game_loaded) then begin
       register_hook_proc(HOOK_ENCOUNTER, encounter_handler);
+      register_hook_proc(HOOK_COMBATDAMAGE, combatdamage_handler);
       display_msg("Мод поселения F2mod " + F2MOD_VERSION + " загружен.");
    end
 end
@@ -34,4 +38,22 @@ procedure encounter_handler begin
    if (get_sfall_global_int(GV_CARAVAN) != CARAVAN_NONE) then return;
    set_sfall_return(MAP_F2MOD_CARAVAN);
    set_sfall_return(1);
+end
+
+// Попадание по людям каравана: прицельное (цель атаки) или случайное (очередь, взрыв).
+// Урон не меняем, только запоминаем; охранник в damage_p_proc решает, обидеться или нет.
+procedure combatdamage_handler begin
+   variable args, target, attacker, hits;
+   args := get_sfall_args;
+   target := args[0];
+   attacker := args[1];
+   if (not target or not attacker) then return;
+   if (has_trait(TRAIT_OBJECT, target, OBJECT_TEAM_NUM) != TEAM_CARAVAN) then return;
+   if (not is_dude_side(attacker)) then return;
+   hits := load_array(ARR_CARAVAN_HITS);
+   if (not hits) then begin
+      hits := create_array_map;
+      save_array(ARR_CARAVAN_HITS, hits);
+   end
+   hits[target] := (target != get_object_data(args[12], C_ATTACK_TARGET));
 end

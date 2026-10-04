@@ -13,6 +13,7 @@ procedure start;
 procedure critter_p_proc;
 procedure talk_p_proc;
 procedure damage_p_proc;
+procedure accidental_hit;
 procedure pickup_p_proc;
 procedure destroy_p_proc;
 procedure look_at_p_proc;
@@ -55,14 +56,38 @@ procedure description_p_proc begin
 end
 
 procedure critter_p_proc begin
+   if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then begin
+      attack(dude_obj);
+      return;
+   end
    if (not said_hello and self_can_see_dude and not on_escort) then begin
       said_hello := 1;
       floater(random(102, 104));
    end
 end
 
+
+// Свой попал случайно (очередью или взрывом) — прощаем и ругаемся; прицельно — бой
+procedure accidental_hit begin
+   variable hits, r := 0;
+   hits := load_array(ARR_CARAVAN_HITS);
+   if (hits) then begin
+      r := hits[self_obj];
+      hits[self_obj] := 0;
+   end
+   return r;
+end
+
 procedure damage_p_proc begin
-   if (source_obj == dude_obj) then attack(source_obj);
+   if (is_dude_side(source_obj)) then begin
+      if (accidental_hit) then
+         floater(random(205, 205 + 2));
+      else begin
+         set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+         attack(dude_obj);
+      end
+   end else
+      attack(source_obj);
 end
 
 procedure pickup_p_proc begin
@@ -70,6 +95,7 @@ procedure pickup_p_proc begin
 end
 
 procedure destroy_p_proc begin
+   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
    if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT) then begin
       set_sfall_global(GV_CARAVAN, CARAVAN_FAILED);
       display_msg(mstr(210));

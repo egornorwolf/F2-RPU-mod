@@ -1,17 +1,21 @@
-// Охранник каравана «Хорошее место»: стоит у каравана, нападает, только если тронули его или караван.
+// Охранник каравана «Хорошее место». Случайное попадание героя или спутника прощает и ругается;
+// прицельный выстрел или смерть охранника от их руки — весь караван воюет с героем.
 #define SCRIPT_REALNAME "f2mcgrd"
 #include "define.h"
 #include "f2mod.h"
 #define NAME                    SCRIPT_F2MCGRD
 #include "command.h"
+#include "sfall.h"
 
 procedure start;
 procedure critter_p_proc;
 procedure damage_p_proc;
+procedure accidental_hit;
 procedure pickup_p_proc;
 procedure talk_p_proc;
 procedure look_at_p_proc;
 procedure description_p_proc;
+procedure destroy_p_proc;
 
 variable warned;
 
@@ -29,6 +33,10 @@ procedure description_p_proc begin
 end
 
 procedure critter_p_proc begin
+   if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then begin
+      attack(dude_obj);
+      return;
+   end
    if (not warned and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
       warned := 1;
       floater(random(102, 104));
@@ -39,10 +47,35 @@ procedure talk_p_proc begin
    floater(random(110, 113));
 end
 
+
+// Свой попал случайно (очередью или взрывом) — прощаем и ругаемся; прицельно — бой
+procedure accidental_hit begin
+   variable hits, r := 0;
+   hits := load_array(ARR_CARAVAN_HITS);
+   if (hits) then begin
+      r := hits[self_obj];
+      hits[self_obj] := 0;
+   end
+   return r;
+end
+
 procedure damage_p_proc begin
-   attack(source_obj);
+   if (is_dude_side(source_obj)) then begin
+      if (accidental_hit) then
+         floater(random(120, 120 + 2));
+      else begin
+         set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+         attack(dude_obj);
+      end
+   end else
+      attack(source_obj);
 end
 
 procedure pickup_p_proc begin
    attack(source_obj);
+end
+
+// Охранник погиб от руки героя или спутника, пусть даже случайно: караван воюет
+procedure destroy_p_proc begin
+   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
 end
