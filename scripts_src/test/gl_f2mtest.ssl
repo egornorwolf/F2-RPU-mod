@@ -137,7 +137,7 @@ procedure skills_max begin
 end
 
 procedure show_help begin
-   display_msg("Ctrl+1..7: СПЕЦИАЛ +1 (С,В,Вн,Х,И,Л,У). Ctrl+Shift+1..7: -1.");
+   display_msg("Ctrl+1..7: СПЕЦИАЛ +1 (С,В,Вн,П,И,Л,У). Ctrl+Shift+1..7: -1.");
    display_msg("Ctrl+K: +10 навыков. Ctrl+N: все навыки 300%. Ctrl+B: вес +100. Ctrl+O: +1 перк. Ctrl+U: +1 уровень.");
    display_msg("Ctrl+E: открыть Лагерь у скал. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек.");
 end
