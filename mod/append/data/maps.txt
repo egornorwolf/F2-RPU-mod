@@ -17,3 +17,12 @@ ambient_sfx=gustwind:20, gustwin1:20, rattle:15, rattle1:15, vulture:15, vulture
 saved=No
 dead_bodies_age=No
 can_rest_here=No,No,No
+
+[Map 175]
+lookup_name=F2mod Caravan Road
+map_name=f2mesct
+music=07desert
+ambient_sfx=gustwind:20, gustwin1:20, rattle:15, rattle1:15, vulture:15, vulture1:15
+saved=No
+dead_bodies_age=No
+can_rest_here=No,No,No

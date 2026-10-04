@@ -1,0 +1,115 @@
+// Дорога с караваном «Хорошее место»: три участка, на каждом свое нападение.
+// 1 — налетчики, 2 — большие радскорпионы, 3 — два когтя смерти (охранник и брамин гибнут сразу).
+#define SCRIPT_REALNAME "f2mesct"
+#include "define.h"
+#include "updatmap.h"
+#include "f2mod.h"
+#define NAME        SCRIPT_F2MESCT
+#include "command.h"
+#include "scenepid.h"
+#include "sfall.h"
+
+#define CAR_HEX     (19096)
+#define START_HEX   (20100)   // точка входа на карту (как в desert3)
+
+procedure start;
+procedure map_enter_p_proc;
+procedure map_update_p_proc;
+procedure map_exit_p_proc;
+procedure put_critter(variable pid, variable sid, variable dir, variable dist);
+procedure put_enemy(variable pid, variable sid, variable dir, variable dist, variable weapon, variable ammo);
+procedure arm(variable who, variable weapon, variable ammo);
+
+variable spawned;
+
+procedure start begin
+end
+
+procedure put_critter(variable pid, variable sid, variable dir, variable dist) begin
+   variable obj;
+   obj := create_object_sid(pid, tile_num_in_direction(START_HEX, dir, dist), 0, sid);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_CARAVAN);
+   return obj;
+end
+
+procedure put_enemy(variable pid, variable sid, variable dir, variable dist, variable weapon, variable ammo) begin
+   variable obj;
+   obj := create_object_sid(pid, tile_num_in_direction(START_HEX, dir, dist), 0, sid);
+   if (weapon) then call arm(obj, weapon, ammo);
+   return obj;
+end
+
+procedure arm(variable who, variable weapon, variable ammo) begin
+   variable item;
+   item := create_object(weapon, 0, 0);
+   add_obj_to_inven(who, item);
+   wield_obj_critter(who, item);
+   if (ammo) then add_mult_objs_to_inven(who, create_object(ammo, 0, 0), 2);
+end
+
+procedure map_enter_p_proc begin
+   variable obj, stage;
+   set_map_exit_tiles(0, 0);
+   Lighting;
+   Check_Create_Car(CAR_HEX, 0)
+   set_sfall_global(GV_ESCORT_MOVING, 0);
+   if (spawned or is_loading_game or get_sfall_global_int(GV_CARAVAN) != CARAVAN_ESCORT) then return;
+   spawned := 1;
+   stage := get_sfall_global_int(GV_ESCORT_STAGE);
+
+   // Караван
+   obj := put_critter(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, 1, 4);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
+   obj := put_critter(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, 0, 5);
+   call arm(obj, PID_10MM_SMG, PID_10MM_JHP);
+   if (stage < 3) then begin
+      obj := put_critter(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, 2, 5);
+      call arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
+      call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, 2, 7);
+   end
+   call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, 1, 7);
+
+   // Нападение
+   if (stage == 1) then begin
+      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 5, 13, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 0, 14, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
+      call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 5, 15, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 0, 12, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      display_msg(mstr(100));
+   end else if (stage == 2) then begin
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 5, 12, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 0, 12, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 4, 13, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 1, 13, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 5, 15, 0, 0);
+      display_msg(mstr(101));
+   end else begin
+      // Когти смерти уже успели убить охранника и брамина
+      obj := put_critter(PID_GUN_GUARD_FEMALE, -1, 2, 5);
+      kill_critter(obj, ANIM_fall_back_blood_sf);
+      obj := put_critter(PID_BRAHMIN, -1, 2, 7);
+      kill_critter(obj, ANIM_fall_back_blood_sf);
+      call put_enemy(PID_TOUGH_DEATHCLAW, SCRIPT_ECDTHCLW, 5, 9, PID_DEATHCLAW_CLAW_1, 0);
+      call put_enemy(PID_TOUGH_DEATHCLAW, SCRIPT_ECDTHCLW, 0, 10, PID_DEATHCLAW_CLAW_1, 0);
+      display_msg(mstr(102));
+   end
+end
+
+procedure map_update_p_proc begin
+   Lighting;
+end
+
+procedure map_exit_p_proc begin
+   if (not car_out_of_fuel) then begin
+      if (tile_contains_pid_obj(global_var(GVAR_CAR_PLACED_TILE), 0, PID_DRIVABLE_CAR) != 0) then begin
+         set_global_var(GVAR_CAR_PLACED_TILE, 0);
+         car_give_to_party;
+      end
+   end
+   // Герой ушел с карты сам, не дойдя до конца: караван брошен
+   if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT and not get_sfall_global_int(GV_ESCORT_MOVING)) then begin
+      set_sfall_global(GV_CARAVAN, CARAVAN_NONE);
+      set_sfall_global(GV_CARAVAN_REFUSED, get_sfall_global_int(GV_CARAVAN_REFUSED) + 1);
+      display_msg(mstr(103));
+   end
+end

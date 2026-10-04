@@ -1,5 +1,7 @@
-// Караванщик Тед Бёрнс: встреча «Хорошее место». Даёт координаты лагеря бесплатно
-// (Красноречие 75% или Привлекательность 7) или за 500 крышек.
+// Караванщик Тед Бернс: встреча «Хорошее место».
+// Первый вариант — проводить караван за 300 (три нападения в пути), второй — просто узнать,
+// где место: за 500 крышек или бесплатно (Красноречие 75% или Привлекательность 7).
+// В лагере у скал (после координат) только прощальная реплика.
 #define SCRIPT_REALNAME "f2mcmst"
 #include "define.h"
 #include "f2mod.h"
@@ -12,6 +14,7 @@ procedure critter_p_proc;
 procedure talk_p_proc;
 procedure damage_p_proc;
 procedure pickup_p_proc;
+procedure destroy_p_proc;
 procedure look_at_p_proc;
 procedure description_p_proc;
 
@@ -22,13 +25,21 @@ procedure Node004;
 procedure Node005;
 procedure Node006;
 procedure Node007;
+procedure Node008;
+procedure Node009;
+procedure Node010;
+procedure Node011;
+procedure Node012;
 procedure Node999;
 procedure give_coords;
+procedure enemies_left;
 
 variable said_hello;
+variable go_next;
 
 // Бесплатно: Красноречие от 75% или Привлекательность от 7
 #define free_coords   ((has_skill(dude_obj, SKILL_SPEECH) >= 75) or (get_critter_stat(dude_obj, STAT_ch) >= 7))
+#define on_escort     ((get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT) and (cur_map_index == MAP_F2MOD_ESCORT))
 
 procedure start begin
 end
@@ -44,29 +55,65 @@ procedure description_p_proc begin
 end
 
 procedure critter_p_proc begin
-   if (not said_hello and self_can_see_dude) then begin
+   if (not said_hello and self_can_see_dude and not on_escort) then begin
       said_hello := 1;
       floater(random(102, 104));
    end
 end
 
 procedure damage_p_proc begin
-   attack(source_obj);
+   if (source_obj == dude_obj) then attack(source_obj);
 end
 
 procedure pickup_p_proc begin
    attack(source_obj);
 end
 
+procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT) then begin
+      set_sfall_global(GV_CARAVAN, CARAVAN_FAILED);
+      display_msg(mstr(210));
+   end
+end
+
+// Живые враги на карте: все, кто не из команды героя и не из каравана
+procedure enemies_left begin
+   variable c, n := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (c != dude_obj and not is_critter_dead(c)) then begin
+         if (has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) != TEAM_PLAYER
+             and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) != TEAM_CARAVAN) then
+            n += 1;
+      end
+   end
+   return n;
+end
+
 procedure talk_p_proc begin
+   if (on_escort and enemies_left > 0) then begin
+      floater(random(195, 197));
+      return;
+   end
    start_gdialog(NAME, self_obj, 4, -1, -1);
    gSay_Start;
       if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE) then
          call Node007;
-      else
+      else if (on_escort) then begin
+         if (get_sfall_global_int(GV_ESCORT_STAGE) < ESCORT_STAGES) then
+            call Node010;
+         else
+            call Node012;
+      end else
          call Node001;
    gSay_End;
    end_dialogue;
+   // Переход на следующий участок дороги: сутки пути и новая карта
+   if (go_next) then begin
+      go_next := 0;
+      set_sfall_global(GV_ESCORT_MOVING, 1);
+      game_time_advance(ONE_GAME_DAY);
+      load_map(MAP_F2MOD_ESCORT, 0);
+   end
 end
 
 procedure give_coords begin
@@ -83,13 +130,14 @@ end
 
 procedure Node002 begin
    Reply(120);
-   if (free_coords) then
-      GOption(121, Node003, 4);
+   NOption(125, Node008, 4);
    NOption(122, Node004, 4);
    NOption(123, Node005, 4);
+   NLowOption(126, Node008);
    NLowOption(124, Node004);
 end
 
+// Координаты даром (проверка Красноречия или Привлекательности)
 procedure Node003 begin
    call give_coords;
    give_exp_points(CARAVAN_XP_TALK);
@@ -98,12 +146,14 @@ procedure Node003 begin
    NLowOption(132, Node999);
 end
 
+// Просто узнать, где место: платно или с проверкой
 procedure Node004 begin
    Reply(140);
    if (free_coords) then
       GOption(144, Node003, 4);
    if (dude_caps >= CARAVAN_PRICE) then
       NOption(141, Node006, 4);
+   NOption(145, Node008, 4);
    NOption(142, Node005, 4);
    NLowOption(143, Node005);
 end
@@ -126,8 +176,50 @@ procedure Node006 begin
 end
 
 procedure Node007 begin
-   Reply(170);
+   if (cur_map_index == MAP_F2MOD_CAMP) then
+      Reply(172);
+   else
+      Reply(170);
    NOption(171, Node999, 4);
+   NLowOption(132, Node999);
+end
+
+// Предложение сопровождения
+procedure Node008 begin
+   Reply(180);
+   NOption(181, Node009, 4);
+   NOption(182, Node005, 4);
+   NLowOption(183, Node009);
+end
+
+// Выходим: первый участок дороги
+procedure Node009 begin
+   set_sfall_global(GV_CARAVAN, CARAVAN_ESCORT);
+   set_sfall_global(GV_ESCORT_STAGE, 1);
+   go_next := 1;
+end
+
+// После нападения: идем дальше или герой сначала собирает трофеи
+procedure Node010 begin
+   Reply(189 + get_sfall_global_int(GV_ESCORT_STAGE));
+   NOption(193, Node011, 4);
+   NOption(194, Node999, 4);
+   NLowOption(132, Node011);
+end
+
+procedure Node011 begin
+   set_sfall_global(GV_ESCORT_STAGE, get_sfall_global_int(GV_ESCORT_STAGE) + 1);
+   go_next := 1;
+end
+
+// Конец пути: плата, координаты, опыт
+procedure Node012 begin
+   set_sfall_global(GV_ESCORT_LOSSES, 1);
+   item_caps_adjust(dude_obj, CARAVAN_ESCORT_PAY);
+   call give_coords;
+   give_exp_points(CARAVAN_XP_ESCORT);
+   Reply(200);
+   NOption(201, Node999, 4);
    NLowOption(132, Node999);
 end
 

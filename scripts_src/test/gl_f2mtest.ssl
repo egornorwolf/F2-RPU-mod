@@ -2,7 +2,7 @@
 // Ctrl+1..7 — СПЕЦИАЛ +1, Ctrl+Shift+1..7 — СПЕЦИАЛ -1,
 // Ctrl+K — +10 очков навыков, Ctrl+N — все навыки 300%, Ctrl+B — переносимый вес +100,
 // Ctrl+E — открыть «Лагерь у скал» на карте мира, Ctrl+R — сбросить встречу с караваном, Ctrl+O — +1 перк, Ctrl+U — +1 уровень,
-// Ctrl+H — лечение, Ctrl+I — сундук с бронёй, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
+// Ctrl+H — лечение, Ctrl+I — сундук с броней, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
 #include "sfall.h"
 #include "dik.h"
 #define SCRIPT_REALNAME "gl_f2mtest"
@@ -47,7 +47,7 @@ procedure keypress_handler begin
    if (not pressed) then return;
    mode := get_game_mode bwand 4192189; // все режимы, кроме карты и боя
    if (mode != 0) then begin
-      display_msg("F2mod: закройте окна и нажмите ещё раз.");
+      display_msg("F2mod: закройте окна и нажмите еще раз.");
       return;
    end
    if (key >= DIK_1 and key <= DIK_7) then begin
@@ -66,10 +66,13 @@ procedure keypress_handler begin
    end else if (key == DIK_R) then begin
       set_sfall_global(GV_CARAVAN, CARAVAN_NONE);
       set_sfall_global(GV_CARAVAN_REFUSED, 0);
+      set_sfall_global(GV_ESCORT_STAGE, 0);
+      set_sfall_global(GV_ESCORT_LOSSES, 0);
+      set_sfall_global(GV_CAMP_CARAVAN, 0);
       // Сначала сбрасываем «посещено», потом прячем кружок совсем
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_UNKNOWN);
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_INVISIBLE);
-      display_msg("F2mod: караван сброшен, лагерь снова скрыт. Караван ждёт на следующей случайной встрече.");
+      display_msg("F2mod: караван сброшен, лагерь снова скрыт. Караван ждет на следующей случайной встрече.");
    end else if (key == DIK_B) then begin
       set_pc_extra_stat(STAT_carry_amt, get_pc_extra_stat(STAT_carry_amt) + 100);
       display_msg("F2mod: переносимый вес " + get_critter_stat(dude_obj, STAT_carry_amt) + " фунтов.");
@@ -115,13 +118,13 @@ procedure spawn_chest begin
    box := create_object(PID_CHEST, tile_num_in_direction(dude_tile, dude_cur_rot, 1), dude_elevation);
    // Вся броня, которую может носить герой
    foreach (pid in ARMOR_PIDS) call add_items(box, pid, 1);
-   // Всё стрелковое и энергетическое оружие (без оружия существ и турелей)
+   // Все стрелковое и энергетическое оружие (без оружия существ и турелей)
    foreach (pid in GUN_PIDS) call add_items(box, pid, 1);
    // Все патроны по 10 пачек
    foreach (pid in AMMO_PIDS) call add_items(box, pid, 10);
    call add_items(box, PID_STIMPAK, 30);
    call add_items(box, PID_SUPER_STIMPAK, 20);
-   display_msg("F2mod: рядом стоит сундук с бронёй, оружием, патронами и стимпаками.");
+   display_msg("F2mod: рядом стоит сундук с броней, оружием, патронами и стимпаками.");
 end
 
 procedure skills_max begin

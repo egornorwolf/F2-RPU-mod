@@ -1,9 +1,13 @@
-// Карта поселения «Лагерь у скал». Этап М1: пустая карта, свет по времени суток и машина героя.
+// Карта поселения «Лагерь у скал». М1: пустая карта, свет по времени суток и машина героя.
+// М2 (тестовый режим): после координат караван Теда Бернса уже стоит в лагере.
+// Позже: караван приходит через пару недель, а в М3 здесь появится палаточный лагерь.
 #define SCRIPT_REALNAME "f2mcamp"
 #include "define.h"
 #include "updatmap.h"
+#include "f2mod.h"
 #include "command.h"
 #include "scenepid.h"
+#include "sfall.h"
 
 // Где ставить машину (та же точка, что в desert1, с которой взят пол карты)
 #define CAR_HEX   (19096)
@@ -12,14 +16,51 @@ procedure start;
 procedure map_enter_p_proc;
 procedure map_update_p_proc;
 procedure map_exit_p_proc;
+procedure put_critter(variable pid, variable sid, variable tile);
+procedure arm(variable who, variable weapon, variable ammo);
+
+#define START_HEX   (20100)
+variable spawned;
 
 procedure start begin
 end
 
+procedure put_critter(variable pid, variable sid, variable tile) begin
+   variable obj;
+   obj := create_object_sid(pid, tile, 0, sid);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_CARAVAN);
+   return obj;
+end
+
+procedure arm(variable who, variable weapon, variable ammo) begin
+   variable item;
+   item := create_object(weapon, 0, 0);
+   add_obj_to_inven(who, item);
+   wield_obj_critter(who, item);
+   if (ammo) then add_mult_objs_to_inven(who, create_object(ammo, 0, 0), 2);
+end
+
 procedure map_enter_p_proc begin
+   variable obj, base;
    set_map_exit_tiles(0, 0);
    Lighting;
    Check_Create_Car(CAR_HEX, 0)
+   // Карта сохраняется, поэтому караван ставим один раз, при первом входе после координат
+   if (spawned or is_loading_game or get_sfall_global_int(GV_CARAVAN) != CARAVAN_DONE
+       or get_sfall_global_int(GV_CAMP_CARAVAN)) then return;
+   spawned := 1;
+   set_sfall_global(GV_CAMP_CARAVAN, 1);
+   base := tile_num_in_direction(START_HEX, 1, 10);
+   obj := put_critter(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, base);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
+   obj := put_critter(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, tile_num_in_direction(base, 0, 3));
+   call arm(obj, PID_10MM_SMG, PID_10MM_JHP);
+   if (not get_sfall_global_int(GV_ESCORT_LOSSES)) then begin
+      obj := put_critter(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, tile_num_in_direction(base, 2, 3));
+      call arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
+      call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, tile_num_in_direction(base, 2, 6));
+   end
+   call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, tile_num_in_direction(base, 1, 6));
 end
 
 procedure map_update_p_proc begin

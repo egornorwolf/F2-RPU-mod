@@ -29,3 +29,4 @@ def make(src, dst, script):
 
 make("desert1", "f2mcamp", "f2mcamp.int")
 make("desert2", "f2mcrvn", "f2mcrvn.int")
+make("desert3", "f2mesct", "f2mesct.int")

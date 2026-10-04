@@ -26,6 +26,12 @@ SSLC="$DEPS/sslc/build/bin/sslc"
 RPU_HEADERS="$DEPS/rpu/scripts_src/headers"
 HEADERS="$DEPS/sfall/artifacts/scripting/headers"
 
+# Шрифт игры не знает букву «ё» (показывает запятую): в текстах мода ее быть не должно
+if grep -rlE "ё|Ё" "$ROOT/scripts_src" "$ROOT/mod"; then
+  echo "Ошибка: в файлах выше есть буква «ё», замените на «е»." >&2
+  exit 1
+fi
+
 rm -rf "$OUT"
 mkdir -p "$OUT/tmp" "$OUT/data/scripts" "$OUT/test/scripts"
 # sslc берёт только одну папку -I, поэтому заголовки RPU и sfall кладём рядом с исходником,
