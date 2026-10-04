@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Карты мода. Этап М1: карта лагеря — копия пустынной карты desert1 из RPU
+со своим именем и своим скриптом карты (без скрипта случайных встреч).
+
+Использование: make_maps.py <base> <scripts.lst мода> <папка data сборки>
+"""
+import shutil
+import struct
+import sys
+
+base, scripts_lst, out = sys.argv[1:4]
+
+
+def script_index(name):
+    lines = open(scripts_lst, encoding="cp1251").read().splitlines()
+    for i, line in enumerate(lines):
+        if line.split(";")[0].strip().lower() == name:
+            return i + 1  # в заголовке карты номер строки с 1, 0 значит «без скрипта»
+    sys.exit(f"нет {name} в scripts.lst")
+
+
+def make(src, dst, script):
+    data = bytearray(open(f"{base}/maps/{src}.map", "rb").read())
+    data[4:20] = f"{dst.upper()}.MAP".encode("ascii").ljust(16, b"\0")
+    struct.pack_into(">i", data, 28, script_index(script))
+    open(f"{out}/maps/{dst}.map", "wb").write(data)
+    shutil.copy(f"{base}/maps/{src}.edg", f"{out}/maps/{dst}.edg")
+
+
+make("desert1", "f2mcamp", "f2mcamp.int")

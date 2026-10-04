@@ -4,6 +4,7 @@
 Использование:
   dat2.py pack <папка> <архив.dat>
   dat2.py list <архив.dat>
+  dat2.py extract <архив.dat> <путь в архиве> <файл>
 """
 import os
 import struct
@@ -38,7 +39,7 @@ def pack(src, out):
     return len(entries)
 
 
-def listing(path):
+def read_tree(path):
     with open(path, "rb") as f:
         f.seek(-8, 2)
         tree_size, total = struct.unpack("<II", f.read(8))
@@ -53,11 +54,29 @@ def listing(path):
         pos += n
         comp, real, size, off = struct.unpack("<BIII", data[pos:pos + 13])
         pos += 13
+        yield name, comp, real, size, off
+
+
+def listing(path):
+    for name, comp, real, _, _ in read_tree(path):
         print(f"{name}\t{real}\t{'zlib' if comp else 'raw'}")
+
+
+def extract(path, inner, out):
+    for name, comp, _, size, off in read_tree(path):
+        if name.lower() == inner.lower():
+            with open(path, "rb") as f:
+                f.seek(off)
+                data = f.read(size)
+            open(out, "wb").write(zlib.decompress(data) if comp else data)
+            return
+    sys.exit(f"нет файла {inner} в {path}")
 
 
 if __name__ == "__main__":
     if sys.argv[1] == "pack":
         print(pack(sys.argv[2], sys.argv[3]), "files")
+    elif sys.argv[1] == "extract":
+        extract(sys.argv[2], sys.argv[3], sys.argv[4])
     else:
         listing(sys.argv[2])

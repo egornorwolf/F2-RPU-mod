@@ -32,7 +32,7 @@ mkdir -p "$OUT/tmp" "$OUT/data/scripts" "$OUT/test/scripts"
 # а sfall ещё и в ../sfall, куда на него ссылается define.h из RPU
 mkdir -p "$OUT/tmp/sfall" "$OUT/tmp/src"
 cp "$HEADERS"/*.h "$OUT/tmp/sfall/"
-cp "$RPU_HEADERS"/*.h "$HEADERS"/*.h "$OUT/tmp/src/"
+cp "$RPU_HEADERS"/*.h "$HEADERS"/*.h "$ROOT"/scripts_src/*.h "$OUT/tmp/src/"
 
 # Исходники в UTF-8, игра ждёт cp1251: перекодируем перед компиляцией
 compile() {
@@ -41,9 +41,24 @@ compile() {
   iconv -f UTF-8 -t CP1251 "$src" > "$OUT/tmp/src/$name.ssl"
   (cd "$OUT/tmp/src" && "$SSLC" -q -l -p -O2 "$name.ssl" -o "$dest/$name.int")
 }
-for src in "$ROOT"/scripts_src/*.ssl; do compile "$src" "$OUT/data/scripts"; done
+for src in "$ROOT"/scripts_src/*.ssl "$ROOT"/scripts_src/maps/*.ssl; do compile "$src" "$OUT/data/scripts"; done
 # Тестовые клавиши — отдельный f2mod_test.dat, в релиз не входит
 for src in "$ROOT"/scripts_src/test/*.ssl; do compile "$src" "$OUT/test/scripts"; done
+
+# Списки игры (city.txt, maps.txt, scripts.lst, map.msg): копия из RPU и наши строки в конце
+BASE="$ROOT/base/rpu-2.4.34"
+(cd "$ROOT/mod/append" && find . -type f) | while read -r rel; do
+  mkdir -p "$OUT/data/$(dirname "$rel")"
+  cp "$BASE/$rel" "$OUT/data/$rel"
+  case "$rel" in
+    *.msg) iconv -f UTF-8 -t CP1251 "$ROOT/mod/append/$rel" >> "$OUT/data/$rel" ;;
+    *) cat "$ROOT/mod/append/$rel" >> "$OUT/data/$rel" ;;
+  esac
+done
+
+# Карты
+mkdir -p "$OUT/data/maps"
+python3 "$ROOT/tools/make_maps.py" "$BASE" "$OUT/data/scripts/scripts.lst" "$OUT/data"
 
 python3 "$ROOT/tools/dat2.py" pack "$OUT/data" "$OUT/f2mod.dat"
 python3 "$ROOT/tools/dat2.py" pack "$OUT/test" "$OUT/f2mod_test.dat"
