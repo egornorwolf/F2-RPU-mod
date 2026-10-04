@@ -67,7 +67,9 @@ procedure keypress_handler begin
       set_sfall_global(GV_CARAVAN, CARAVAN_NONE);
       set_sfall_global(GV_CARAVAN_REFUSED, 0);
       set_sfall_global(GV_ESCORT_STAGE, 0);
-      set_sfall_global(GV_ESCORT_LOSSES, 0);
+      set_sfall_global(GV_CARAVAN_DEAD, 0);
+      set_sfall_global(GV_CARAVAN_LAST, 0);
+      set_sfall_global(GV_ESCORT_S3, 0);
       set_sfall_global(GV_CAMP_CARAVAN, 0);
       set_sfall_global(GV_CARAVAN_HOSTILE, 0);
       // Сначала сбрасываем «посещено», потом прячем кружок совсем

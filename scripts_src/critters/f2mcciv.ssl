@@ -6,6 +6,7 @@
 #define NAME                    SCRIPT_F2MCCIV
 #include "command.h"
 #include "sfall.h"
+#include "f2mcdead.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -16,6 +17,7 @@ procedure look_at_p_proc;
 procedure description_p_proc;
 procedure destroy_p_proc;
 procedure is_child;
+procedure use_stim;
 
 variable greeted;
 
@@ -75,7 +77,22 @@ procedure accidental_hit begin
    return r;
 end
 
+// Мирные в бою все время убегают, и движок не дает им лечиться самим: стим колем по скрипту,
+// когда здоровья осталось меньше половины
+procedure use_stim begin
+   variable st, n;
+   if (is_critter_dead(self_obj)) then return;
+   if (get_critter_stat(self_obj, STAT_current_hp) * 2 >= get_critter_stat(self_obj, STAT_max_hp)) then return;
+   st := obj_carrying_pid_obj(self_obj, PID_STIMPAK);
+   if (not st) then return;
+   n := rm_mult_objs_from_inven(self_obj, st, 1);
+   destroy_object(st);
+   critter_heal(self_obj, random(10, 20));
+   floater(random(160, 161));
+end
+
 procedure damage_p_proc begin
+   call use_stim;
    if (is_dude_side(source_obj)) then begin
       if (accidental_hit) then
          floater(random(130, 132));
@@ -86,7 +103,9 @@ procedure damage_p_proc begin
    end
 end
 
-// Погиб от руки героя или спутника, пусть даже случайно: караван воюет
+// Погиб от руки героя или спутника, пусть даже случайно: караван воюет.
+// На следующем участке дороги погибшего уже нет.
 procedure destroy_p_proc begin
    if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   call cv_mark_dead(obj_pid(self_obj));
 end

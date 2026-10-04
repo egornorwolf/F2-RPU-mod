@@ -1,0 +1,67 @@
+// Брамин каравана «Хорошее место». Тянет фургон и в бою не дерется, а убегает
+// (пакет ИИ «трус», как у мирных). Скрипт брамина из RPU не берем: он переводит брамина
+// в другую команду и ставит боевой ИИ, поэтому брамины лезли в драку.
+// Случайное попадание героя или спутника прощают; прицельный выстрел или смерть от их руки — караван воюет.
+#define SCRIPT_REALNAME "f2mcbrm"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MCBRM
+#include "command.h"
+#include "sfall.h"
+#include "f2mcdead.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure damage_p_proc;
+procedure accidental_hit;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   // Не даем брамину сменить команду: с караваном он и в бою считается своим
+   if (has_trait(TRAIT_OBJECT, self_obj, OBJECT_TEAM_NUM) != TEAM_CARAVAN) then
+      critter_add_trait(self_obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_CARAVAN);
+end
+
+procedure talk_p_proc begin
+   floater(random(110, 112));
+end
+
+// Свой попал случайно (очередью или взрывом) — прощаем; прицельно — бой
+procedure accidental_hit begin
+   variable hits, r := 0;
+   hits := load_array(ARR_CARAVAN_HITS);
+   if (hits) then begin
+      r := hits[self_obj];
+      hits[self_obj] := 0;
+   end
+   return r;
+end
+
+procedure damage_p_proc begin
+   if (is_dude_side(source_obj) and not accidental_hit) then
+      set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   floater(random(120, 122));
+end
+
+// Погиб от руки героя или спутника, пусть даже случайно: караван воюет.
+// На следующем участке дороги погибшего брамина уже нет.
+procedure destroy_p_proc begin
+   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   call cv_mark_dead(obj_pid(self_obj));
+end

@@ -5,3 +5,4 @@ f2mcmst.int     ; F2mod caravan master Ted Burns                # local_vars=0
 f2mcgrd.int     ; F2mod caravan guard                           # local_vars=0
 f2mesct.int     ; F2mod caravan escort road map                 # local_vars=0
 f2mcciv.int     ; F2mod caravan settler (civilian)               # local_vars=0
+f2mcbrm.int     ; F2mod caravan brahmin (flees in combat)          # local_vars=0

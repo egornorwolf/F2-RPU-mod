@@ -8,6 +8,7 @@
 #include "sfall.h"
 #include "define_extra.h"
 #include "f2mcfgt.h"
+#include "f2mcdead.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -87,7 +88,9 @@ procedure pickup_p_proc begin
    attack(source_obj);
 end
 
-// Охранник погиб от руки героя или спутника, пусть даже случайно: караван воюет
+// Охранник погиб от руки героя или спутника, пусть даже случайно: караван воюет.
+// На следующем участке дороги погибшего уже нет.
 procedure destroy_p_proc begin
    if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   call cv_mark_dead(obj_pid(self_obj));
 end

@@ -19,6 +19,7 @@
 #define SCRIPT_F2MCGRD      (1562)  // охранник каравана
 #define SCRIPT_F2MESCT      (1563)  // карта дороги с караваном
 #define SCRIPT_F2MCCIV      (1564)  // мирный переселенец каравана
+#define SCRIPT_F2MCBRM      (1565)  // брамин каравана (в бою убегает)
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU
@@ -29,7 +30,9 @@
 #define GV_CARAVAN          "f2mcrvst"  // встреча «Хорошее место»: CARAVAN_* ниже
 #define GV_ESCORT_STAGE     "f2mescst"  // нападение в пути: 1 налетчики, 2 скорпионы, 3 когти смерти
 #define GV_ESCORT_MOVING    "f2mescmv"  // 1 = караван сам переходит на следующую карту
-#define GV_ESCORT_LOSSES    "f2mesclo"  // 1 = в пути погибли охранник и брамин
+#define GV_CARAVAN_DEAD     "f2mcvded"  // кто из каравана погиб в пути: биты CV_SLOT_* (f2mcdead.h)
+#define GV_ESCORT_S3        "f2mesc3k"  // кого убили гекконы до прихода героя: 1 Сара, 2 брамин, 4 мирные
+#define GV_CARAVAN_LAST     "f2mcrvls"  // чем кончилась прошлая встреча: CARAVAN_LAST_* ниже
 #define GV_ESCORT_WMX       "f2mescwx"  // точка встречи на карте мира (x), от нее идет караван
 #define GV_ESCORT_WMY       "f2mescwy"  // то же, y
 #define GV_CAMP_CARAVAN     "f2mcmpcv"  // 1 = караван уже поставлен в лагере
@@ -41,6 +44,9 @@
 // Свой герою: сам герой или его спутник
 #define is_dude_side(x)     ((x) == dude_obj or obj_in_party(x))
 #define GV_CARAVAN_REFUSED  "f2mcrvrf"  // сколько раз герой отказал каравану
+
+#define CARAVAN_LAST_REFUSED   (1)  // герой отказал в разговоре
+#define CARAVAN_LAST_ABANDONED (2)  // герой бросил караван на дороге
 
 #define CARAVAN_NONE        (0)
 #define CARAVAN_DONE        (1)     // координаты получены

@@ -36,6 +36,8 @@ procedure Node010;
 procedure Node011;
 procedure Node012;
 procedure Node013;
+procedure Node014;
+procedure Node015;
 procedure Node999;
 procedure give_coords;
 procedure enemies_left;
@@ -71,7 +73,12 @@ procedure critter_p_proc begin
    end
    if (not said_hello and self_can_see_dude and not on_escort) then begin
       said_hello := 1;
-      floater(random(102, 104));
+      if (get_sfall_global_int(GV_CARAVAN_LAST) == CARAVAN_LAST_ABANDONED) then
+         floater(random(106, 108));
+      else if (get_sfall_global_int(GV_CARAVAN_LAST) == CARAVAN_LAST_REFUSED) then
+         floater(random(106, 107));
+      else
+         floater(random(102, 104));
    end
 end
 
@@ -140,7 +147,11 @@ procedure talk_p_proc begin
             call Node010;
          else
             call Node012;
-      end else
+      end else if (get_sfall_global_int(GV_CARAVAN_LAST) == CARAVAN_LAST_ABANDONED) then
+         call Node015;
+      else if (get_sfall_global_int(GV_CARAVAN_LAST) == CARAVAN_LAST_REFUSED) then
+         call Node014;
+      else
          call Node001;
    gSay_End;
    end_dialogue;
@@ -161,6 +172,7 @@ end
 
 procedure give_coords begin
    set_sfall_global(GV_CARAVAN, CARAVAN_DONE);
+   set_sfall_global(GV_CARAVAN_LAST, 0);
    mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_KNOWN);
 end
 
@@ -182,6 +194,7 @@ end
 
 // Координаты даром (проверка Красноречия или Привлекательности)
 procedure Node003 begin
+   set_sfall_global(GV_CARAVAN_DEAD, 0);   // без дороги в лагерь приходят все
    call give_coords;
    give_exp_points(CARAVAN_XP_TALK);
    Reply(130);
@@ -203,6 +216,7 @@ end
 
 procedure Node005 begin
    set_sfall_global(GV_CARAVAN_REFUSED, get_sfall_global_int(GV_CARAVAN_REFUSED) + 1);
+   set_sfall_global(GV_CARAVAN_LAST, CARAVAN_LAST_REFUSED);
    Reply(150);
    NOption(151, Node999, 4);
    NLowOption(152, Node999);
@@ -211,6 +225,7 @@ end
 procedure Node006 begin
    item_caps_adjust(dude_obj, -CARAVAN_PRICE);
    item_caps_adjust(self_obj, CARAVAN_PRICE);
+   set_sfall_global(GV_CARAVAN_DEAD, 0);   // без дороги в лагерь приходят все
    call give_coords;
    give_exp_points(CARAVAN_XP_BUY);
    Reply(160);
@@ -239,6 +254,8 @@ end
 procedure Node009 begin
    set_sfall_global(GV_CARAVAN, CARAVAN_ESCORT);
    set_sfall_global(GV_ESCORT_STAGE, 1);
+   set_sfall_global(GV_CARAVAN_DEAD, 0);   // в дорогу выходят все
+   set_sfall_global(GV_CARAVAN_LAST, 0);
    // Запоминаем, где на карте мира встретили караван: дорога пойдет отсюда, а не из Арройо
    set_sfall_global(GV_ESCORT_WMX, get_world_map_x_pos);
    set_sfall_global(GV_ESCORT_WMY, get_world_map_y_pos);
@@ -260,7 +277,19 @@ end
 
 // Последнее нападение отбито: идем к скалам вместе
 procedure Node012 begin
-   Reply(200);
+   variable k;
+   // Кого гекконы убили до прихода героя (карта дороги, GV_ESCORT_S3): 1 Сара, 2 брамин, 4 мирные
+   k := get_sfall_global_int(GV_ESCORT_S3) bwand 3;
+   if (k == 3) then
+      Reply(200);
+   else if (k == 2) then
+      Reply(202);
+   else if (k == 1) then
+      Reply(203);
+   else if (get_sfall_global_int(GV_ESCORT_S3) bwand 4) then
+      Reply(204);
+   else
+      Reply(198);
    NOption(201, Node013, 4);
    NOption(194, Node999, 4);
    NLowOption(183, Node013);
@@ -268,12 +297,30 @@ end
 
 // Дошли: плата, координаты, опыт, переход в лагерь
 procedure Node013 begin
-   set_sfall_global(GV_ESCORT_LOSSES, 1);
    item_caps_adjust(dude_obj, CARAVAN_ESCORT_PAY);
    call give_coords;
    give_exp_points(CARAVAN_XP_ESCORT);
    display_msg(mstr(211));
    go_camp := 1;
+end
+
+// Снова встретились после отказа
+procedure Node014 begin
+   Reply(114);
+   NOption(115, Node002, 4);
+   NOption(125, Node008, 4);
+   NOption(122, Node004, 4);
+   NOption(116, Node005, 4);
+   NLowOption(117, Node002);
+end
+
+// Снова встретились после того, как герой бросил караван на дороге
+procedure Node015 begin
+   Reply(118);
+   NOption(119, Node008, 4);
+   NOption(122, Node004, 4);
+   NOption(116, Node005, 4);
+   NLowOption(117, Node008);
 end
 
 procedure Node999 begin
