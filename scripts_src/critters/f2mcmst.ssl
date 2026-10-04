@@ -173,6 +173,7 @@ end
 procedure give_coords begin
    set_sfall_global(GV_CARAVAN, CARAVAN_DONE);
    set_sfall_global(GV_CARAVAN_LAST, 0);
+   set_sfall_global(GV_ESCORT_RESUME, 0);
    mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_KNOWN);
 end
 
@@ -194,7 +195,8 @@ end
 
 // Координаты даром (проверка Красноречия или Привлекательности)
 procedure Node003 begin
-   set_sfall_global(GV_CARAVAN_DEAD, 0);   // без дороги в лагерь приходят все
+   // Без дороги в лагерь приходят все, кто жив (бросил на дороге — погибшие там остаются)
+   if (not get_sfall_global_int(GV_ESCORT_RESUME)) then set_sfall_global(GV_CARAVAN_DEAD, 0);
    call give_coords;
    give_exp_points(CARAVAN_XP_TALK);
    Reply(130);
@@ -225,7 +227,7 @@ end
 procedure Node006 begin
    item_caps_adjust(dude_obj, -CARAVAN_PRICE);
    item_caps_adjust(self_obj, CARAVAN_PRICE);
-   set_sfall_global(GV_CARAVAN_DEAD, 0);   // без дороги в лагерь приходят все
+   if (not get_sfall_global_int(GV_ESCORT_RESUME)) then set_sfall_global(GV_CARAVAN_DEAD, 0);
    call give_coords;
    give_exp_points(CARAVAN_XP_BUY);
    Reply(160);
@@ -244,7 +246,10 @@ end
 
 // Предложение сопровождения
 procedure Node008 begin
-   Reply(180);
+   if (get_sfall_global_int(GV_ESCORT_RESUME)) then
+      Reply(184);
+   else
+      Reply(180);
    NOption(181, Node009, 4);
    NOption(182, Node005, 4);
    NLowOption(183, Node009);
@@ -253,8 +258,16 @@ end
 // Выходим: первый участок дороги
 procedure Node009 begin
    set_sfall_global(GV_CARAVAN, CARAVAN_ESCORT);
-   set_sfall_global(GV_ESCORT_STAGE, 1);
-   set_sfall_global(GV_CARAVAN_DEAD, 0);   // в дорогу выходят все
+   // Бросил дорогу раньше: продолжаем с несделанного нападения теми, кто уцелел.
+   // Иначе выходят все, с первого нападения.
+   if (get_sfall_global_int(GV_ESCORT_RESUME)) then
+      set_sfall_global(GV_ESCORT_STAGE, get_sfall_global_int(GV_ESCORT_RESUME));
+   else begin
+      set_sfall_global(GV_ESCORT_STAGE, 1);
+      set_sfall_global(GV_CARAVAN_DEAD, 0);
+      set_sfall_global(GV_ESCORT_S3, 0);
+   end
+   set_sfall_global(GV_ESCORT_RESUME, 0);
    set_sfall_global(GV_CARAVAN_LAST, 0);
    // Запоминаем, где на карте мира встретили караван: дорога пойдет отсюда, а не из Арройо
    set_sfall_global(GV_ESCORT_WMX, get_world_map_x_pos);

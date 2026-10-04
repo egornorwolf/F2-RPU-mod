@@ -22,6 +22,7 @@ procedure map_update_p_proc;
 procedure map_exit_p_proc;
 procedure at(variable dir, variable dist);
 procedure put_enemy(variable pid, variable sid, variable dir, variable dist, variable weapon, variable ammo);
+procedure enemies_left;
 
 variable spawned;
 
@@ -40,6 +41,15 @@ procedure put_enemy(variable pid, variable sid, variable dir, variable dist, var
    return obj;
 end
 
+
+// Живые враги на карте (список в f2mod.h: is_escort_enemy)
+procedure enemies_left begin
+   variable c, n := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (not is_critter_dead(c) and is_escort_enemy(obj_pid(c))) then n += 1;
+   end
+   return n;
+end
 
 procedure map_enter_p_proc begin
    variable stage, extra, killed;
@@ -60,10 +70,17 @@ procedure map_enter_p_proc begin
       call cv_brahmin(CV_SLOT_BRAHMIN, at(1, 7));
       call cv_brahmin(CV_SLOT_BRAHMIN + 1, at(2, 7));
       call cv_civilians(at(2, 12), 0);
+   end else if (get_sfall_global_int(GV_ESCORT_S3) bwand 8) then begin
+      // Повтор гекконов после брошенной дороги: кого они убили в первый раз, тех уже нет,
+      // заново никого не убиваем
+      call cv_guard(CV_SLOT_SARA, at(2, 5));
+      call cv_brahmin(CV_SLOT_BRAHMIN, at(1, 7));
+      call cv_brahmin(CV_SLOT_BRAHMIN + 1, at(2, 7));
+      call cv_civilians(at(2, 12), 0);
    end else begin
       // Гекконы напали раньше, чем герой подоспел: Сара, один брамин и двое мирных уже мертвы
       // (если они дожили до этого участка). Тед потом говорит, кого потеряли.
-      killed := 0;
+      killed := 8;
       if (not cv_is_dead(CV_SLOT_SARA)) then begin
          call cv_corpse(CV_SLOT_SARA, at(2, 5));
          killed := killed bwor 1;
@@ -117,14 +134,20 @@ procedure map_update_p_proc begin
 end
 
 procedure map_exit_p_proc begin
+   variable stage;
    if (not car_out_of_fuel) then begin
       if (tile_contains_pid_obj(global_var(GVAR_CAR_PLACED_TILE), 0, PID_DRIVABLE_CAR) != 0) then begin
          set_global_var(GVAR_CAR_PLACED_TILE, 0);
          car_give_to_party;
       end
    end
-   // Герой ушел с карты сам, не дойдя до конца: караван брошен
+   // Герой ушел с карты сам, не дойдя до конца: караван брошен.
+   // В следующий раз дорога продолжится с несделанного нападения: враги здесь перебиты —
+   // со следующего, иначе с этого же. После гекконов (последнее) — снова гекконы.
    if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT and not get_sfall_global_int(GV_ESCORT_MOVING)) then begin
+      stage := get_sfall_global_int(GV_ESCORT_STAGE);
+      if (stage < ESCORT_STAGES and enemies_left == 0) then stage += 1;
+      set_sfall_global(GV_ESCORT_RESUME, stage);
       set_sfall_global(GV_CARAVAN, CARAVAN_NONE);
       set_sfall_global(GV_CARAVAN_REFUSED, get_sfall_global_int(GV_CARAVAN_REFUSED) + 1);
       set_sfall_global(GV_CARAVAN_LAST, CARAVAN_LAST_ABANDONED);

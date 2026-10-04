@@ -121,7 +121,8 @@ procedure cv_wagons(variable center) begin
    end
 end
 
-// Мирные переселенцы: 3 мужчины, 4 женщины, 3 ребенка. Без оружия, по стиму, в бою убегают.
+// Мирные переселенцы: 3 мужчины, 4 женщины, 3 ребенка. Без оружия, в бою убегают.
+// Свой стим у каждого считает скрипт мирного (f2mcciv), в инвентарь его не кладем.
 // Ставим только живых; первые kill из них гибнут сразу (нападение началось до прихода героя).
 procedure cv_civilians(variable center, variable kill) begin
    variable i := 0, obj, tile;
@@ -134,7 +135,6 @@ procedure cv_civilians(variable center, variable kill) begin
          end else begin
             obj := cv_put(cv_slot_pid(CV_SLOT_CIV + i), SCRIPT_F2MCCIV, tile);
             critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_ADDICT_WIMPY);
-            call cv_stims(obj, 1);
             anim(obj, ANIMATE_ROTATION, random(0, 5));
          end
       end

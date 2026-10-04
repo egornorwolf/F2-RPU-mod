@@ -21,6 +21,9 @@ procedure use_stim;
 
 variable greeted;
 
+// LVAR 0: 1 = свой стим уже вколот (хранится в сохранении)
+#define LVAR_STIM_USED   (0)
+
 procedure start begin
 end
 
@@ -77,16 +80,14 @@ procedure accidental_hit begin
    return r;
 end
 
-// Мирные в бою все время убегают, и движок не дает им лечиться самим: стим колем по скрипту,
-// когда здоровья осталось меньше половины
+// У каждого мирного один стим. Самим предметом в инвентаре его не даем: ИИ трусливых
+// жителей колет стимы сразу в начале боя, даже без ран (проверено в игре, 0.2.4).
+// Поэтому стим «в кармане» считаем по LVAR: колем по скрипту, когда здоровья меньше половины,
+// а если мирный погиб, так и не вколов его, стим остается на трупе.
 procedure use_stim begin
-   variable st, n;
-   if (is_critter_dead(self_obj)) then return;
+   if (is_critter_dead(self_obj) or local_var(LVAR_STIM_USED)) then return;
    if (get_critter_stat(self_obj, STAT_current_hp) * 2 >= get_critter_stat(self_obj, STAT_max_hp)) then return;
-   st := obj_carrying_pid_obj(self_obj, PID_STIMPAK);
-   if (not st) then return;
-   n := rm_mult_objs_from_inven(self_obj, st, 1);
-   destroy_object(st);
+   set_local_var(LVAR_STIM_USED, 1);
    critter_heal(self_obj, random(10, 20));
    floater(random(160, 161));
 end
@@ -108,4 +109,8 @@ end
 procedure destroy_p_proc begin
    if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
    call cv_mark_dead(obj_pid(self_obj));
+   if (not local_var(LVAR_STIM_USED)) then begin
+      set_local_var(LVAR_STIM_USED, 1);
+      add_obj_to_inven(self_obj, create_object(PID_STIMPAK, 0, 0));
+   end
 end

@@ -31,7 +31,9 @@
 #define GV_ESCORT_STAGE     "f2mescst"  // нападение в пути: 1 налетчики, 2 скорпионы, 3 когти смерти
 #define GV_ESCORT_MOVING    "f2mescmv"  // 1 = караван сам переходит на следующую карту
 #define GV_CARAVAN_DEAD     "f2mcvded"  // кто из каравана погиб в пути: биты CV_SLOT_* (f2mcdead.h)
-#define GV_ESCORT_S3        "f2mesc3k"  // кого убили гекконы до прихода героя: 1 Сара, 2 брамин, 4 мирные
+#define GV_ESCORT_S3        "f2mesc3k"  // кого убили гекконы до прихода героя: 1 Сара, 2 брамин, 4 мирные;
+                                        // 8 = это уже случилось (при повторе гекконов никого заново не убиваем)
+#define GV_ESCORT_RESUME    "f2mescrs"  // герой бросил дорогу: с какого нападения продолжить (0 = с начала)
 #define GV_CARAVAN_LAST     "f2mcrvls"  // чем кончилась прошлая встреча: CARAVAN_LAST_* ниже
 #define GV_ESCORT_WMX       "f2mescwx"  // точка встречи на карте мира (x), от нее идет караван
 #define GV_ESCORT_WMY       "f2mescwy"  // то же, y

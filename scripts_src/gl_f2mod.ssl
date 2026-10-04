@@ -14,7 +14,7 @@
 #include "command.h"
 #include "f2mod.h"
 
-#define F2MOD_VERSION "0.2.4"
+#define F2MOD_VERSION "0.2.5"
 
 procedure start;
 procedure encounter_handler;
@@ -83,5 +83,8 @@ procedure combatdamage_handler begin
       hits := create_array_map;
       save_array(ARR_CARAVAN_HITS, hits);
    end
-   hits[target] := (target != get_object_data(args[12], C_ATTACK_TARGET));
+   // Прицельное = это и есть цель, которую выбрал герой. Ее движок хранит в C_ATTACK_MAIN_TARGET;
+   // C_ATTACK_TARGET при промахе меняется на того, в кого пуля попала по пути (так брамин
+   // получал «прицельный» выстрел, когда герой промахивался по врагу рядом с ним).
+   hits[target] := (target != get_object_data(args[12], C_ATTACK_MAIN_TARGET));
 end
