@@ -66,7 +66,9 @@ procedure keypress_handler begin
    end else if (key == DIK_R) then begin
       set_sfall_global(GV_CARAVAN, CARAVAN_NONE);
       set_sfall_global(GV_CARAVAN_REFUSED, 0);
+      // Сначала сбрасываем «посещено», потом прячем кружок совсем
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_UNKNOWN);
+      mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_INVISIBLE);
       display_msg("F2mod: караван сброшен, лагерь снова скрыт. Караван ждёт на следующей случайной встрече.");
    end else if (key == DIK_B) then begin
       set_pc_extra_stat(STAT_carry_amt, get_pc_extra_stat(STAT_carry_amt) + 100);

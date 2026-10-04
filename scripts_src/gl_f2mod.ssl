@@ -10,7 +10,7 @@
 #include "command.h"
 #include "f2mod.h"
 
-#define F2MOD_VERSION "0.2.0"
+#define F2MOD_VERSION "0.2.1"
 
 procedure start;
 procedure encounter_handler;
@@ -32,7 +32,6 @@ procedure encounter_handler begin
    if (event != 0 or special) then return;
    if (get_pc_stat(PCSTAT_level) < CARAVAN_MIN_LEVEL) then return;
    if (get_sfall_global_int(GV_CARAVAN) != CARAVAN_NONE) then return;
-   set_sfall_global(GV_CARAVAN_HERE, 1);
    set_sfall_return(MAP_F2MOD_CARAVAN);
    set_sfall_return(1);
 end

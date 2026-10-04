@@ -7,7 +7,8 @@
 #include "sfall.h"
 #include "f2mod.h"
 
-#define CAR_HEX   (19096)
+#define CAR_HEX     (19096)
+#define START_HEX   (20100)   // точка входа на карту (как в desert2)
 
 procedure start;
 procedure map_enter_p_proc;
@@ -21,7 +22,7 @@ end
 
 procedure put_critter(variable pid, variable sid, variable dir, variable dist) begin
    variable obj;
-   obj := create_object_sid(pid, tile_num_in_direction(dude_tile, dir, dist), dude_elevation, sid);
+   obj := create_object_sid(pid, tile_num_in_direction(START_HEX, dir, dist), 0, sid);
    critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_CARAVAN);
    return obj;
 end
@@ -39,8 +40,9 @@ procedure map_enter_p_proc begin
    set_map_exit_tiles(0, 0);
    Lighting;
    Check_Create_Car(CAR_HEX, 0)
-   if (get_sfall_global_int(GV_CARAVAN_HERE)) then begin
-      set_sfall_global(GV_CARAVAN_HERE, 0);
+   // На эту карту попадаем только через встречу, пока координаты не получены
+   if (not is_loading_game and get_sfall_global_int(GV_CARAVAN) == CARAVAN_NONE
+       and not tile_contains_pid_obj(tile_num_in_direction(START_HEX, 1, 7), 0, PID_AVERAGE_MERCHANT_MALE)) then begin
       obj := put_critter(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, 1, 7);
       critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
       item_caps_adjust(obj, random(50, 150));
@@ -50,6 +52,9 @@ procedure map_enter_p_proc begin
       call arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
       call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, 1, 10);
       call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, 2, 11);
+      #ifdef F2MOD_DEBUG
+      display_msg("F2mod (отладка): караван поставлен, герой на клетке " + dude_tile + ", уровень " + dude_elevation + ".");
+      #endif
    end
 end
 

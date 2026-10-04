@@ -17,11 +17,13 @@
 // Глобальные переменные sfall (имя ровно 8 символов, хранятся в сохранении)
 #define GV_CARAVAN          "f2mcrvst"  // встреча «Хорошее место»: 0 не было, 1 координаты получены
 #define GV_CARAVAN_REFUSED  "f2mcrvrf"  // сколько раз герой отказал каравану
-#define GV_CARAVAN_HERE     "f2mcrvnw"  // 1 = эту карту загрузила наша встреча
 
 #define CARAVAN_NONE        (0)
 #define CARAVAN_DONE        (1)
 #define CARAVAN_MIN_LEVEL   (10)
 #define CARAVAN_PRICE       (500)
+
+// Отладочные сообщения в окне игры (на время тестов)
+#define F2MOD_DEBUG
 
 #endif
