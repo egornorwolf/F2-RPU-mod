@@ -27,15 +27,25 @@ RPU_HEADERS="$DEPS/rpu/scripts_src/headers"
 HEADERS="$DEPS/sfall/artifacts/scripting/headers"
 
 rm -rf "$OUT"
-mkdir -p "$OUT/tmp" "$OUT/data/scripts"
+mkdir -p "$OUT/tmp" "$OUT/data/scripts" "$OUT/test/scripts"
+# sslc берёт только одну папку -I, поэтому заголовки RPU и sfall кладём рядом с исходником,
+# а sfall ещё и в ../sfall, куда на него ссылается define.h из RPU
+mkdir -p "$OUT/tmp/sfall" "$OUT/tmp/src"
+cp "$HEADERS"/*.h "$OUT/tmp/sfall/"
+cp "$RPU_HEADERS"/*.h "$HEADERS"/*.h "$OUT/tmp/src/"
 
 # Исходники в UTF-8, игра ждёт cp1251: перекодируем перед компиляцией
-for src in "$ROOT"/scripts_src/*.ssl; do
+compile() {
+  local src="$1" dest="$2" name
   name="$(basename "$src" .ssl)"
-  iconv -f UTF-8 -t CP1251 "$src" > "$OUT/tmp/$name.ssl"
-  (cd "$OUT/tmp" && "$SSLC" -q -l -p -O2 -I"$HEADERS" -I"$RPU_HEADERS" -I"$ROOT/scripts_src" "$name.ssl" -o "$OUT/data/scripts/$name.int")
-done
+  iconv -f UTF-8 -t CP1251 "$src" > "$OUT/tmp/src/$name.ssl"
+  (cd "$OUT/tmp/src" && "$SSLC" -q -l -p -O2 "$name.ssl" -o "$dest/$name.int")
+}
+for src in "$ROOT"/scripts_src/*.ssl; do compile "$src" "$OUT/data/scripts"; done
+# Тестовые клавиши — отдельный f2mod_test.dat, в релиз не входит
+for src in "$ROOT"/scripts_src/test/*.ssl; do compile "$src" "$OUT/test/scripts"; done
 
 python3 "$ROOT/tools/dat2.py" pack "$OUT/data" "$OUT/f2mod.dat"
+python3 "$ROOT/tools/dat2.py" pack "$OUT/test" "$OUT/f2mod_test.dat"
 rm -rf "$OUT/tmp"
-echo "Готово: $OUT/f2mod.dat"
+echo "Готово: $OUT/f2mod.dat, $OUT/f2mod_test.dat"
