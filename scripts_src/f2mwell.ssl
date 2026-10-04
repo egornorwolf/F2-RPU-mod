@@ -1,0 +1,81 @@
+// Колодцы лагеря у скал. Один скрипт на три вида:
+// старый заколоченный (MODWELL1) — чинит герой: детали у прораба и Ремонт 50%, после починки
+// на его месте открытый колодец (WELL001); новый колодец с воротом (well1) копает прораб.
+// Первый рабочий колодец закрывает квест «Вода».
+#define SCRIPT_REALNAME "f2mwell"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MWELL
+#include "command.h"
+#include "sfall.h"
+#include "f2mcdead.h"
+#include "f2mcamp.h"
+
+procedure start;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure use_p_proc;
+procedure use_skill_on_p_proc;
+
+#define is_old   (obj_pid(self_obj) == PID_WELL_OLD)
+#define is_new   (obj_pid(self_obj) == PID_WELL_NEW)
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   if (is_old) then
+      display_msg(mstr(100));
+   else if (is_new) then
+      display_msg(mstr(102));
+   else
+      display_msg(mstr(101));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   if (is_old) then begin
+      if (get_sfall_global_int(GV_WELL_OLD) == WELL_OLD_PARTS) then
+         display_msg(mstr(111));
+      else
+         display_msg(mstr(110));
+   end else if (is_new) then
+      display_msg(mstr(113));
+   else
+      display_msg(mstr(112));
+end
+
+procedure use_p_proc begin
+   script_overrides;
+   if (is_old) then
+      display_msg(mstr(120));
+   else
+      display_msg(mstr(121));
+end
+
+procedure use_skill_on_p_proc begin
+   variable well;
+   if (not is_old or action_being_used != SKILL_REPAIR) then return;
+   script_overrides;
+   if (get_sfall_global_int(GV_WELL_OLD) != WELL_OLD_PARTS) then begin
+      display_msg(mstr(130));
+      return;
+   end
+   // Чинит тот, кто применил навык: герой или спутник, у которого Ремонт лучше
+   if (has_skill(source_obj, SKILL_REPAIR) < WELL_FIX_SKILL) then begin
+      display_msg(mstr(131));
+      return;
+   end
+   // Починили: час работы, на месте заколоченного колодца открытый
+   gfade_out(1);
+   game_time_advance(ONE_GAME_HOUR);
+   set_sfall_global(GV_WELL_OLD, WELL_OLD_FIXED);
+   well := create_object_sid(PID_WELL_FIXED, self_tile, self_elevation, SCRIPT_F2MWELL);
+   gfade_in(1);
+   display_msg(mstr(132));
+   call camp_water_done(mstr(140));
+   // Себя прячем, а не уничтожаем: после этой процедуры движок еще читает объект.
+   // Спрятанный колодец не мешает пройти, карта лагеря уберет его при следующем входе.
+   set_obj_visibility(self_obj, 1);
+end

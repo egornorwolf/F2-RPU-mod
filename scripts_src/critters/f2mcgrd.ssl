@@ -1,5 +1,6 @@
 // Охранник каравана «Хорошее место». Случайное попадание героя или спутника прощает и ругается;
 // прицельный выстрел или смерть охранника от их руки — весь караван воюет с героем.
+// В лагере у скал охранник Рик — начальник охраны (если погиб в пути, начальник — Сара).
 #define SCRIPT_REALNAME "f2mcgrd"
 #include "define.h"
 #include "f2mod.h"
@@ -20,15 +21,30 @@ procedure talk_p_proc;
 procedure look_at_p_proc;
 procedure description_p_proc;
 procedure destroy_p_proc;
+procedure Node001;
+procedure Node002;
+procedure Node999;
 
 variable warned;
 
 procedure start begin
 end
 
+#define in_camp     (cur_map_index == MAP_F2MOD_CAMP)
+#define is_rick     (obj_pid(self_obj) == PID_GUN_GUARD_MALE)
+// Начальник охраны в лагере: Рик, а если он погиб в пути — Сара
+#define is_chief    (in_camp and (is_rick or cv_is_dead(CV_SLOT_GUARD)))
+
 procedure look_at_p_proc begin
    script_overrides;
-   display_msg(mstr(100));
+   if (not in_camp) then
+      display_msg(mstr(100));
+   else if (is_chief and is_rick) then
+      display_msg(mstr(160));
+   else if (is_chief) then
+      display_msg(mstr(161));
+   else
+      display_msg(mstr(162));
 end
 
 procedure description_p_proc begin
@@ -44,7 +60,7 @@ procedure critter_p_proc begin
    if (not combat_is_initialized) then begin
       if (cv_fight) then return;
    end
-   if (not warned and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
+   if (not warned and not in_camp and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
       warned := 1;
       floater(random(102, 104));
    end
@@ -57,7 +73,42 @@ procedure combat_p_proc begin
 end
 
 procedure talk_p_proc begin
-   floater(random(110, 113));
+   if (get_sfall_global_int(GV_CARAVAN_HOSTILE) or not in_camp) then begin
+      floater(random(110, 113));
+      return;
+   end
+   if (not is_chief) then begin
+      floater(random(170, 172));
+      return;
+   end
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+end
+
+// Начальник охраны лагеря
+procedure Node001 begin
+   if (not is_rick) then
+      Reply(132);
+   else if (cv_is_dead(CV_SLOT_SARA)) then
+      Reply(131);
+   else
+      Reply(130);
+   NOption(133, Node002, 4);
+   NOption(134, Node999, 4);
+   NLowOption(135, Node999);
+end
+
+procedure Node002 begin
+   Reply(140);
+   NOption(141, Node001, 4);
+   NOption(134, Node999, 4);
+   NLowOption(135, Node999);
+end
+
+procedure Node999 begin
 end
 
 

@@ -7,6 +7,7 @@
 #include "command.h"
 #include "sfall.h"
 #include "f2mcdead.h"
+#include "f2mcamp.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -53,7 +54,9 @@ procedure critter_p_proc begin
    if (not greeted and not combat_is_initialized and self_can_see_dude
        and tile_distance_objs(self_obj, dude_obj) < 5 and random(0, 3) == 0) then begin
       greeted := 1;
-      if (is_child) then
+      if (cur_map_index == MAP_F2MOD_CAMP and not is_child) then
+         floater(random(170, 172));
+      else if (is_child) then
          floater(random(140, 142));
       else
          floater(random(143, 145));
@@ -65,8 +68,12 @@ procedure talk_p_proc begin
       floater(random(150, 152));
    else if (is_child) then
       floater(random(120, 123));
-   else
+   else if (cur_map_index != MAP_F2MOD_CAMP) then
       floater(random(110, 114));
+   else if (not camp_has_water) then
+      floater(random(180, 182));
+   else
+      floater(random(183, 188));
 end
 
 // Свой попал случайно (очередью или взрывом) — прощаем; прицельно — бой

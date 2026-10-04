@@ -2,7 +2,7 @@
 // Первый вариант — проводить караван за 300 (три нападения в пути), второй — просто узнать,
 // где место: за 500 крышек или бесплатно (Красноречие 75% или Привлекательность 7).
 // После третьего нападения караван с героем сразу приходит в лагерь у скал (карта лагеря).
-// В лагере у скал (после координат) только прощальная реплика.
+// В лагере у скал Тед — староста: рассказывает про воду (квест «Вода»), дела лагеря и кто за что отвечает.
 #define SCRIPT_REALNAME "f2mcmst"
 #include "define.h"
 #include "f2mod.h"
@@ -11,6 +11,8 @@
 #include "sfall.h"
 #include "define_extra.h"
 #include "f2mcfgt.h"
+#include "f2mcdead.h"
+#include "f2mcamp.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -38,7 +40,12 @@ procedure Node012;
 procedure Node013;
 procedure Node014;
 procedure Node015;
+procedure Node020;
+procedure Node021;
+procedure Node022;
+procedure Node023;
 procedure Node999;
+procedure camp_people;
 procedure give_coords;
 procedure enemies_left;
 
@@ -236,10 +243,11 @@ procedure Node006 begin
 end
 
 procedure Node007 begin
-   if (cur_map_index == MAP_F2MOD_CAMP) then
-      Reply(172);
-   else
-      Reply(170);
+   if (cur_map_index == MAP_F2MOD_CAMP) then begin
+      call Node020;
+      return;
+   end
+   Reply(170);
    NOption(171, Node999, 4);
    NLowOption(132, Node999);
 end
@@ -334,6 +342,58 @@ procedure Node015 begin
    NOption(122, Node004, 4);
    NOption(116, Node005, 4);
    NLowOption(117, Node008);
+end
+
+// Лагерь у скал: Тед — староста
+procedure Node020 begin
+   if (get_sfall_global_int(GV_QUEST_WATER) == 0 and not camp_has_water) then begin
+      set_sfall_global(GV_QUEST_WATER, 1);
+      Reply(220);
+   end else
+      Reply(221);
+   NOption(222, Node021, 4);
+   NOption(223, Node022, 4);
+   NOption(224, Node023, 4);
+   NOption(225, Node999, 4);
+   NLowOption(226, Node022);
+   NLowOption(132, Node999);
+end
+
+// Сколько народу в лагере: Тед, Хэнк, живые охранники и переселенцы
+procedure camp_people begin
+   return 2 + (not cv_is_dead(CV_SLOT_GUARD)) + (not cv_is_dead(CV_SLOT_SARA)) + cv_civs_alive;
+end
+
+procedure Node021 begin
+   // Числа вставляем прямо в реплику: окно сообщений во время диалога не видно
+   if (camp_has_water) then
+      Reply(mstr(230) + " " + mstr(232) + camp_people + mstr(233));
+   else
+      Reply(mstr(231) + " " + mstr(232) + camp_people + mstr(233));
+   NOption(227, Node020, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node022 begin
+   variable left;
+   left := CAMP_WATER_DAYS - camp_days;
+   if (camp_has_water) then
+      Reply(240);
+   else if (left > 0) then begin
+      Reply(mstr(243) + left + mstr(244) + " " + mstr(241));
+   end else
+      Reply(242);
+   NOption(227, Node020, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node023 begin
+   if (cv_is_dead(CV_SLOT_GUARD)) then
+      Reply(251);
+   else
+      Reply(250);
+   NOption(227, Node020, 4);
+   NLowOption(132, Node999);
 end
 
 procedure Node999 begin

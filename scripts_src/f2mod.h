@@ -20,6 +20,8 @@
 #define SCRIPT_F2MESCT      (1563)  // карта дороги с караваном
 #define SCRIPT_F2MCCIV      (1564)  // мирный переселенец каравана
 #define SCRIPT_F2MCBRM      (1565)  // брамин каравана (в бою убегает)
+#define SCRIPT_F2MCFRM      (1566)  // прораб Хэнк
+#define SCRIPT_F2MWELL      (1567)  // колодцы лагеря (старый, починенный, новый)
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU
@@ -39,6 +41,21 @@
 #define GV_ESCORT_WMY       "f2mescwy"  // то же, y
 #define GV_CAMP_CARAVAN     "f2mcmpcv"  // 1 = караван уже поставлен в лагере
 #define GV_CARAVAN_HOSTILE  "f2mcrvhs"  // 1 = караван воюет с героем (прицельный выстрел или убитый охранник)
+
+// Лагерь у скал (М3)
+#define GV_CAMP_LAYOUT      "f2mclayt"  // 1 = лагерь расставлен (палатки, костер, старый колодец, прораб)
+#define GV_CAMP_DAY         "f2mcmpdy"  // когда основан лагерь: game_time / ONE_GAME_HOUR
+#define GV_CAMP_BUILT       "f2mcbult"  // что построил прораб: биты по местам LAY_* (0 колодец, 1-2 огороды, 3-6 палатки)
+#define GV_WELL_OLD         "f2mwlold"  // старый колодец: WELL_OLD_* ниже
+#define GV_QUEST_WATER      "f2mqwatr"  // квест «Вода»: 0 не начат, 1 Тед рассказал, 2 выполнен
+
+#define WELL_OLD_BROKEN     (0)
+#define WELL_OLD_PARTS      (1)     // детали куплены у прораба
+#define WELL_OLD_FIXED      (2)     // герой починил (Ремонт 50%)
+#define WELL_FIX_SKILL      (50)    // Ремонт для починки старого колодца
+#define WELL_PARTS_PRICE    (20)    // детали у прораба
+#define CAMP_WATER_DAYS     (14)    // воды из бочек каравана на 2 недели
+#define WATER_XP            (200)   // квест «Вода»: первый рабочий колодец
 
 // Массив случайных попаданий по каравану: объект -> 1, если по нему попали не прицельно
 #define ARR_CARAVAN_HITS    "f2mhits"
