@@ -2,7 +2,9 @@
    Мод поселения F2mod: главный глобальный скрипт.
    М0: пишет в окно сообщений, что мод загружен.
    М2: подменяет случайную встречу встречей с караваном «Хорошее место»;
-       отмечает случайные (не прицельные) попадания героя и спутников по каравану.
+       отмечает случайные (не прицельные) попадания героя и спутников по каравану;
+       на дороге с караваном держит героя на карте мира у места встречи (движок после
+       load_map на карту без города переносит героя в Арройо).
 */
 
 #include "sfall.h"
@@ -12,18 +14,44 @@
 #include "command.h"
 #include "f2mod.h"
 
-#define F2MOD_VERSION "0.2.1"
+#define F2MOD_VERSION "0.2.2"
 
 procedure start;
 procedure encounter_handler;
 procedure combatdamage_handler;
+procedure keep_escort_wm_pos;
+procedure step_toward(variable a, variable b, variable s);
 
 procedure start begin
    if (game_loaded) then begin
       register_hook_proc(HOOK_ENCOUNTER, encounter_handler);
       register_hook_proc(HOOK_COMBATDAMAGE, combatdamage_handler);
+      set_global_script_repeat(60);
       display_msg("Мод поселения F2mod " + F2MOD_VERSION + " загружен.");
+   end else
+      call keep_escort_wm_pos;
+end
+
+procedure step_toward(variable a, variable b, variable s) begin
+   if (a < b) then begin
+      if (a + s > b) then return b;
+      return a + s;
    end
+   if (a - s < b) then return b;
+   return a - s;
+end
+
+// На картах дороги: точка встречи, сдвинутая к лагерю на ESCORT_WM_STEP за каждый участок
+procedure keep_escort_wm_pos begin
+   variable x, y, s;
+   if (not is_escort_map(cur_map_index)) then return;
+   x := get_sfall_global_int(GV_ESCORT_WMX);
+   if (x <= 0) then return;
+   y := get_sfall_global_int(GV_ESCORT_WMY);
+   s := get_sfall_global_int(GV_ESCORT_STAGE) * ESCORT_WM_STEP;
+   x := step_toward(x, CAMP_WM_X, s);
+   y := step_toward(y, CAMP_WM_Y, s);
+   if (get_world_map_x_pos != x or get_world_map_y_pos != y) then set_world_map_pos(x, y);
 end
 
 // Случайная встреча в пути: после 10 уровня, пока координаты не получены, вместо нее грузим караван.

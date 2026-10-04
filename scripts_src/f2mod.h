@@ -6,7 +6,11 @@
 #define AREA_F2MOD_CAMP     (61)    // [Area 61] в city.txt
 #define MAP_F2MOD_CAMP      (173)   // [Map 173] в maps.txt
 #define MAP_F2MOD_CARAVAN   (174)   // [Map 174] в maps.txt: встреча с караваном
-#define MAP_F2MOD_ESCORT    (175)   // [Map 175] в maps.txt: дорога с караваном (три нападения)
+#define MAP_F2MOD_ESCORT    (175)   // [Map 175] в maps.txt: дорога с караваном, 1-е нападение
+#define MAP_F2MOD_ESCORT2   (176)   // [Map 176]: 2-е нападение (своя карта: движок не перегружает текущую)
+#define MAP_F2MOD_ESCORT3   (177)   // [Map 177]: 3-е нападение
+#define escort_map(stage)   (MAP_F2MOD_ESCORT + (stage) - 1)
+#define is_escort_map(m)    ((m) >= MAP_F2MOD_ESCORT and (m) <= MAP_F2MOD_ESCORT3)
 
 // Номера скриптов = номер строки в scripts.lst
 #define SCRIPT_F2MCAMP      (1559)  // карта лагеря
@@ -25,6 +29,8 @@
 #define GV_ESCORT_STAGE     "f2mescst"  // нападение в пути: 1 налетчики, 2 скорпионы, 3 когти смерти
 #define GV_ESCORT_MOVING    "f2mescmv"  // 1 = караван сам переходит на следующую карту
 #define GV_ESCORT_LOSSES    "f2mesclo"  // 1 = в пути погибли охранник и брамин
+#define GV_ESCORT_WMX       "f2mescwx"  // точка встречи на карте мира (x), от нее идет караван
+#define GV_ESCORT_WMY       "f2mescwy"  // то же, y
 #define GV_CAMP_CARAVAN     "f2mcmpcv"  // 1 = караван уже поставлен в лагере
 #define GV_CARAVAN_HOSTILE  "f2mcrvhs"  // 1 = караван воюет с героем (прицельный выстрел или убитый охранник)
 
@@ -46,6 +52,9 @@
 #define CARAVAN_ESCORT_PAY  (300)   // плата за сопровождение
 #define CARAVAN_XP_ESCORT   (500)   // опыт за сопровождение
 #define ESCORT_STAGES       (3)
+#define ESCORT_WM_STEP      (25)    // на сколько точек карты мира караван продвигается к лагерю за участок
+#define CAMP_WM_X           (800)   // лагерь на карте мира (city.txt, Area 61)
+#define CAMP_WM_Y           (720)
 
 // Отладочные сообщения в окне игры (на время тестов)
 #define F2MOD_DEBUG

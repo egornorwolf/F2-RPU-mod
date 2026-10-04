@@ -30,3 +30,5 @@ def make(src, dst, script):
 make("desert1", "f2mcamp", "f2mcamp.int")
 make("desert2", "f2mcrvn", "f2mcrvn.int")
 make("desert3", "f2mesct", "f2mesct.int")
+make("desert2", "f2mesc2", "f2mesct.int")  # 2-й участок дороги
+make("desert1", "f2mesc3", "f2mesct.int")  # 3-й участок дороги

@@ -25,7 +25,7 @@
 
 ## Установка
 
-1. Скопировать `f2mod.dat` в папку `mods` игры (у Эгора `D:\Projects\F2mod\RPU\mods`).
+1. Скопировать `f2mod.dat` в папку `mods` игры (у Егора `D:\Projects\F2mod\RPU\mods`).
 2. Добавить строку `f2mod.dat` в конец `mods\mods_order.txt`.
 
 ## Тестовые клавиши (только для проверки)
