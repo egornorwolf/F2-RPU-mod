@@ -1,0 +1,48 @@
+// Охранник каравана «Хорошее место»: стоит у каравана, нападает, только если тронули его или караван.
+#define SCRIPT_REALNAME "f2mcgrd"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MCGRD
+#include "command.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure damage_p_proc;
+procedure pickup_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+
+variable warned;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   if (not warned and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
+      warned := 1;
+      floater(random(102, 104));
+   end
+end
+
+procedure talk_p_proc begin
+   floater(random(110, 113));
+end
+
+procedure damage_p_proc begin
+   attack(source_obj);
+end
+
+procedure pickup_p_proc begin
+   attack(source_obj);
+end

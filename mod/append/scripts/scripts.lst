@@ -1,2 +1,5 @@
 
 f2mcamp.int     ; F2mod settlement map                          # local_vars=0
+f2mcrvn.int     ; F2mod caravan encounter map                   # local_vars=0
+f2mcmst.int     ; F2mod caravan master Ted Burns                # local_vars=0
+f2mcgrd.int     ; F2mod caravan guard                           # local_vars=0

@@ -1,0 +1,128 @@
+// Караванщик Тед Бёрнс: встреча «Хорошее место». Даёт координаты лагеря бесплатно
+// (Красноречие 75% или Харизма 7) или за 500 крышек.
+#define SCRIPT_REALNAME "f2mcmst"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MCMST
+#include "command.h"
+#include "sfall.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure talk_p_proc;
+procedure damage_p_proc;
+procedure pickup_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+
+procedure Node001;
+procedure Node002;
+procedure Node003;
+procedure Node004;
+procedure Node005;
+procedure Node006;
+procedure Node007;
+procedure Node999;
+procedure give_coords;
+
+variable said_hello;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   if (not said_hello and self_can_see_dude) then begin
+      said_hello := 1;
+      floater(random(102, 104));
+   end
+end
+
+procedure damage_p_proc begin
+   attack(source_obj);
+end
+
+procedure pickup_p_proc begin
+   attack(source_obj);
+end
+
+procedure talk_p_proc begin
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE) then
+         call Node007;
+      else
+         call Node001;
+   gSay_End;
+   end_dialogue;
+end
+
+procedure give_coords begin
+   set_sfall_global(GV_CARAVAN, CARAVAN_DONE);
+   mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_KNOWN);
+end
+
+procedure Node001 begin
+   Reply(110);
+   NOption(111, Node002, 4);
+   NOption(112, Node005, 4);
+   NLowOption(113, Node002);
+end
+
+procedure Node002 begin
+   Reply(120);
+   if (has_skill(dude_obj, SKILL_SPEECH) >= 75 or dude_charisma >= 7) then
+      GOption(121, Node003, 4);
+   NOption(122, Node004, 4);
+   NOption(123, Node005, 4);
+   NLowOption(124, Node004);
+end
+
+procedure Node003 begin
+   call give_coords;
+   Reply(130);
+   NOption(131, Node999, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node004 begin
+   Reply(140);
+   if (dude_caps >= CARAVAN_PRICE) then
+      NOption(141, Node006, 4);
+   NOption(142, Node005, 4);
+   NLowOption(143, Node005);
+end
+
+procedure Node005 begin
+   set_sfall_global(GV_CARAVAN_REFUSED, get_sfall_global_int(GV_CARAVAN_REFUSED) + 1);
+   Reply(150);
+   NOption(151, Node999, 4);
+   NLowOption(152, Node999);
+end
+
+procedure Node006 begin
+   item_caps_adjust(dude_obj, -CARAVAN_PRICE);
+   item_caps_adjust(self_obj, CARAVAN_PRICE);
+   call give_coords;
+   Reply(160);
+   NOption(161, Node999, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node007 begin
+   Reply(170);
+   NOption(171, Node999, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node999 begin
+end
