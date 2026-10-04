@@ -18,3 +18,12 @@
 - План реализации: [docs/implementation-plan.md](docs/implementation-plan.md)
 - Экономика: [docs/economy.md](docs/economy.md)
 - Все квесты: [docs/quests.md](docs/quests.md)
+
+## Сборка
+
+`tools/build.sh` компилирует скрипты (`scripts_src/`) компилятором sfall и упаковывает всё в `build/f2mod.dat`. Нужны git, cmake, gcc с 32-битной поддержкой (`gcc-multilib`), iconv и python3. Компилятор и заголовки sfall скачиваются в `.deps/` при первой сборке.
+
+## Установка
+
+1. Скопировать `f2mod.dat` в папку `mods` игры (у Эгора `D:\Projects\F2mod\RPU\mods`).
+2. Добавить строку `f2mod.dat` в конец `mods\mods_order.txt`.

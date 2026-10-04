@@ -1,0 +1,16 @@
+/*
+   Мод поселения F2mod: главный глобальный скрипт.
+   М0: при запуске новой игры и при загрузке сохранения пишет в окно сообщений, что мод загружен.
+*/
+
+#include "sfall.h"
+
+#define F2MOD_VERSION "0.0.1"
+
+procedure start;
+
+procedure start begin
+   if (game_loaded) then begin
+      display_msg("Мод поселения F2mod " + F2MOD_VERSION + " загружен.");
+   end
+end
