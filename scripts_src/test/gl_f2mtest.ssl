@@ -1,7 +1,7 @@
 // Тестовые клавиши F2mod. Только для проверки мода, в релиз не входит.
 // Ctrl+1..7 — СПЕЦИАЛ +1, Ctrl+Shift+1..7 — СПЕЦИАЛ -1,
-// Ctrl+K — +10 очков навыков, Ctrl+O — +1 перк, Ctrl+U — +1 уровень,
-// Ctrl+H — лечение, Ctrl+I — сундук с вещами, Ctrl+M — +5000 крышек, Ctrl+G — справка.
+// Ctrl+K — +10 очков навыков, Ctrl+N — все навыки 300%, Ctrl+O — +1 перк, Ctrl+U — +1 уровень,
+// Ctrl+H — лечение, Ctrl+I — сундук с бронёй, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
 #include "sfall.h"
 #include "dik.h"
 #define SCRIPT_REALNAME "gl_f2mtest"
@@ -13,8 +13,16 @@ procedure keypress_handler;
 procedure show_help;
 procedure change_special(variable stat, variable delta);
 procedure spawn_chest;
+procedure skills_max;
 procedure add_items(variable box, variable pid, variable qty);
 
+// PID из прото master.dat и RPU (proto/items), сверены 2026-10-04
+#define ARMOR_PIDS [1, 2, 3, 17, 74, 113, 232, 239, 240, 265, 348, 349, 379, 380, 381, 524, 554]
+#define GUN_PIDS [8, 9, 10, 11, 12, 13, 15, 16, 18, 22, 23, 24, 28, 94, 116, 118, 120, 122, 143, 160, 161, 162, \
+   233, 235, 241, 242, 268, 283, 287, 296, 299, 300, 313, 332, 350, 351, 352, 353, 354, 355, 385, 387, 388, \
+   389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407, 500, 575, \
+   25, 26, 27]
+#define AMMO_PIDS [14, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 95, 111, 121, 163, 357, 358, 359, 360, 361, 362, 363, 382]
 #define STAT_NAMES ["Сила", "Восприятие", "Выносливость", "Харизма", "Интеллект", "Ловкость", "Удача"]
 
 procedure start begin
@@ -30,7 +38,7 @@ procedure keypress_handler begin
    key := get_sfall_arg;
    if (not(key_pressed(DIK_LCONTROL) or key_pressed(DIK_RCONTROL))) then return;
    if (key != DIK_1 and key != DIK_2 and key != DIK_3 and key != DIK_4 and key != DIK_5
-       and key != DIK_6 and key != DIK_7 and key != DIK_K and key != DIK_O and key != DIK_U
+       and key != DIK_6 and key != DIK_7 and key != DIK_K and key != DIK_N and key != DIK_O and key != DIK_U
        and key != DIK_H and key != DIK_I and key != DIK_M and key != DIK_G) then return;
    // Глушим букву, чтобы игра не открыла инвентарь или настройки
    set_sfall_return(DIK_UNLABELED);
@@ -48,6 +56,8 @@ procedure keypress_handler begin
    end else if (key == DIK_K) then begin
       set_available_skill_points(get_available_skill_points + 10);
       display_msg("F2mod: +10 очков навыков (раздать в окне персонажа, C).");
+   end else if (key == DIK_N) then begin
+      call skills_max;
    end else if (key == DIK_O) then begin
       set_perk_owed(get_perk_owed + 1);
       display_msg("F2mod: +1 перк (выбрать в окне персонажа, C).");
@@ -86,41 +96,33 @@ procedure add_items(variable box, variable pid, variable qty) begin
 end
 
 procedure spawn_chest begin
-   variable box;
+   variable box, pid;
    box := create_object(PID_CHEST, tile_num_in_direction(dude_tile, dude_cur_rot, 1), dude_elevation);
-   // Броня
-   call add_items(box, PID_LEATHER_ARMOR, 1);
-   call add_items(box, PID_METAL_ARMOR, 1);
-   call add_items(box, PID_COMBAT_ARMOR, 1);
-   call add_items(box, PID_POWERED_ARMOR, 1);
-   // Оружие и патроны
-   call add_items(box, PID_ASSAULT_RIFLE, 1);
-   call add_items(box, PID_COMBAT_SHOTGUN, 1);
-   call add_items(box, PID_LASER_RIFLE, 1);
-   call add_items(box, PID_PLASMA_RIFLE, 1);
-   call add_items(box, PID_ROCKET_LAUNCHER, 1);
-   call add_items(box, PID_5MM_JHP, 10);
-   call add_items(box, PID_10MM_JHP, 10);
-   call add_items(box, PID_223_FMJ, 10);
-   call add_items(box, PID_SHOTGUN_SHELLS, 10);
-   call add_items(box, PID_SMALL_ENERGY_CELL, 10);
-   call add_items(box, PID_MICRO_FUSION_CELL, 10);
-   call add_items(box, PID_EXPLOSIVE_ROCKET, 10);
-   call add_items(box, PID_DYNAMITE, 5);
-   // Лечение и инструменты
-   call add_items(box, PID_STIMPAK, 20);
-   call add_items(box, PID_SUPER_STIMPAK, 10);
-   call add_items(box, PID_FIRST_AID_KIT, 3);
-   call add_items(box, PID_MULTI_TOOL, 1);
-   call add_items(box, PID_SUPER_TOOL_KIT, 1);
-   call add_items(box, PID_LOCKPICKS, 1);
-   call add_items(box, PID_GEIGER_COUNTER, 1);
-   call add_items(box, PID_MOTION_SENSOR, 1);
-   display_msg("F2mod: рядом стоит сундук с вещами.");
+   // Вся броня, которую может носить герой
+   foreach (pid in ARMOR_PIDS) call add_items(box, pid, 1);
+   // Всё стрелковое и энергетическое оружие (без оружия существ и турелей)
+   foreach (pid in GUN_PIDS) call add_items(box, pid, 1);
+   // Все патроны по 10 пачек
+   foreach (pid in AMMO_PIDS) call add_items(box, pid, 10);
+   call add_items(box, PID_STIMPAK, 30);
+   call add_items(box, PID_SUPER_STIMPAK, 20);
+   display_msg("F2mod: рядом стоит сундук с бронёй, оружием, патронами и стимпаками.");
+end
+
+procedure skills_max begin
+   variable s, pts;
+   for (s := 0; s < 18; s++) begin
+      pts := get_critter_skill_points(dude_obj, s);
+      if (has_skill(dude_obj, s) < 300) then
+         set_critter_skill_points(dude_obj, s, pts + 300 - has_skill(dude_obj, s));
+      while (has_skill(dude_obj, s) > 300 and get_critter_skill_points(dude_obj, s) > 0) do
+         set_critter_skill_points(dude_obj, s, get_critter_skill_points(dude_obj, s) - 1);
+   end
+   display_msg("F2mod: все навыки 300%.");
 end
 
 procedure show_help begin
    display_msg("Ctrl+1..7: СПЕЦИАЛ +1 (С,В,Вн,Х,И,Л,У). Ctrl+Shift+1..7: -1.");
-   display_msg("Ctrl+K: +10 навыков. Ctrl+O: +1 перк. Ctrl+U: +1 уровень.");
+   display_msg("Ctrl+K: +10 навыков. Ctrl+N: все навыки 300%. Ctrl+O: +1 перк. Ctrl+U: +1 уровень.");
    display_msg("Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек.");
 end
