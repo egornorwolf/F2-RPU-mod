@@ -14,6 +14,7 @@
 #define SCRIPT_F2MCMST      (1561)  // караванщик
 #define SCRIPT_F2MCGRD      (1562)  // охранник каравана
 #define SCRIPT_F2MESCT      (1563)  // карта дороги с караваном
+#define SCRIPT_F2MCCIV      (1564)  // мирный переселенец каравана
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU

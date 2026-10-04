@@ -4,10 +4,11 @@
 #define SCRIPT_REALNAME "f2mcamp"
 #include "define.h"
 #include "updatmap.h"
-#include "f2mod.h"
 #include "command.h"
 #include "scenepid.h"
 #include "sfall.h"
+#include "f2mod.h"
+#include "f2mcv.h"
 
 // Где ставить машину (та же точка, что в desert1, с которой взят пол карты)
 #define CAR_HEX   (19096)
@@ -16,8 +17,6 @@ procedure start;
 procedure map_enter_p_proc;
 procedure map_update_p_proc;
 procedure map_exit_p_proc;
-procedure put_critter(variable pid, variable sid, variable tile);
-procedure arm(variable who, variable weapon, variable ammo);
 
 #define START_HEX   (20100)
 variable spawned;
@@ -25,20 +24,7 @@ variable spawned;
 procedure start begin
 end
 
-procedure put_critter(variable pid, variable sid, variable tile) begin
-   variable obj;
-   obj := create_object_sid(pid, tile, 0, sid);
-   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_CARAVAN);
-   return obj;
-end
 
-procedure arm(variable who, variable weapon, variable ammo) begin
-   variable item;
-   item := create_object(weapon, 0, 0);
-   add_obj_to_inven(who, item);
-   wield_obj_critter(who, item);
-   if (ammo) then add_mult_objs_to_inven(who, create_object(ammo, 0, 0), 2);
-end
 
 procedure map_enter_p_proc begin
    variable obj, base;
@@ -51,16 +37,22 @@ procedure map_enter_p_proc begin
    spawned := 1;
    set_sfall_global(GV_CAMP_CARAVAN, 1);
    base := tile_num_in_direction(START_HEX, 1, 10);
-   obj := put_critter(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, base);
+   obj := cv_put(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, base);
    critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
-   obj := put_critter(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, tile_num_in_direction(base, 0, 3));
-   call arm(obj, PID_10MM_SMG, PID_10MM_JHP);
+   obj := cv_put(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, tile_num_in_direction(base, 0, 3));
+   call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
    if (not get_sfall_global_int(GV_ESCORT_LOSSES)) then begin
-      obj := put_critter(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, tile_num_in_direction(base, 2, 3));
-      call arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
-      call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, tile_num_in_direction(base, 2, 6));
+      obj := cv_put(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, tile_num_in_direction(base, 2, 3));
+      call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
+      call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, tile_num_in_direction(base, 2, 6));
    end
-   call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, tile_num_in_direction(base, 1, 6));
+   call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, tile_num_in_direction(base, 1, 6));
+   call cv_wagons(tile_num_in_direction(base, 1, 12));
+   // После сопровождения из десяти мирных дошли восемь
+   if (get_sfall_global_int(GV_ESCORT_LOSSES)) then
+      call cv_civilians(tile_num_in_direction(base, 1, 12), 2, 8, 0);
+   else
+      call cv_civilians(tile_num_in_direction(base, 1, 12), 0, 10, 0);
 end
 
 procedure map_update_p_proc begin

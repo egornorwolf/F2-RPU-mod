@@ -1,5 +1,5 @@
 // Дорога с караваном «Хорошее место»: три участка, на каждом свое нападение.
-// 1 — налетчики, 2 — большие радскорпионы, 3 — два когтя смерти (охранник и брамин гибнут сразу).
+// 1 — налетчики, 2 — большие радскорпионы, 3 — два когтя смерти (охранник, брамин и двое мирных гибнут сразу).
 #define SCRIPT_REALNAME "f2mesct"
 #include "define.h"
 #include "updatmap.h"
@@ -8,6 +8,7 @@
 #include "command.h"
 #include "scenepid.h"
 #include "sfall.h"
+#include "f2mcv.h"
 
 #define CAR_HEX     (19096)
 #define START_HEX   (20100)   // точка входа на карту (как в desert3)
@@ -16,36 +17,26 @@ procedure start;
 procedure map_enter_p_proc;
 procedure map_update_p_proc;
 procedure map_exit_p_proc;
-procedure put_critter(variable pid, variable sid, variable dir, variable dist);
+procedure at(variable dir, variable dist);
 procedure put_enemy(variable pid, variable sid, variable dir, variable dist, variable weapon, variable ammo);
-procedure arm(variable who, variable weapon, variable ammo);
 
 variable spawned;
+
+procedure at(variable dir, variable dist) begin
+   return tile_num_in_direction(START_HEX, dir, dist);
+end
 
 procedure start begin
 end
 
-procedure put_critter(variable pid, variable sid, variable dir, variable dist) begin
-   variable obj;
-   obj := create_object_sid(pid, tile_num_in_direction(START_HEX, dir, dist), 0, sid);
-   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_CARAVAN);
-   return obj;
-end
 
 procedure put_enemy(variable pid, variable sid, variable dir, variable dist, variable weapon, variable ammo) begin
    variable obj;
    obj := create_object_sid(pid, tile_num_in_direction(START_HEX, dir, dist), 0, sid);
-   if (weapon) then call arm(obj, weapon, ammo);
+   if (weapon) then call cv_arm(obj, weapon, ammo);
    return obj;
 end
 
-procedure arm(variable who, variable weapon, variable ammo) begin
-   variable item;
-   item := create_object(weapon, 0, 0);
-   add_obj_to_inven(who, item);
-   wield_obj_critter(who, item);
-   if (ammo) then add_mult_objs_to_inven(who, create_object(ammo, 0, 0), 2);
-end
 
 procedure map_enter_p_proc begin
    variable obj, stage;
@@ -58,16 +49,21 @@ procedure map_enter_p_proc begin
    stage := get_sfall_global_int(GV_ESCORT_STAGE);
 
    // Караван
-   obj := put_critter(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, 1, 4);
+   obj := cv_put(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, at(1, 4));
    critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
-   obj := put_critter(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, 0, 5);
-   call arm(obj, PID_10MM_SMG, PID_10MM_JHP);
+   obj := cv_put(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, at(0, 5));
+   call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
    if (stage < 3) then begin
-      obj := put_critter(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, 2, 5);
-      call arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
-      call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, 2, 7);
+      obj := cv_put(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, at(2, 5));
+      call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
+      call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, at(2, 7));
    end
-   call put_critter(PID_BRAHMIN, SCRIPT_ECBRAHMN, 1, 7);
+   call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, at(1, 7));
+   call cv_wagons(at(2, 12));
+   if (stage < 3) then
+      call cv_civilians(at(2, 12), 0, 10, 0);
+   else
+      call cv_civilians(at(2, 12), 0, 10, 2);   // двое мирных погибли первыми
 
    // Нападение
    if (stage == 1) then begin
@@ -85,9 +81,9 @@ procedure map_enter_p_proc begin
       display_msg(mstr(101));
    end else begin
       // Когти смерти уже успели убить охранника и брамина
-      obj := put_critter(PID_GUN_GUARD_FEMALE, -1, 2, 5);
+      obj := cv_put(PID_GUN_GUARD_FEMALE, -1, at(2, 5));
       kill_critter(obj, ANIM_fall_back_blood_sf);
-      obj := put_critter(PID_BRAHMIN, -1, 2, 7);
+      obj := cv_put(PID_BRAHMIN, -1, at(2, 7));
       kill_critter(obj, ANIM_fall_back_blood_sf);
       call put_enemy(PID_TOUGH_DEATHCLAW, SCRIPT_ECDTHCLW, 5, 9, PID_DEATHCLAW_CLAW_1, 0);
       call put_enemy(PID_TOUGH_DEATHCLAW, SCRIPT_ECDTHCLW, 0, 10, PID_DEATHCLAW_CLAW_1, 0);

@@ -1,0 +1,92 @@
+// Мирный переселенец каравана «Хорошее место»: мужчина, женщина или ребенок. Оружия нет, в бою убегает.
+// Случайное попадание героя или спутника прощает; прицельный выстрел или смерть от их руки — караван воюет.
+#define SCRIPT_REALNAME "f2mcciv"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MCCIV
+#include "command.h"
+#include "sfall.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure damage_p_proc;
+procedure accidental_hit;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+procedure is_child;
+
+variable greeted;
+
+procedure start begin
+end
+
+procedure is_child begin
+   return (obj_pid(self_obj) == PID_CHILD_MALE or obj_pid(self_obj) == PID_CHILD_FEMALE);
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   if (is_child) then
+      display_msg(mstr(102));
+   else if (get_critter_stat(self_obj, STAT_gender) == GENDER_FEMALE) then
+      display_msg(mstr(101));
+   else
+      display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   if (is_child) then
+      display_msg(mstr(104));
+   else
+      display_msg(mstr(103));
+end
+
+procedure critter_p_proc begin
+   if (not greeted and not combat_is_initialized and self_can_see_dude
+       and tile_distance_objs(self_obj, dude_obj) < 5 and random(0, 3) == 0) then begin
+      greeted := 1;
+      if (is_child) then
+         floater(random(140, 142));
+      else
+         floater(random(143, 145));
+   end
+end
+
+procedure talk_p_proc begin
+   if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then
+      floater(random(150, 152));
+   else if (is_child) then
+      floater(random(120, 123));
+   else
+      floater(random(110, 114));
+end
+
+// Свой попал случайно (очередью или взрывом) — прощаем; прицельно — бой
+procedure accidental_hit begin
+   variable hits, r := 0;
+   hits := load_array(ARR_CARAVAN_HITS);
+   if (hits) then begin
+      r := hits[self_obj];
+      hits[self_obj] := 0;
+   end
+   return r;
+end
+
+procedure damage_p_proc begin
+   if (is_dude_side(source_obj)) then begin
+      if (accidental_hit) then
+         floater(random(130, 132));
+      else begin
+         set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+         floater(random(150, 152));
+      end
+   end
+end
+
+// Погиб от руки героя или спутника, пусть даже случайно: караван воюет
+procedure destroy_p_proc begin
+   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+end
