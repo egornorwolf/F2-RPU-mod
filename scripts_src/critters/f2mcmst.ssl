@@ -76,13 +76,15 @@ procedure destroy_p_proc begin
    end
 end
 
-// Живые враги на карте: все, кто не из команды героя и не из каравана
+// Живые враги на карте: только те, кого ставит дорога (налетчики, скорпионы, когти смерти).
+// По команде считать нельзя: брамины из RPU сами переходят в свою команду.
 procedure enemies_left begin
-   variable c, n := 0;
+   variable c, pid, n := 0;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (c != dude_obj and not is_critter_dead(c)) then begin
-         if (has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) != TEAM_PLAYER
-             and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) != TEAM_CARAVAN) then
+      if (not is_critter_dead(c)) then begin
+         pid := obj_pid(c);
+         if (pid == PID_RAIDER_MALE or pid == PID_RAIDER_FEMALE
+             or pid == PID_LARGE_RADSCORPION or pid == PID_TOUGH_DEATHCLAW) then
             n += 1;
       end
    end
