@@ -15,5 +15,6 @@
 - Охрана: численность, броня, оружие: [docs/guards.md](docs/guards.md)
 - Фразы жителей: [docs/resident-phrases.md](docs/resident-phrases.md)
 - Нашествие роботов и свои роботы: [docs/robots.md](docs/robots.md)
+- План реализации: [docs/implementation-plan.md](docs/implementation-plan.md)
 - Экономика: [docs/economy.md](docs/economy.md)
 - Все квесты: [docs/quests.md](docs/quests.md)
