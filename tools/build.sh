@@ -73,6 +73,7 @@ done
 
 # Номера скриптов в f2mod.h должны совпадать со строками scripts.lst
 python3 "$ROOT/tools/check_ids.py" "$ROOT/scripts_src/f2mod.h" "$OUT/data/scripts/scripts.lst"
+python3 "$ROOT/tools/check_msgs.py" "$ROOT"
 
 # Карты
 mkdir -p "$OUT/data/maps"

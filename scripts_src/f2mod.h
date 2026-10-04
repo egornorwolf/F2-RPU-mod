@@ -23,6 +23,7 @@
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU
 #define SCRIPT_ECDTHCLW     (791)   // коготь смерти случайной встречи из RPU
+#define SCRIPT_ECGECKO      (615)   // геккон случайной встречи из RPU
 
 // Глобальные переменные sfall (имя ровно 8 символов, хранятся в сохранении)
 #define GV_CARAVAN          "f2mcrvst"  // встреча «Хорошее место»: CARAVAN_* ниже
@@ -52,6 +53,13 @@
 #define CARAVAN_ESCORT_PAY  (300)   // плата за сопровождение
 #define CARAVAN_XP_ESCORT   (500)   // опыт за сопровождение
 #define ESCORT_STAGES       (3)
+#define ESCORT_LEVEL_STEP   (8)     // +1 враг на участке за каждые 8 уровней героя сверх 10-го
+#define ESCORT_EXTRA_MAX    (2)     // но не больше двух лишних
+
+// Враги на дороге: только те, кого ставит карта дороги. По команде считать нельзя:
+// скрипты RPU меняют команды (брамины уходят в свою).
+#define is_escort_enemy(pid) ((pid) == PID_RAIDER_MALE or (pid) == PID_RAIDER_FEMALE \
+                              or (pid) == PID_LARGE_RADSCORPION or (pid) == PID_FIRE_GECKO)
 #define ESCORT_WM_STEP      (25)    // на сколько точек карты мира караван продвигается к лагерю за участок
 #define CAMP_WM_X           (800)   // лагерь на карте мира (city.txt, Area 61)
 #define CAMP_WM_Y           (720)

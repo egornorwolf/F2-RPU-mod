@@ -6,9 +6,12 @@
 #define NAME                    SCRIPT_F2MCGRD
 #include "command.h"
 #include "sfall.h"
+#include "define_extra.h"
+#include "f2mcfgt.h"
 
 procedure start;
 procedure critter_p_proc;
+procedure combat_p_proc;
 procedure damage_p_proc;
 procedure accidental_hit;
 procedure pickup_p_proc;
@@ -37,10 +40,19 @@ procedure critter_p_proc begin
       attack(dude_obj);
       return;
    end
+   if (not combat_is_initialized) then begin
+      if (cv_fight) then return;
+   end
    if (not warned and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
       warned := 1;
       floater(random(102, 104));
    end
+end
+
+// На дороге охрана и караванщик стреляют по налетчикам и зверям сами
+procedure combat_p_proc begin
+   if (fixed_param == COMBAT_SUBTYPE_TURN or fixed_param == COMBAT_SUBTYPE_NONCOM_TURN) then
+      call cv_fight;
 end
 
 procedure talk_p_proc begin

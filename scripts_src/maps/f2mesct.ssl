@@ -1,5 +1,7 @@
 // Дорога с караваном «Хорошее место»: три участка (карты 175–177 с этим скриптом), на каждом свое нападение.
-// 1 — налетчики, 2 — большие радскорпионы, 3 — два когтя смерти (охранник, брамин и двое мирных гибнут сразу).
+// 1 — налетчики, 2 — большие радскорпионы, 3 — огненные гекконы (охранница, брамин и двое мирных гибнут сразу).
+// Число врагов рассчитано на 10-й уровень: +1 за каждые 8 уровней сверх, не больше +2.
+// Враги стоят близко, а охрана нападает сама (f2mcfgt.h), поэтому бой начинается сразу.
 #define SCRIPT_REALNAME "f2mesct"
 #include "define.h"
 #include "updatmap.h"
@@ -32,14 +34,14 @@ end
 
 procedure put_enemy(variable pid, variable sid, variable dir, variable dist, variable weapon, variable ammo) begin
    variable obj;
-   obj := create_object_sid(pid, tile_num_in_direction(START_HEX, dir, dist), 0, sid);
+   obj := create_object_sid(pid, cv_free_tile(at(dir, dist)), 0, sid);
    if (weapon) then call cv_arm(obj, weapon, ammo);
    return obj;
 end
 
 
 procedure map_enter_p_proc begin
-   variable obj, stage;
+   variable obj, stage, extra;
    set_map_exit_tiles(0, 0);
    Lighting;
    Check_Create_Car(CAR_HEX, 0)
@@ -51,6 +53,7 @@ procedure map_enter_p_proc begin
    // Караван
    obj := cv_put(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, at(1, 4));
    critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
+   call cv_arm(obj, PID_10MM_PISTOL, PID_10MM_JHP);   // в дороге Тед отстреливается сам
    obj := cv_put(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, at(0, 5));
    call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
    if (stage < 3) then begin
@@ -66,27 +69,41 @@ procedure map_enter_p_proc begin
       call cv_civilians(at(2, 12), 0, 10, 2);   // двое мирных погибли первыми
 
    // Нападение
+   extra := (get_pc_stat(PCSTAT_level) - CARAVAN_MIN_LEVEL) / ESCORT_LEVEL_STEP;
+   if (extra < 0) then extra := 0;
+   if (extra > ESCORT_EXTRA_MAX) then extra := ESCORT_EXTRA_MAX;
    if (stage == 1) then begin
-      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 5, 13, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
-      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 0, 14, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
-      call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 5, 15, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
-      call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 0, 12, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 5, 9, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 0, 10, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
+      call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 5, 11, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 0, 9, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      if (extra > 0) then call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 4, 10, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      if (extra > 1) then call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 1, 10, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
       display_msg(mstr(100));
    end else if (stage == 2) then begin
-      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 5, 12, 0, 0);
-      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 0, 12, 0, 0);
-      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 4, 13, 0, 0);
-      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 1, 13, 0, 0);
-      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 5, 15, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 5, 9, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 0, 9, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 4, 10, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 1, 10, 0, 0);
+      call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 5, 11, 0, 0);
+      if (extra > 0) then call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 0, 11, 0, 0);
+      if (extra > 1) then call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 4, 12, 0, 0);
       display_msg(mstr(101));
    end else begin
-      // Когти смерти уже успели убить охранника и брамина
+      // Гекконы уже успели убить охранницу и брамина. Ее вещи остаются при ней.
       obj := cv_put(PID_GUN_GUARD_FEMALE, -1, at(2, 5));
+      add_obj_to_inven(obj, create_object(PID_HUNTING_RIFLE, 0, 0));
+      add_mult_objs_to_inven(obj, create_object(PID_223_FMJ, 0, 0), 2);
+      add_mult_objs_to_inven(obj, create_object(PID_STIMPAK, 0, 0), 2);
+      item_caps_adjust(obj, random(20, 50));
       kill_critter(obj, ANIM_fall_back_blood_sf);
       obj := cv_put(PID_BRAHMIN, -1, at(2, 7));
       kill_critter(obj, ANIM_fall_back_blood_sf);
-      call put_enemy(PID_TOUGH_DEATHCLAW, SCRIPT_ECDTHCLW, 5, 9, PID_DEATHCLAW_CLAW_1, 0);
-      call put_enemy(PID_TOUGH_DEATHCLAW, SCRIPT_ECDTHCLW, 0, 10, PID_DEATHCLAW_CLAW_1, 0);
+      call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 5, 8, PID_FLAME_BREATH, 0);
+      call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 0, 9, PID_FLAME_BREATH, 0);
+      call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 4, 9, PID_FLAME_BREATH, 0);
+      if (extra > 0) then call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 1, 9, PID_FLAME_BREATH, 0);
+      if (extra > 1) then call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 5, 10, PID_FLAME_BREATH, 0);
       display_msg(mstr(102));
    end
 end

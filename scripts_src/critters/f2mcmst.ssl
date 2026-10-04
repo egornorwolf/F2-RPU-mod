@@ -1,6 +1,7 @@
 // Караванщик Тед Бернс: встреча «Хорошее место».
 // Первый вариант — проводить караван за 300 (три нападения в пути), второй — просто узнать,
 // где место: за 500 крышек или бесплатно (Красноречие 75% или Привлекательность 7).
+// После третьего нападения караван с героем сразу приходит в лагерь у скал (карта лагеря).
 // В лагере у скал (после координат) только прощальная реплика.
 #define SCRIPT_REALNAME "f2mcmst"
 #include "define.h"
@@ -8,9 +9,12 @@
 #define NAME                    SCRIPT_F2MCMST
 #include "command.h"
 #include "sfall.h"
+#include "define_extra.h"
+#include "f2mcfgt.h"
 
 procedure start;
 procedure critter_p_proc;
+procedure combat_p_proc;
 procedure talk_p_proc;
 procedure damage_p_proc;
 procedure accidental_hit;
@@ -31,12 +35,14 @@ procedure Node009;
 procedure Node010;
 procedure Node011;
 procedure Node012;
+procedure Node013;
 procedure Node999;
 procedure give_coords;
 procedure enemies_left;
 
 variable said_hello;
 variable go_next;
+variable go_camp;
 
 // Бесплатно: Красноречие от 75% или Привлекательность от 7
 #define free_coords   ((has_skill(dude_obj, SKILL_SPEECH) >= 75) or (get_critter_stat(dude_obj, STAT_ch) >= 7))
@@ -59,6 +65,9 @@ procedure critter_p_proc begin
    if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then begin
       attack(dude_obj);
       return;
+   end
+   if (not combat_is_initialized) then begin
+      if (cv_fight) then return;
    end
    if (not said_hello and self_can_see_dude and not on_escort) then begin
       said_hello := 1;
@@ -102,19 +111,19 @@ procedure destroy_p_proc begin
    end
 end
 
-// Живые враги на карте: только те, кого ставит дорога (налетчики, скорпионы, когти смерти).
-// По команде считать нельзя: брамины из RPU сами переходят в свою команду.
+// Живые враги на дороге (список в f2mod.h: is_escort_enemy)
 procedure enemies_left begin
-   variable c, pid, n := 0;
+   variable c, n := 0;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (not is_critter_dead(c)) then begin
-         pid := obj_pid(c);
-         if (pid == PID_RAIDER_MALE or pid == PID_RAIDER_FEMALE
-             or pid == PID_LARGE_RADSCORPION or pid == PID_TOUGH_DEATHCLAW) then
-            n += 1;
-      end
+      if (not is_critter_dead(c) and is_escort_enemy(obj_pid(c))) then n += 1;
    end
    return n;
+end
+
+// На дороге охрана и караванщик стреляют по налетчикам и зверям сами
+procedure combat_p_proc begin
+   if (fixed_param == COMBAT_SUBTYPE_TURN or fixed_param == COMBAT_SUBTYPE_NONCOM_TURN) then
+      call cv_fight;
 end
 
 procedure talk_p_proc begin
@@ -141,6 +150,12 @@ procedure talk_p_proc begin
       set_sfall_global(GV_ESCORT_MOVING, 1);
       game_time_advance(ONE_GAME_DAY);
       load_map(escort_map(get_sfall_global_int(GV_ESCORT_STAGE)), 0);
+   end
+   // Последний участок пройден: еще сутки пути, и караван с героем уже в лагере у скал
+   if (go_camp) then begin
+      go_camp := 0;
+      game_time_advance(ONE_GAME_DAY);
+      load_map(MAP_F2MOD_CAMP, 0);
    end
 end
 
@@ -235,7 +250,7 @@ procedure Node010 begin
    Reply(189 + get_sfall_global_int(GV_ESCORT_STAGE));
    NOption(193, Node011, 4);
    NOption(194, Node999, 4);
-   NLowOption(132, Node011);
+   NLowOption(183, Node011);
 end
 
 procedure Node011 begin
@@ -243,15 +258,22 @@ procedure Node011 begin
    go_next := 1;
 end
 
-// Конец пути: плата, координаты, опыт
+// Последнее нападение отбито: идем к скалам вместе
 procedure Node012 begin
+   Reply(200);
+   NOption(201, Node013, 4);
+   NOption(194, Node999, 4);
+   NLowOption(183, Node013);
+end
+
+// Дошли: плата, координаты, опыт, переход в лагерь
+procedure Node013 begin
    set_sfall_global(GV_ESCORT_LOSSES, 1);
    item_caps_adjust(dude_obj, CARAVAN_ESCORT_PAY);
    call give_coords;
    give_exp_points(CARAVAN_XP_ESCORT);
-   Reply(200);
-   NOption(201, Node999, 4);
-   NLowOption(132, Node999);
+   display_msg(mstr(211));
+   go_camp := 1;
 end
 
 procedure Node999 begin
