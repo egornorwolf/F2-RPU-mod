@@ -52,7 +52,7 @@ for i, (u, y) in enumerate(HOUSES): put('house', u, y, None, f'Дом {i + 1}')
 labels.append(('6-7 Жилье', 128, 50))
 put('hero', 143, 50, '8 Дом героя')
 put('hall', 102, 68, '12 Ратуша')
-put('barracks', 128, 116, '16 Казарма')
+put('barracks', 134, 116, '16 Казарма')
 for i, (u, y) in enumerate([(84, 152), (92, 154), (108, 152), (116, 154)]): spr('CCART0%d.FRM' % (1 + i % 2), u, y, 'items')
 labels.append(('15 Двор каравана', 100, 156))
 spr('CONBAR01.frm', 92, 164); spr('vclight1.frm', 95, 164); spr('CONBAR01.frm', 107, 164); spr('vclight1.frm', 104, 164)
@@ -239,15 +239,26 @@ NEAR = [(0, 0), (0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (0, 2), (0, 
 LIGHT = os.environ.get('LIGHT', 'electric')
 LAMP = ('strlit1.frm', 'strlit3.frm') if LIGHT == 'electric' else ('barrel.frm', 'barrel.frm')
 lamps = []
+# фонарь НКР нарисован в 4 поворотах: плечо (на экране) влево-назад, влево-вперед, вправо-назад, вправо-вперед
+ARM = {'strlit1.frm': (-2, -1), 'strlit2.frm': (-2, 1), 'strlit3.frm': (2, -1), 'strlit4.frm': (2, 1)}
+def orient(p):
+    """Поворачивает только что поставленный фонарь плечом к ближайшей клетке дорожки."""
+    if not p or LIGHT != 'electric': return
+    u, y = p
+    pu, py = min(PATHHEX, key=lambda h: (h[0] - u) ** 2 + (h[1] - y) ** 2)
+    (x0, y0), (x1, y1) = hexxy(T(u, y)), hexxy(T(pu, py))
+    vx, vy = x1 - x0, y1 - y0
+    best = max(ARM, key=lambda k: ARM[k][0] * vx + ARM[k][1] * 2 * vy)
+    DECO[-1]['path'] = 'art\\scenery\\' + best
 for i, y in enumerate(range(38, 168, 12)):                      # вдоль главной дороги, через сторону
-    p = deco(LAMP[i % 2], 97 if i % 2 == 0 else 102, y, tries=NEAR)
+    p = deco(LAMP[i % 2], 97 if i % 2 == 0 else 102, y, tries=NEAR); orient(p)
     if p: lamps.append(p)
 for i, u in enumerate(range(36, 166, 12)):                      # вдоль поперечной
     if 94 <= u <= 105: continue
-    p = deco(LAMP[i % 2], u, 103 if i % 2 == 0 else 108, tries=NEAR)
+    p = deco(LAMP[i % 2], u, 103 if i % 2 == 0 else 108, tries=NEAR); orient(p)
     if p: lamps.append(p)
 for u, y in [(88, 160), (112, 160), (150, 150), (130, 150), (78, 150), (60, 150), (140, 82), (66, 36), (40, 52), (166, 112)]:
-    p = deco(LAMP[0], u, y, tries=NEAR)                         # двор каравана, стрельбище, углы
+    p = deco(LAMP[0], u, y, tries=NEAR); orient(p)             # двор каравана, стрельбище, углы
     if p: lamps.append(p)
 # стрельбище у южной стены (юго-восточный угол): мишени — дверь машины на бочке (weed05) у самой стены,
 # за ними сено (HAYBED), огневой рубеж — столы с ящиками патронов; стреляют в сторону стены
