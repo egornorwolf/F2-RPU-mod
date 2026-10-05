@@ -46,6 +46,7 @@ g=cut(m,(300,90,1040,560),org_render(25131,(520,300)),SK+('adw','gate4','adb','n
 g=main_part(g,90); g['floor']={}; P['garden']=g
 b=main_part(cut(mv,(1470,1170,2340,1450),ov,SK+('adw','fen')),90); P['bar']=b; wallfloor('bar')
 mi=load('modinn'); P['stall']=main_part(cut(mi,(240,900,1170,1320),ov_origin(mi),SK),90)
+mnc=load('ncrent'); P['market']=main_part(cut(mnc,(2250,90,3080,620),ov_origin(mnc),SK+('fence','ccart','njunk')),120); P['market']['floor']={}
 mr=load('redment'); P['corral']=main_part(cut(mr,(540,960,1980,1400),ov_origin(mr),SK),90)
 for k,p in pieces.items():
     b=p['bb']; print(k,len(p['objs']),'size',b[2]-b[0]+1,'x',b[3]-b[1]+1)

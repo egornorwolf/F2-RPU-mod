@@ -53,6 +53,7 @@ labels.append(('6-7 Жилье', 128, 50))
 put('hero', 143, 50, '8 Дом героя')
 put('hall', 102, 68, '12 Ратуша')
 put('barracks', 134, 116, '16 Казарма')
+put('market', 50, 148, '18 Рынок')
 for i, (u, y) in enumerate([(84, 152), (92, 154), (108, 152), (116, 154)]): spr('CCART0%d.FRM' % (1 + i % 2), u, y, 'items')
 labels.append(('15 Двор каравана', 100, 156))
 spr('CONBAR01.frm', 92, 164); spr('vclight1.frm', 95, 164); spr('CONBAR01.frm', 107, 164); spr('vclight1.frm', 104, 164)
@@ -219,6 +220,13 @@ for k, (u0, y0, u1, y1, _) in build.items():
     if len(br) <= 30: BRANCH.update(br); PATH.update(br)
 PATHHEX = {h for sq in PATH for h in sq_hexes(*sq)}
 
+# ---- автодок в госпитале (holo.frm, «Auto-Doc»): свободная клетка внутри здания, вокруг свободно, подход есть
+R_, blk_, _ = check()
+u0, y0, u1, y1, _ = build['14 Госпиталь']
+cand = [(u, y) for u in range(u0 + 2, u1 - 1) for y in range(y0 + 2, y1 - 1)
+        if T(u, y) in R_ and all(n not in blk_ for n in nbrs(T(u, y))) and all(m not in blk_ for n in nbrs(T(u, y)) for m in nbrs(n))]
+AUTODOC = min(cand, key=lambda p: (p[0] - (u0 + u1) / 2) ** 2 + (p[1] - (y0 + y1) / 2) ** 2) if cand else None
+if AUTODOC: spr('holo.frm', *AUTODOC, tag='autodoc')
 _, _, res_ref = check()
 # ---- убранство: фонари, деревья, кусты, стрельбище; ничего не ставим на дорожки и вплотную к зданиям
 occupied = {o['tile'] for o in objs}
@@ -237,54 +245,17 @@ def deco(name, u, y, m=1, kind='scenery', tag='deco', tries=((0, 0),), gap=0):
     return None
 NEAR = [(0, 0), (0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (0, 2), (0, -2), (2, 0), (-2, 0)]
 LIGHT = os.environ.get('LIGHT', 'electric')
-LAMP = ('strlit1.frm', 'strlit3.frm') if LIGHT == 'electric' else ('barrel.frm', 'barrel.frm')
+# фонари утверждены Егором 2026-10-05: номер Ф = место в списке, поворот фонаря НКР задан явно
+# (strlit1 плечо влево-назад, strlit2 влево-вперед, strlit3 вправо-назад, strlit4 вправо-вперед); без генератора — горящие бочки
+LAMPS = [(97, 38, 'strlit3.frm'), (97, 62, 'strlit3.frm'), (97, 86, 'strlit3.frm'), (102, 122, 'strlit2.frm'),
+         (97, 134, 'strlit3.frm'), (102, 146, 'strlit2.frm'), (97, 158, 'strlit3.frm'), (44, 103, 'strlit4.frm'),
+         (108, 103, 'strlit4.frm'), (120, 108, 'strlit1.frm'), (132, 103, 'strlit4.frm'), (144, 108, 'strlit1.frm'),
+         (156, 103, 'strlit4.frm'), (102, 50, 'strlit2.frm'), (97, 74, 'strlit3.frm'), (150, 150, 'strlit4.frm'),
+         (130, 150, 'strlit4.frm'), (78, 150, 'strlit1.frm'), (60, 103, 'strlit4.frm'), (102, 162, 'strlit2.frm'),
+         (66, 36, 'strlit1.frm'), (78, 103, 'strlit4.frm'), (166, 108, 'strlit1.frm')]
 lamps = []
-# фонарь НКР нарисован в 4 поворотах: плечо (на экране) влево-назад, влево-вперед, вправо-назад, вправо-вперед
-ARM = {'strlit1.frm': (-2, -1), 'strlit2.frm': (-2, 1), 'strlit3.frm': (2, -1), 'strlit4.frm': (2, 1)}
-def orient(p):
-    """Поворачивает только что поставленный фонарь плечом к ближайшей клетке дорожки."""
-    if not p or LIGHT != 'electric': return
-    u, y = p
-    pu, py = min(PATHHEX, key=lambda h: (h[0] - u) ** 2 + (h[1] - y) ** 2)
-    (x0, y0), (x1, y1) = hexxy(T(u, y)), hexxy(T(pu, py))
-    vx, vy = x1 - x0, y1 - y0
-    best = max(ARM, key=lambda k: ARM[k][0] * vx + ARM[k][1] * 2 * vy)
-    DECO[-1]['path'] = 'art\\scenery\\' + best
-for i, y in enumerate(range(38, 168, 12)):                      # вдоль главной дороги, через сторону
-    p = deco(LAMP[i % 2], 97 if i % 2 == 0 else 102, y, tries=NEAR); orient(p)
-    if p: lamps.append(p)
-for i, u in enumerate(range(36, 166, 12)):                      # вдоль поперечной
-    if 94 <= u <= 105: continue
-    p = deco(LAMP[i % 2], u, 103 if i % 2 == 0 else 108, tries=NEAR); orient(p)
-    if p: lamps.append(p)
-for u, y in [(88, 160), (112, 160), (150, 150), (130, 150), (78, 150), (60, 150), (140, 82), (66, 36), (40, 52), (166, 112)]:
-    p = deco(LAMP[0], u, y, tries=NEAR); orient(p)             # двор каравана, стрельбище, углы
-    if p: lamps.append(p)
-# правки Егора по номерам фонарей (Ф1…Ф23 на town_lamps.jpg, 2026-10-05)
-if LIGHT == 'electric':
-    CW = {'strlit1.frm': 'strlit3.frm', 'strlit3.frm': 'strlit4.frm', 'strlit4.frm': 'strlit2.frm', 'strlit2.frm': 'strlit1.frm'}   # по часовой
-    CCW = {v: k for k, v in CW.items()}
-    ROT = {5: CW, 16: lambda n: CW[CW[n]], 17: CCW, 18: CCW}
-    def lamp_obj(i): return next(o for o in DECO if o['tile'] == T(*lamps[i - 1]))
-    for i, r in ROT.items():
-        o = lamp_obj(i); n = o['path'].split('\\')[-1]
-        o['path'] = 'art\\scenery\\' + (r(n) if callable(r) else r[n])
-    def near_path(u0, y0):
-        """Ближайшая к точке свободная клетка вплотную к дорожке (не в здании, не у двери)."""
-        sp = set()
-        for (u, y) in PATHHEX:
-            for du, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                p = (u + du, y + dy)
-                if free_spot(*p, m=0, door=2): sp.add(p)
-        return min(sp, key=lambda p: (p[0] - u0) ** 2 + (p[1] - y0) ** 2)
-    # куда перенести: Ф8 и Ф19 — западная часть поперечной дороги, Ф22 — поперечная у сквера,
-    # Ф14 и Ф15 — восточная сторона главной дороги на севере, Ф20 — главная дорога у ворот, восточная сторона, Ф23 — к дорожке
-    MOVE = {8: (44, 103), 19: (60, 103), 22: (78, 103), 14: (102, 50), 15: (102, 74), 20: (102, 162), 23: None}
-    for i, tgt in MOVE.items():
-        o = lamp_obj(i); DECO.remove(o); objs.remove(o); occupied.discard(o['tile'])
-        best = near_path(*(tgt or lamps[i - 1]))
-        lamps[i - 1] = best
-        q = deco('strlit1.frm', *best, m=0); orient(q)
+for u, y, name in LAMPS:
+    spr(name if LIGHT == 'electric' else 'barrel.frm', u, y, tag='deco'); occupied.add(T(u, y)); DECO.append(objs[-1]); lamps.append((u, y))
 # стрельбище у южной стены (юго-восточный угол): мишени — дверь машины на бочке (weed05) у самой стены,
 # за ними сено (HAYBED), огневой рубеж — столы с ящиками патронов; стреляют в сторону стены
 range_parts = []
@@ -450,5 +421,6 @@ L += ['', f'Свободное место внутри стены: {n_free} кл
 for i, (name, (a, b)) in enumerate(trash):
     L.append(f'  М{i + 1} {name}: клетка {T(a, b)} (u{a}, y{b})')
 L.append('  Куча у каравана: ' + ', '.join(f'{T(a, b)} (u{a}, y{b})' for a, b in PILE))
-L.append(''); L.append(f'Турелей: {len(TUR)}')
+L.append(''); L.append(f'Автодок в госпитале: ' + (f'клетка {T(*AUTODOC)} (u{AUTODOC[0]}, y{AUTODOC[1]})' if AUTODOC else 'НЕ ВЛЕЗ'))
+L.append(f'Турелей: {len(TUR)}')
 open(OUT + 'town_max_report.txt', 'w', encoding='utf-8').write('\n'.join(L)); print('\n'.join(L)); print(im.size)
