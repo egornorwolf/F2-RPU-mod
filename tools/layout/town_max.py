@@ -220,12 +220,13 @@ for k, (u0, y0, u1, y1, _) in build.items():
     if len(br) <= 30: BRANCH.update(br); PATH.update(br)
 PATHHEX = {h for sq in PATH for h in sq_hexes(*sq)}
 
-# ---- автодок в госпитале (holo.frm, «Auto-Doc»): свободная клетка внутри здания, вокруг свободно, подход есть
-R_, blk_, _ = check()
+# ---- автодок в госпитале (holo.frm, «Auto-Doc»): на месте стола со стульями (ss102 стол, ss106/107/116/117 стулья), Егор
 u0, y0, u1, y1, _ = build['14 Госпиталь']
-cand = [(u, y) for u in range(u0 + 2, u1 - 1) for y in range(y0 + 2, y1 - 1)
-        if T(u, y) in R_ and all(n not in blk_ for n in nbrs(T(u, y))) and all(m not in blk_ for n in nbrs(T(u, y)) for m in nbrs(n))]
-AUTODOC = min(cand, key=lambda p: (p[0] - (u0 + u1) / 2) ** 2 + (p[1] - (y0 + y1) / 2) ** 2) if cand else None
+def _nm(o): return ((o.get('path') or render.fidpath(o['fid']) or '').split('\\')[-1]).lower()
+inside = [o for o in objs if u0 <= U(o['tile'])[0] <= u1 and y0 <= U(o['tile'])[1] <= y1]
+table = next((o for o in inside if _nm(o) == 'ss102.frm'), None)
+AUTODOC = U(table['tile']) if table else None
+objs[:] = [o for o in objs if not (o in inside and _nm(o) in ('ss102.frm', 'ss106.frm', 'ss107.frm', 'ss116.frm', 'ss117.frm'))]
 if AUTODOC: spr('holo.frm', *AUTODOC, tag='autodoc')
 _, _, res_ref = check()
 # ---- убранство: фонари, деревья, кусты, стрельбище; ничего не ставим на дорожки и вплотную к зданиям
