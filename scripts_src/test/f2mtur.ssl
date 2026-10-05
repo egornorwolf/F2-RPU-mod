@@ -1,0 +1,46 @@
+// Турель песочницы (только с f2mod_test.dat). Сама не двигается. Видит налетчика — открывает огонь;
+// в бою целится в ближайшего живого налетчика (ИИ движка берет цель из «кто меня ударил», ставим ее туда).
+#define SCRIPT_REALNAME "f2mtur"
+#include "define.h"
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "f2mod.h"
+
+#define TUR_RANGE   (40)
+
+procedure start;
+procedure critter_p_proc;
+procedure combat_p_proc;
+procedure nearest_enemy;
+
+procedure start begin
+end
+
+procedure nearest_enemy begin
+   variable c, best := 0, d, best_d := TUR_RANGE + 1;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (not is_critter_dead(c) and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_RND_RAIDERS) then begin
+         d := tile_distance_objs(self_obj, c);
+         if (d < best_d) then begin
+            best := c;
+            best_d := d;
+         end
+      end
+   end
+   return best;
+end
+
+procedure critter_p_proc begin
+   variable e;
+   if (combat_is_initialized) then return;
+   e := nearest_enemy;
+   if (e and obj_can_see_obj(self_obj, e)) then attack(e);
+end
+
+procedure combat_p_proc begin
+   variable e;
+   if (fixed_param != COMBAT_SUBTYPE_TURN) then return;
+   e := nearest_enemy;
+   if (e) then set_object_data(self_obj, OBJ_DATA_WHO_HIT_ME, e);
+end

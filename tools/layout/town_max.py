@@ -32,7 +32,9 @@ objs = []; floor = {}; labels = []; build = {}
 NOBLOCK = 0x10
 def put(name, u0, y0, label=None, key=None):
     p = P[name]; w = p['bb'][2] - p['bb'][0] + 1; h = p['bb'][3] - p['bb'][1] + 1
-    o, f = place(p, 199 - u0 - w + 1, y0); objs.extend(o); floor.update(f)
+    o, f = place(p, 199 - u0 - w + 1, y0)
+    for x in o: x['tag'] = 'b:' + (key or label or name)   # для тестовой стройки (town_build.py): чье это здание
+    objs.extend(o); floor.update(f)
     if label: labels.append((label, u0 + w // 2, y0 + h // 2))
     build[key or label or name] = (u0, y0, u0 + w - 1, y0 + h - 1, label)
     return w, h
@@ -357,6 +359,10 @@ for o in objs:
     u, y = U(o['tile'])
     if not (F0 < u < F1 and F0 < y < F1): out_of.append((o.get('path') or render.fidpath(o['fid']), u, y))
 
+# ---- данные для тестовой стройки (town_build.py)
+pickle.dump(dict(objs=objs, build=build, floor=floor, PATH=PATH, lamps=lamps, TUR=TUR, CAR=CAR, F=(F0, F1), M=(M0, M1), GX0=GX0,
+                 STILLS=STILLS, AUTODOC=AUTODOC), open(OUT + 'town_max.pkl', 'wb'))
+if os.environ.get('NOIMG'): sys.exit(0)
 # ---- картинка
 mm = dict(base); mm['objs'] = objs
 t = list(base['tiles'][0]); rr = random.Random(7)

@@ -8,3 +8,6 @@ f2mcciv.int     ; F2mod caravan settler (civilian)               # local_vars=1
 f2mcbrm.int     ; F2mod caravan brahmin (flees in combat)          # local_vars=0
 f2mcfrm.int     ; F2mod camp foreman Hank                        # local_vars=1
 f2mwell.int     ; F2mod camp wells (old, fixed, new)             # local_vars=0
+f2mtown.int     ; F2mod test: town building sandbox map            # local_vars=0
+f2mtbld.int     ; F2mod test: sandbox builder                       # local_vars=0
+f2mtur.int      ; F2mod test: sandbox turret                        # local_vars=0

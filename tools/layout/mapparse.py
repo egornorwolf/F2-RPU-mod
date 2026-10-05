@@ -47,7 +47,7 @@ class R:
         return v if n > 1 else v[0]
 def read_obj(r, out, depth=0):
     f = r.i(18)
-    o = dict(tile=f[1], fid=f[8], flags=f[9], elev=f[10], pid=f[11], sid=f[16])
+    o = dict(tile=f[1], fid=f[8], flags=f[9], elev=f[10], pid=f[11], sid=f[16], frame=f[6], rot=f[7], ld=f[13], li=f[14])
     inv_len = r.i(); r.i(2)
     t = o['pid'] >> 24
     if t == 1:

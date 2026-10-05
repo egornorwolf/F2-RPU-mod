@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Сверяет номера строк, которые скрипты берут из своего .msg (mstr, Reply, NOption, floater(random(a, b))),
-с файлами mod/data/text/russian/dialog/<скрипт>.msg. Ищет и дубли номеров в .msg."""
+с файлами mod/data/text/russian/dialog/<скрипт>.msg (тестовые — mod/test/...). Ищет и дубли номеров в .msg."""
 import glob
 import os
 import re
@@ -36,6 +36,8 @@ for ssl in glob.glob(f"{root}/scripts_src/**/*.ssl", recursive=True):
         continue
     name = re.search(r'SCRIPT_REALNAME\s+"(\w+)"', src).group(1)
     msg = f"{msgdir}/{name}.msg"
+    if "/test/" in ssl:  # тестовые скрипты: свои .msg в mod/test (f2mod_test.dat)
+        msg = f"{root}/mod/test/text/russian/dialog/{name}.msg"
     if not os.path.exists(msg):
         print(f"{name}: нет файла {msg}")
         bad += 1

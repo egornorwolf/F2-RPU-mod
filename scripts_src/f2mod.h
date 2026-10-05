@@ -14,6 +14,8 @@
 #define MAP_F2MOD_ESCORT3   (177)   // [Map 177]: 3-е нападение
 #define escort_map(stage)   (MAP_F2MOD_ESCORT + (stage) - 1)
 #define is_escort_map(m)    ((m) >= MAP_F2MOD_ESCORT and (m) <= MAP_F2MOD_ESCORT3)
+#define AREA_F2MOD_TOWN     (62)    // [Area 62]: песочница для обкатки стройки (только с f2mod_test.dat)
+#define MAP_F2MOD_TOWN      (178)   // [Map 178]: карта песочницы f2mtown
 
 // Номера скриптов = номер строки в scripts.lst
 #define SCRIPT_F2MCAMP      (1559)  // карта лагеря
@@ -25,6 +27,9 @@
 #define SCRIPT_F2MCBRM      (1565)  // брамин каравана (в бою убегает)
 #define SCRIPT_F2MCFRM      (1566)  // прораб Хэнк
 #define SCRIPT_F2MWELL      (1567)  // колодцы лагеря (старый, починенный, новый)
+#define SCRIPT_F2MTOWN      (1568)  // карта песочницы (тест)
+#define SCRIPT_F2MTBLD      (1569)  // строитель песочницы (тест)
+#define SCRIPT_F2MTUR       (1570)  // турель песочницы (тест)
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU
