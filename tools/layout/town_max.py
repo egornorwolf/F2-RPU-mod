@@ -43,8 +43,8 @@ def spr(path, u, y, kind='scenery', flags=0, pid=0x2000001, tag=None):
 put('pump', 35, 35, '1 Водокачка'); put('cistern', 52, 38, None, 'Цистерна')
 spr('WELL001.frm', 47, 49); spr('well1.frm', 55, 49); spr('gektank5.frm', 44, 46)
 put('ranch', 35, 58, '4 Ранчо')
-put('workshop', 35, 105, '9 Автомастерская'); spr('crafter1.frm', 33, 128)
-put('storage', 36, 130, '10 Склад')
+put('workshop', 35, 107, '9 Автомастерская'); spr('crafter1.frm', 33, 130)
+put('storage', 36, 132, '10 Склад')
 put('garden', 68, 35, '2 Огород', '2 Огород'); put('garden', 68, 64, '3 Огород', '3 Огород')
 put('bar', 68, 108, '11 Бар'); put('clinic', 70, 124, '14 Госпиталь')
 HOUSES = [(102 + i * 13, 35) for i in range(5)] + [(102 + i * 13, 51) for i in range(3)]
@@ -59,8 +59,7 @@ spr('CONBAR01.frm', 92, 164); spr('vclight1.frm', 95, 164); spr('CONBAR01.frm', 
 rnd = random.Random(3)
 for u in range(70, 97, 6):
     for y in (94, 100): spr(rnd.choice(['tree11.frm', 'tree10.frm', 'TREE8.FRM']), u + rnd.randint(-1, 1), y)
-labels.append(('13 Сквер', 83, 97)); labels.append(('17 Охрана, тир', 112, 140))
-for y in range(36, 160, 8): spr('tree11.frm', 97, y)
+labels.append(('13 Сквер', 83, 97))
 
 # ---- стена Города-Убежища (adw) с аркой, внешняя сетка (fence), турели
 F0, F1 = 30, 169                       # линия стены: u и y от 30 до 169
@@ -172,36 +171,162 @@ def open_passage(k):
 for k in list(build):
     for _ in range(3):
         if not open_passage(k): break
-# ---- 12 мест для мусора (по участкам из robots.md), выбираем свободные клетки, которые не мешают проходу
+# ---- дорожки: плитка Города-Убежища (brick33, BRICK20), 1 квадрат пола = 2x2 клетки
+def inbox(u, y, m=0):
+    for k, (u0, y0, u1, y1, _) in build.items():
+        if u0 - m <= u <= u1 + m and y0 - m <= y <= y1 + m: return k
+    return None
+def sq_hexes(sx, sy): return [(199 - (2 * sx + dx), 2 * sy + dy) for dx in (0, 1) for dy in (0, 1)]
+def sq_ok(sx, sy): return all(F0 < u < F1 and F0 < y < F1 and not inbox(u, y) for u, y in sq_hexes(sx, sy))
+MAIN = set()
+for sy in range(16, 85):                      # главная дорога от ворот на север, клетки u 98–101 (4 клетки)
+    for sx in (49, 50):
+        if sq_ok(sx, sy): MAIN.add((sx, sy))
+for sx in range(16, 84):                      # поперечная, клетки y 104–107 (4 клетки, у мастерской 2)
+    for sy in (52, 53):
+        if sq_ok(sx, sy): MAIN.add((sx, sy))
+PATH = set(MAIN); BRANCH = set()
+blocked_set()                                 # заполняет DOORS
+def bfs_sq(starts):
+    prev = {s: None for s in starts}; q = collections.deque(starts)
+    while q:
+        s = q.popleft()
+        if s in PATH:
+            out = []
+            while s is not None and s not in starts: out.append(s); s = prev[s]
+            if s is not None: out.append(s)
+            return [x for x in out if x not in PATH]
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            n = (s[0] + dx, s[1] + dy)
+            if n not in prev and (n in PATH or sq_ok(*n)): prev[n] = s; q.append(n)
+    return []
+for k, (u0, y0, u1, y1, _) in build.items():
+    if k == 'Цистерна': continue
+    ds = [t for t in DOORS if u0 <= U(t)[0] <= u1 and y0 <= U(t)[1] <= y1]
+    seeds = set()
+    for t in ds:                              # двери на краю здания: клетки снаружи рядом с дверью
+        for n in list(nbrs(t)) + [m for n in nbrs(t) for m in nbrs(n)]:
+            u, y = U(n)
+            if not inbox(u, y):
+                sq = ((199 - u) // 2, y // 2)
+                if sq_ok(*sq): seeds.add(sq)
+    if not seeds:                             # открытые постройки: любой квадрат вплотную к зданию
+        for u in range(u0 - 2, u1 + 3):
+            for y in range(y0 - 2, y1 + 3):
+                sq = ((199 - u) // 2, y // 2)
+                if sq_ok(*sq): seeds.add(sq)
+    br = bfs_sq(list(seeds))
+    if len(br) <= 30: BRANCH.update(br); PATH.update(br)
+PATHHEX = {h for sq in PATH for h in sq_hexes(*sq)}
+
+_, _, res_ref = check()
+# ---- убранство: фонари, деревья, кусты, стрельбище; ничего не ставим на дорожки и вплотную к зданиям
+occupied = {o['tile'] for o in objs}
+DOORUY = [U(t) for t in DOORS]
+DECO = []
+def free_spot(u, y, m=1, door=3, gap=0):
+    if not (F0 + 1 < u < F1 - 1 and F0 + 1 < y < F1 - 1): return False
+    if inbox(u, y, m) or (u, y) in PATHHEX or T(u, y) in occupied: return False
+    if gap and any((u + a, y + b) in PATHHEX for a in range(-gap, gap + 1) for b in range(-gap, gap + 1)): return False
+    return all(abs(u - a) + abs(y - b) > door for a, b in DOORUY)
+def deco(name, u, y, m=1, kind='scenery', tag='deco', tries=((0, 0),), gap=0):
+    if gap == 0 and ('tree' in name): gap = 2                   # деревья не закрывают дорожки
+    for du, dy in tries:
+        if free_spot(u + du, y + dy, m, gap=gap):
+            spr(name, u + du, y + dy, kind, tag=tag); occupied.add(T(u + du, y + dy)); DECO.append(objs[-1]); return (u + du, y + dy)
+    return None
+NEAR = [(0, 0), (0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (0, 2), (0, -2), (2, 0), (-2, 0)]
+LIGHT = os.environ.get('LIGHT', 'electric')
+LAMP = ('strlit1.frm', 'strlit3.frm') if LIGHT == 'electric' else ('barrel.frm', 'barrel.frm')
+lamps = []
+for i, y in enumerate(range(38, 168, 12)):                      # вдоль главной дороги, через сторону
+    p = deco(LAMP[i % 2], 97 if i % 2 == 0 else 102, y, tries=NEAR)
+    if p: lamps.append(p)
+for i, u in enumerate(range(36, 166, 12)):                      # вдоль поперечной
+    if 94 <= u <= 105: continue
+    p = deco(LAMP[i % 2], u, 103 if i % 2 == 0 else 108, tries=NEAR)
+    if p: lamps.append(p)
+for u, y in [(88, 160), (112, 160), (150, 150), (130, 150), (78, 150), (60, 150), (140, 82), (66, 36), (40, 52), (166, 112)]:
+    p = deco(LAMP[0], u, y, tries=NEAR)                         # двор каравана, стрельбище, углы
+    if p: lamps.append(p)
+# стрельбище у южной стены (юго-восточный угол): мишени — дверь машины на бочке (weed05) у самой стены,
+# за ними сено (HAYBED), огневой рубеж — столы с ящиками патронов; стреляют в сторону стены
+range_parts = []
+for u in range(128, 166, 6):
+    for name, uu, yy, kind in (('posts.frm' if u % 12 == 8 else 'weed05.frm', u, 163, 'scenery'), ('HAYBED05.frm', u + 1, 166, 'scenery'),
+                               ('table6.frm', u, 153, 'scenery'), ('ammobox1.frm' if u % 12 else 'ammobox3.frm', u + 2, 152, 'items')):
+        p = deco(name, uu, yy, m=0, kind=kind, tag='range')
+        if p: range_parts.append((name, p))
+deco('wepnbox.frm', 124, 152, m=0, kind='items', tag='range'); deco('boxes1.frm', 124, 156, m=0, tag='range')
+labels.append(('17 Стрельбище', 146, 160))
+# деревья и кусты: вторая аллея вдоль главной дороги, вдоль поперечной, по свободным местам
+TREES = ['tree10.frm', 'tree11.frm', 'treea.frm', 'tree10.frm', 'tree11.frm', 'tree7.frm', 'tree8.frm']
+trees = 0
+for y in range(36, 166, 7):                                     # аллея по обе стороны главной дороги
+    for u in (95, 104):
+        if deco(rnd.choice(TREES), u, y + (3 if u == 104 else 0), tries=NEAR): trees += 1
+for u in range(40, 166, 10):
+    for y in (101, 110):
+        if deco(rnd.choice(TREES), u + (5 if y == 110 else 0), y, tries=NEAR): trees += 1
+rt = random.Random(11); placed = []
+for _ in range(900):
+    u, y = rt.randint(F0 + 3, F1 - 3), rt.randint(F0 + 3, F1 - 3)
+    if 120 <= u and 148 <= y: continue                          # стрельбище
+    if 78 <= u <= 118 and 148 <= y: continue                    # двор каравана
+    if any(abs(u - a) + abs(y - b) < 7 for a, b in placed): continue
+    bush = rt.random() < 0.4
+    if deco(rt.choice(['bush1.frm', 'bush2.frm', 'bush3.frm']) if bush else rt.choice(TREES), u, y, m=2):
+        placed.append((u, y)); trees += 0 if bush else 1
+bushes = len(placed)
+# всё убранство не должно перекрывать входы: если перекрыло, снимаем последнее поставленное
+def worse(r): return any(r[k]['inner_ok'] < res_ref[k]['inner_ok'] or (res_ref[k]['near'] and not r[k]['near']) for k in r)
+removed = 0
+while worse(check()[2]):
+    o = DECO.pop(); objs.remove(o); removed += 1
+
+# ---- мусор: на видных местах у дорог, не на проходе и не у дверей; во дворе каравана большая куча из 5
 TRASH = ['junk2', 'njunk5', 'njunk6', 'trash1', 'trash3', 'trash4', 'pipes2', 'junk1']
-def bxy(k): u0, y0, u1, y1, _ = build[k]; return u0, y0, u1, y1
-SPOTS = []
-for i in range(4):   # промежутки между домами северного ряда
-    a = HOUSES[i]; SPOTS.append((f'между домами {i + 1} и {i + 2}', a[0] + 11, a[1] + 4, a[0] + 12, a[1] + 9))
-for i in range(5, 7):
-    a = HOUSES[i]; SPOTS.append((f'между домами {i + 1} и {i + 2}', a[0] + 11, a[1] + 4, a[0] + 12, a[1] + 9))
-u0, y0, u1, y1 = bxy('11 Бар'); SPOTS.append(('у западной стены бара', u0 - 3, y0 + 2, u0 - 1, y1 - 2))
-u0, y0, u1, y1 = bxy('10 Склад'); SPOTS.append(('за складом', u0 - 3, y0 + 2, u0 - 1, y1 - 2))
-u0, y0, u1, y1 = bxy('9 Автомастерская'); SPOTS.append(('угол двора автомастерской', u0 + 1, y1 - 2, u0 + 6, y1))
-u0, y0, u1, y1 = bxy('16 Казарма'); SPOTS.append(('за казармой', u1 + 1, y0 + 4, u1 + 3, y1 - 4))
-SPOTS.append(('угол двора каравана', 80, 158, 86, 162))
-u0, y0, u1, y1 = bxy('4 Ранчо'); SPOTS.append(('за загоном ранчо', u1 + 1, y0 + 30, u1 + 3, y1 - 2))
-R, blk, res0 = check()
-trash = []
-for name, a0, b0, a1, b1 in SPOTS:
-    pick = None
-    for u in range(a0, a1 + 1):
-        for y in range(b0, b1 + 1):
-            t = T(u, y)
-            if t in blk or t not in R or any(t == x[1] for x in trash): continue
-            R2, _, r2 = check([x[1] for x in trash] + [t])
-            if all(r2[k]['inner_ok'] >= res0[k]['inner_ok'] and (r2[k]['near'] or not res0[k]['near']) for k in r2):
-                pick = t; break
-        if pick: break
-    trash.append((name, pick))
-for i, (name, t) in enumerate(trash):
-    if t: spr(TRASH[i % len(TRASH)] + '.frm', *U(t), tag='trash')
+def near_label(u, y):
+    best = min(build.items(), key=lambda kv: (max(kv[1][0] - u, 0, u - kv[1][2]) ** 2 + max(kv[1][1] - y, 0, y - kv[1][3]) ** 2))
+    return best[0]
+def road_of(u, y):
+    for sq in MAIN:
+        if any(abs(u - a) <= 1 and abs(y - b) <= 1 for a, b in sq_hexes(*sq)): return 'у главной дороги' if sq[0] in (49, 50) and sq[1] not in (52, 53) else 'у поперечной дороги'
+    return 'у дорожки'
+cand = []
+for (u, y) in PATHHEX:
+    for du, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        a, b = u + du, y + dy
+        if free_spot(a, b, m=1, door=4) and (a, b) not in cand:
+            score = 0 if road_of(a, b) != 'у дорожки' else 1
+            cand.append((a, b, score))
+rt2 = random.Random(5); rt2.shuffle(cand); cand.sort(key=lambda c: c[2])
+R, blk, res_ref = check()
+trash = []; WANT = 30
+for a, b, sc in cand:
+    if len(trash) >= WANT: break
+    if any(abs(a - x) + abs(b - y) < 10 for _, (x, y) in trash): continue
+    if 78 <= a <= 118 and 148 <= b: continue
+    t = T(a, b)
+    if t in blk or t not in R: continue
+    r2 = check([T(*p) for _, p in trash] + [t])[2]
+    if worse(r2): continue
+    trash.append((f'{road_of(a, b)}, {near_label(a, b)}', (a, b)))
+for i, (name, (a, b)) in enumerate(trash):
+    spr(TRASH[i % len(TRASH)] + '.frm', a, b, tag='trash'); occupied.add(T(a, b))
+PILE = []
+for a, b in [(84, 162), (85, 161), (85, 163), (86, 162), (84, 164), (86, 160), (83, 163)]:
+    if len(PILE) >= 5: break
+    if free_spot(a, b, m=0, door=2):
+        r2 = check([T(a, b)])[2]
+        if not worse(r2):
+            spr(['junk2', 'pipes2', 'njunk5', 'junk1', 'njunk6'][len(PILE)] + '.frm', a, b, tag='trash'); occupied.add(T(a, b)); PILE.append((a, b))
 R, blk, res = check()
+# свободное место внутри стены
+inside = [(u, y) for u in range(F0 + 1, F1) for y in range(F0 + 1, F1)]
+n_box = sum(1 for u, y in inside if inbox(u, y)); n_path = sum(1 for h in inside if h in PATHHEX)
+n_free = sum(1 for u, y in inside if not inbox(u, y) and (u, y) not in PATHHEX and T(u, y) not in blk)
+
 
 # ---- все ли внутри забора
 out_of = []
@@ -214,6 +339,9 @@ for o in objs:
 mm = dict(base); mm['objs'] = objs
 t = list(base['tiles'][0]); rr = random.Random(7)
 t = [v if (v & 0xffff) not in (0, 1, 659, 179, 180) else (v & 0xffff0000) | rr.choice(range(191, 199)) for v in t]
+rp = random.Random(9)
+for sq in PATH:
+    if sq not in floor: t[sq[1] * 100 + sq[0]] = (t[sq[1] * 100 + sq[0]] & 0xffff0000) | (2261 if rp.random() < 0.2 else 2274)
 for (sx, sy), f in floor.items(): t[sy * 100 + sx] = f
 mm['tiles'] = {0: t}
 render.parse = lambda f: mm
@@ -226,10 +354,10 @@ X0, Y0 = hexxy(c); X0 -= rx; Y0 -= ry
 def scr(u, y): x, yy = hexxy(T(u, y)); return x + 16 - X0, yy + 8 - Y0
 fnt = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 44)
 fs = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 34)
-for i, (name, tt) in enumerate(trash):
-    if not tt: continue
-    x, yy = scr(*U(tt)); d.ellipse((x - 26, yy - 26, x + 26, yy + 26), outline=(255, 60, 60), width=6)
-    d.text((x + 30, yy - 20), f'М{i + 1}', font=fs, fill=(255, 90, 90), stroke_width=4, stroke_fill=(0, 0, 0))
+for i, (name, tt) in enumerate(trash + [('куча у каравана', p) for p in PILE[:1]]):
+    lbl = f'М{i + 1}' if i < len(trash) else 'Куча'
+    x, yy = scr(*tt); d.ellipse((x - 26, yy - 26, x + 26, yy + 26), outline=(255, 60, 60), width=6)
+    d.text((x + 30, yy - 20), lbl, font=fs, fill=(255, 90, 90), stroke_width=4, stroke_fill=(0, 0, 0))
 for lb, u, y in labels:
     x, yy = scr(u, y); d.text((x - len(lb) * 12, yy - 140), lb, font=fnt, fill=(255, 255, 120), stroke_width=4, stroke_fill=(0, 0, 0))
 im.save(OUT + 'town_max_full.png')
@@ -263,8 +391,12 @@ for k, r in res.items():
     L.append(f'  {k}: {st} (помещения {r["inner"]} кл.)')
 L += ['', 'Прорублены проходы (убран пролет стены):']
 for k, t in FIXED: L.append(f'  {k}: клетка {t} (u{U(t)[0]}, y{U(t)[1]})')
-L += ['', 'Места мусора:']
-for i, (name, tt) in enumerate(trash):
-    L.append(f'  М{i + 1} {name}: ' + (f'клетка {tt} (u{U(tt)[0]}, y{U(tt)[1]})' if tt else 'НЕ НАЙДЕНО'))
+L += ['', f'Свободное место внутри стены: {n_free} клеток из {len(inside)} ({100 * n_free // len(inside)}%); здания {n_box}, дорожки {n_path}',
+      f'Дорожки: главная и поперечная по 4 клетки (2 квадрата пола), к зданиям по 2 клетки; квадратов {len(PATH)}',
+      f'Фонари ({LIGHT}): {len(lamps)}; деревья и кусты: {len([o for o in DECO if "tree" in o["path"] or "bush" in o["path"]])}; снято из-за проходов: {removed}',
+      f'Стрельбище: {len(range_parts)} предметов (мишени, сено, столы, патроны)', '', f'Места мусора ({len(trash)} + куча из {len(PILE)} у каравана):']
+for i, (name, (a, b)) in enumerate(trash):
+    L.append(f'  М{i + 1} {name}: клетка {T(a, b)} (u{a}, y{b})')
+L.append('  Куча у каравана: ' + ', '.join(f'{T(a, b)} (u{a}, y{b})' for a, b in PILE))
 L.append(''); L.append(f'Турелей: {len(TUR)}')
 open(OUT + 'town_max_report.txt', 'w', encoding='utf-8').write('\n'.join(L)); print('\n'.join(L)); print(im.size)
