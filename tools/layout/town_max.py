@@ -257,6 +257,17 @@ LAMPS = [(97, 38, 'strlit3.frm'), (97, 62, 'strlit3.frm'), (97, 86, 'strlit3.frm
 lamps = []
 for u, y, name in LAMPS:
     spr(name if LIGHT == 'electric' else 'barrel.frm', u, y, tag='deco'); occupied.add(T(u, y)); DECO.append(objs[-1]); lamps.append((u, y))
+# самогонные аппараты за баром (Егор 2026-10-05, после квеста «Самогон»): still.frm, прото 1000, как в Кламате
+bu0, by0, bu1, by1, _ = build['11 Бар']
+STILLS = []
+bdoor = min(DOORUY, key=lambda d: max(0, bu0 - d[0], d[0] - bu1) + max(0, by0 - d[1], d[1] - by1))
+cand = [(u, y) for y in range(by0 - 1, by0 - 8, -1) for u in range(bu0 + 4, bu1 - 3)]
+for u, y in cand:
+    if len(STILLS) == 3: break
+    if all(abs(u - a) + abs(y - b) >= 4 for a, b in STILLS) and free_spot(u, y, gap=1):
+        spr('still.frm', u, y, tag='still'); occupied.add(T(u, y)); DECO.append(objs[-1]); STILLS.append((u, y))
+print('bar door', bdoor)
+print('bar box', build['11 Бар'][:4], 'stills', STILLS)
 # стрельбище у южной стены (юго-восточный угол): мишени — дверь машины на бочке (weed05) у самой стены,
 # за ними сено (HAYBED), огневой рубеж — столы с ящиками патронов; стреляют в сторону стены
 range_parts = []
@@ -422,6 +433,15 @@ L += ['', f'Свободное место внутри стены: {n_free} кл
 for i, (name, (a, b)) in enumerate(trash):
     L.append(f'  М{i + 1} {name}: клетка {T(a, b)} (u{a}, y{b})')
 L.append('  Куча у каравана: ' + ', '.join(f'{T(a, b)} (u{a}, y{b})' for a, b in PILE))
-L.append(''); L.append(f'Автодок в госпитале: ' + (f'клетка {T(*AUTODOC)} (u{AUTODOC[0]}, y{AUTODOC[1]})' if AUTODOC else 'НЕ ВЛЕЗ'))
+L.append(f'Самогонные аппараты за баром: {STILLS}'); L.append(''); L.append(f'Автодок в госпитале: ' + (f'клетка {T(*AUTODOC)} (u{AUTODOC[0]}, y{AUTODOC[1]})' if AUTODOC else 'НЕ ВЛЕЗ'))
 L.append(f'Турелей: {len(TUR)}')
 open(OUT + 'town_max_report.txt', 'w', encoding='utf-8').write('\n'.join(L)); print('\n'.join(L)); print(im.size)
+# ---- вырезка бара с самогонными аппаратами
+if STILLS:
+    left = [p for p in STILLS if any(o.get('tag') == 'still' and o['tile'] == T(*p) for o in objs)]
+    bx, by = scr((bu0 + bu1) // 2 - 6, (by0 + by1) // 2)
+    cb = clean.crop((bx - 900, by - 650, bx + 700, by + 450)).copy(); db = ImageDraw.Draw(cb)
+    for i, p in enumerate(left):
+        x, yy = scr(*p); x -= bx - 900; yy -= by - 650
+        db.text((x - 20, yy + 14), f'С{i + 1}', font=fs, fill=(255, 200, 80), stroke_width=4, stroke_fill=(0, 0, 0))
+    cb.save(OUT + 'town_bar_stills.jpg', quality=90); print('stills on map', left)
