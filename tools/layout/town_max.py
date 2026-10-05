@@ -360,7 +360,7 @@ pts = [hexxy(T(a, b)) for a in (M0, M1) for b in (M0, M1)]
 cx = (min(p[0] for p in pts) + max(p[0] for p in pts)) // 2; cy = (min(p[1] for p in pts) + max(p[1] for p in pts)) // 2
 c = nearest(cx, cy); rx = (max(p[0] for p in pts) - min(p[0] for p in pts)) // 2 + 120; ry = (max(p[1] for p in pts) - min(p[1] for p in pts)) // 2 + 260
 render.render('x', OUT + 'town_max_full.png', c, rad_px=(rx, ry))
-im = Image.open(OUT + 'town_max_full.png'); d = ImageDraw.Draw(im)
+im = Image.open(OUT + 'town_max_full.png'); clean = im.copy(); d = ImageDraw.Draw(im)
 X0, Y0 = hexxy(c); X0 -= rx; Y0 -= ry
 def scr(u, y): x, yy = hexxy(T(u, y)); return x + 16 - X0, yy + 8 - Y0
 fnt = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 44)
@@ -371,6 +371,22 @@ for i, (name, tt) in enumerate(trash + [('куча у каравана', p) for 
     d.text((x + 30, yy - 20), lbl, font=fs, fill=(255, 90, 90), stroke_width=4, stroke_fill=(0, 0, 0))
 for lb, u, y in labels:
     x, yy = scr(u, y); d.text((x - len(lb) * 12, yy - 140), lb, font=fnt, fill=(255, 255, 120), stroke_width=4, stroke_fill=(0, 0, 0))
+# фонари с номерами: общий план и лист крупных вырезок (номер = Ф1…, в подписи поворот)
+fl = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 26)
+LAMPOBJ = {o['tile']: o['path'].split('\\')[-1] for o in objs if o.get('tag') == 'deco' and ('strlit' in o['path'] or 'barrel.frm' in o['path'])}
+lampov = clean.copy(); dl = ImageDraw.Draw(lampov); cells = []
+for i, (u, y) in enumerate(lamps):
+    x, yy = scr(u, y)
+    dl.ellipse((x - 30, yy - 30, x + 30, yy + 30), outline=(80, 200, 255), width=7)
+    dl.text((x + 34, yy - 24), f'Ф{i + 1}', font=fs, fill=(120, 220, 255), stroke_width=4, stroke_fill=(0, 0, 0))
+    c = clean.crop((x - 220, yy - 230, x + 220, yy + 90)).copy(); dc = ImageDraw.Draw(c)
+    dc.ellipse((220 - 12, 230 - 9, 220 + 12, 230 + 9), outline=(80, 200, 255), width=3)
+    dc.text((8, 6), f'Ф{i + 1}  {LAMPOBJ.get(T(u, y), "?")[:-4]}  u{u} y{y}', font=fl, fill=(120, 220, 255), stroke_width=4, stroke_fill=(0, 0, 0))
+    cells.append(c)
+sm2 = lampov.copy(); sm2.thumbnail((2600, 2600)); sm2.save(OUT + 'town_lamps_map.jpg', quality=88)
+W = 5; sheet = Image.new('RGB', (440 * W, 320 * ((len(cells) + W - 1) // W)), (0, 0, 0))
+for i, c in enumerate(cells): sheet.paste(c, ((i % W) * 440, (i // W) * 320))
+sheet.save(OUT + 'town_lamps.jpg', quality=88)
 im.save(OUT + 'town_max_full.png')
 sm = im.copy(); sm.thumbnail((2600, 2600)); sm.save(OUT + 'town_max.jpg', quality=88)
 gx, gy = scr(199 - (GX0 + 5), M1 - 2); im.crop((gx - 700, gy - 450, gx + 700, gy + 300)).save(OUT + 'town_max_gate.jpg', quality=90)
