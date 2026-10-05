@@ -260,6 +260,31 @@ for i, u in enumerate(range(36, 166, 12)):                      # вдоль п�
 for u, y in [(88, 160), (112, 160), (150, 150), (130, 150), (78, 150), (60, 150), (140, 82), (66, 36), (40, 52), (166, 112)]:
     p = deco(LAMP[0], u, y, tries=NEAR); orient(p)             # двор каравана, стрельбище, углы
     if p: lamps.append(p)
+# правки Егора по номерам фонарей (Ф1…Ф23 на town_lamps.jpg, 2026-10-05)
+if LIGHT == 'electric':
+    CW = {'strlit1.frm': 'strlit3.frm', 'strlit3.frm': 'strlit4.frm', 'strlit4.frm': 'strlit2.frm', 'strlit2.frm': 'strlit1.frm'}   # по часовой
+    CCW = {v: k for k, v in CW.items()}
+    ROT = {5: CW, 16: lambda n: CW[CW[n]], 17: CCW, 18: CCW}
+    def lamp_obj(i): return next(o for o in DECO if o['tile'] == T(*lamps[i - 1]))
+    for i, r in ROT.items():
+        o = lamp_obj(i); n = o['path'].split('\\')[-1]
+        o['path'] = 'art\\scenery\\' + (r(n) if callable(r) else r[n])
+    def near_path(u0, y0):
+        """Ближайшая к точке свободная клетка вплотную к дорожке (не в здании, не у двери)."""
+        sp = set()
+        for (u, y) in PATHHEX:
+            for du, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                p = (u + du, y + dy)
+                if free_spot(*p, m=0, door=2): sp.add(p)
+        return min(sp, key=lambda p: (p[0] - u0) ** 2 + (p[1] - y0) ** 2)
+    # куда перенести: Ф8 и Ф19 — западная часть поперечной дороги, Ф22 — поперечная у сквера,
+    # Ф14 и Ф15 — восточная сторона главной дороги на севере, Ф20 — главная дорога у ворот, восточная сторона, Ф23 — к дорожке
+    MOVE = {8: (44, 103), 19: (60, 103), 22: (78, 103), 14: (102, 50), 15: (102, 74), 20: (102, 162), 23: None}
+    for i, tgt in MOVE.items():
+        o = lamp_obj(i); DECO.remove(o); objs.remove(o); occupied.discard(o['tile'])
+        best = near_path(*(tgt or lamps[i - 1]))
+        lamps[i - 1] = best
+        q = deco('strlit1.frm', *best, m=0); orient(q)
 # стрельбище у южной стены (юго-восточный угол): мишени — дверь машины на бочке (weed05) у самой стены,
 # за ними сено (HAYBED), огневой рубеж — столы с ящиками патронов; стреляют в сторону стены
 range_parts = []
