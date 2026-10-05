@@ -56,7 +56,9 @@ put('barracks', 134, 116, '16 Казарма')
 put('market', 50, 148, '18 Рынок')
 for i, (u, y) in enumerate([(84, 152), (92, 154), (108, 152), (116, 154)]): spr('CCART0%d.FRM' % (1 + i % 2), u, y, 'items')
 labels.append(('15 Двор каравана', 100, 156))
-CAR = (116, 161); spr('CARSPEC1.FRM', *CAR, tag='car')   # стоянка машины героя (Check_Create_Car в скрипте карты)
+CAR = (116, 161); spr('CARSPEC1.FRM', *CAR, tag='car')
+from hexlib import tdir
+TRUNK = U(tdir(tdir(T(*CAR), 5, 2), 4, 1)); spr('cartrunk.frm', *TRUNK, 'items', tag='car')   # багажник: макрос RPU Create_Trunk (2 клетки по напр. 5, 1 по напр. 4)   # стоянка машины героя (Check_Create_Car в скрипте карты)
 spr('CONBAR01.frm', 92, 164); spr('vclight1.frm', 95, 164); spr('CONBAR01.frm', 107, 164); spr('vclight1.frm', 104, 164)
 rnd = random.Random(3)
 for u in range(70, 97, 6):
