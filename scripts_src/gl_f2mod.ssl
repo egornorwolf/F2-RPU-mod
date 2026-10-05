@@ -14,7 +14,7 @@
 #include "command.h"
 #include "f2mod.h"
 
-#define F2MOD_VERSION "0.3.0"
+#define F2MOD_VERSION "0.3.1"
 
 procedure start;
 procedure encounter_handler;
@@ -23,7 +23,10 @@ procedure keep_escort_wm_pos;
 procedure step_toward(variable a, variable b, variable s);
 
 procedure start begin
+   variable st;
    if (game_loaded) then begin
+      // Потолок статов героя F2MOD_STAT_MAX вместо 10 (sfall, не сохраняется — ставим при каждой загрузке)
+      for (st := STAT_st; st <= STAT_lu; st++) set_pc_stat_max(st, F2MOD_STAT_MAX);
       register_hook_proc(HOOK_ENCOUNTER, encounter_handler);
       register_hook_proc(HOOK_COMBATDAMAGE, combatdamage_handler);
       set_global_script_repeat(60);

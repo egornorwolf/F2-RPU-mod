@@ -104,8 +104,8 @@ end
 procedure change_special(variable stat, variable delta) begin
    variable val, names;
    val := get_pc_base_stat(stat) + delta;
-   if (val < 1 or val > 10) then begin
-      display_msg("F2mod: значение должно быть от 1 до 10.");
+   if (val < 1 or val > F2MOD_STAT_MAX) then begin
+      display_msg("F2mod: значение должно быть от 1 до " + F2MOD_STAT_MAX + ".");
       return;
    end
    set_pc_base_stat(stat, val);

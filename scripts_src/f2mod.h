@@ -3,6 +3,9 @@
 #ifndef F2MOD_H
 #define F2MOD_H
 
+// Потолок основных статов героя (Егор, 2026-10-05): 15 вместо 10, ставит sfall при каждой загрузке
+#define F2MOD_STAT_MAX 15
+
 #define AREA_F2MOD_CAMP     (61)    // [Area 61] в city.txt
 #define MAP_F2MOD_CAMP      (173)   // [Map 173] в maps.txt
 #define MAP_F2MOD_CARAVAN   (174)   // [Map 174] в maps.txt: встреча с караваном
