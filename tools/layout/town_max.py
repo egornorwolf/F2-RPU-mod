@@ -56,6 +56,7 @@ put('barracks', 134, 116, '16 Казарма')
 put('market', 50, 148, '18 Рынок')
 for i, (u, y) in enumerate([(84, 152), (92, 154), (108, 152), (116, 154)]): spr('CCART0%d.FRM' % (1 + i % 2), u, y, 'items')
 labels.append(('15 Двор каравана', 100, 156))
+CAR = (116, 161); spr('CARSPEC1.FRM', *CAR, tag='car')   # стоянка машины героя (Check_Create_Car в скрипте карты)
 spr('CONBAR01.frm', 92, 164); spr('vclight1.frm', 95, 164); spr('CONBAR01.frm', 107, 164); spr('vclight1.frm', 104, 164)
 rnd = random.Random(3)
 for u in range(70, 97, 6):
@@ -445,3 +446,8 @@ if STILLS:
         x, yy = scr(*p); x -= bx - 900; yy -= by - 650
         db.text((x - 20, yy + 14), f'С{i + 1}', font=fs, fill=(255, 200, 80), stroke_width=4, stroke_fill=(0, 0, 0))
     cb.save(OUT + 'town_bar_stills.jpg', quality=90); print('stills on map', left)
+
+# ---- вырезка стоянки машины
+cx_, cy_ = scr(*CAR)
+cc = clean.crop((cx_ - 700, cy_ - 450, cx_ + 700, cy_ + 350)).copy(); ImageDraw.Draw(cc).text((700 - 60, 450 + 40), 'Машина', font=fs, fill=(255, 200, 80), stroke_width=4, stroke_fill=(0, 0, 0))
+cc.save(OUT + 'town_car.jpg', quality=90)
