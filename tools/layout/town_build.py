@@ -210,13 +210,14 @@ def inside_cells(objs):
             r, c = rows.get(y, ()), cols.get(x, ())
             if any(v < x for v in r) and any(v > x for v in r) and any(v < y for v in c) and any(v > y for v in c): out.add(y * 200 + x)
     return out
+BIGN = ('bed', 'aybed', 'sstove', 'fridge', 'desk', 'tbl', 'table')
 BACK = {n: 'ur' for n in ('bokcas1', 'bokcas5', 'bkshlf5', 'locker5', 'dresr1', 'dresr3')}; BACK['abkshlf1'] = 'ul'   # к какой стене прижата спина
 def back_nb(t, side):
     """Соседняя клетка в сторону верха-вправо ('ur') или верха-влево ('ul') на экране."""
     x0, y0 = hexxy(t); best = None
     for r in range(6):
         n = tdir(t, r, 1); x, y = hexxy(n); dx, dy = x - x0, y - y0
-        sc = (dx - dy) if side == 'ur' else (-dx - dy)
+        sc = {'ur': dx - dy, 'ul': -dx - dy, 'dl': -dx + dy, 'dr': dx + dy}[side]
         if best is None or sc > best[0]: best = (sc, n)
     return best[1]
 def furnish(objs, items, seed, mode='wall', region=None):
@@ -230,15 +231,26 @@ def furnish(objs, items, seed, mode='wall', region=None):
     R0, blk, door = reach(objs, bb)
     busy = set()
     for o in objs:
+        if mode == 'free' and (o.get('path') or fidpath(o['fid']) or '').lower().split('\\')[-1].startswith('haybed'): continue   # сено не мешает
         busy.add(o['tile'])
         if o.get('crit') or opid(o) >> 24 == 2: busy |= ring1(o['tile'])
     for d in door: busy |= {n for m in ring1(d) for n in ring1(m)}
     blk0 = set(blk); WALLS = {o['tile'] for o in objs if not o.get('crit') and opid(o) >> 24 == 3}
     for it in items:
         c = [t for t in region if t in R0 and t not in blk and t not in busy]
-        if it[0][:-4] in BACK and mode == 'wall': c = [t for t in c if back_nb(t, BACK[it[0][:-4]]) in WALLS]   # полка спиной к стене
+        nm0 = it[0][:-4].lower()
+        if nm0.startswith(BIGN):                       # высокие и широкие вещи не вплотную к стенам: текстура торчала за стену (Егор)
+            c2 = [t for t in c if not any(n in WALLS for m in ring1(t) for n in ring1(m))]
+            if c2 or not nm0.startswith(('bed', 'aybed')): c = c2
+            else: print('  кровать без отступа от стен:', it)
+        def shown(t):                                     # перед полкой (к зрителю) в 2 клетках нет стены: иначе ее закрывает часть здания
+            for sd in ('dl', 'dr'):
+                n1 = back_nb(t, sd); n2 = back_nb(n1, sd)
+                if n1 in WALLS or n2 in WALLS: return False
+            return True
+        if it[0][:-4] in BACK: c = [t for t in c if (mode != 'wall' or back_nb(t, BACK[it[0][:-4]]) in WALLS) and shown(t)]   # полка спиной к стене
         nb = lambda t: any(n in blk0 for n in ring1(t) - {t})
-        c = sorted(t for t in c if nb(t) == (mode == 'wall')); rnd.shuffle(c)
+        c = sorted(t for t in c if mode == 'free' or nb(t) == (mode == 'wall')); rnd.shuffle(c)
         for t in c:
             o = dict(tile=t, pid=it[1], rot=rnd.randrange(6), crit=True, fid=0, flags=0) if it[0] == 'crit' else \
                 dict(tile=t, path=f'art\\{it[1] if len(it) > 1 else "scenery"}\\{it[0]}', pid=0, fid=0, flags=0)
@@ -282,8 +294,18 @@ def garden_lv(key, lv):
     def nm(o): return (fidpath(o['fid']) or '').split('\\')[-1].lower()
     if lv == 1: return [o for o in g if nm(o) == 'cab1.frm']
     if lv == 2: return [o for o in g if nm(o) in ('cab1.frm', 'corn1.frm', 'corn3.frm')]
-    if lv == 3: return [o for o in g if not nm(o).startswith('fen')]
-    return g
+    plants = [o for o in g if not nm(o).startswith(('fen', 'gate'))]            # ворота и забор НКР рвались на куски (Егор): свой забор
+    if lv == 3: return plants
+    gate = [o for o in g if nm(o).startswith('gate')]                           # ворота НКР оставляем (Егор), забор вокруг свой и цельный
+    ts = [o['tile'] for o in plants]; xs = [t % 200 for t in ts]; ys = [t // 200 for t in ts]
+    X0 = (min(xs) - 3) & ~1; X1 = ((max(xs) + 3) | 1)
+    if gate:
+        gx, gy = gate[0]['tile'] % 200, gate[0]['tile'] // 200
+        Y0 = gy if gx % 2 == 0 else gy - 1                                     # северный ряд забора проходит через ворота
+    else: gx = (X0 + X1) // 2; Y0 = (min(ys) - 3) & ~1
+    Y1 = ((max(ys) + 3) | 1)
+    gx = max(X0 + 2, min(X1 - 3, gx))
+    return plants + gate + wood_rect(X0, X1, Y0, Y1, gapN=range(gx - 1, gx + 2))
 
 # ---- здания: (имя в диалоге, ключи участков, функция уровня -> объекты)
 BOX = lambda k: B[k]
@@ -300,7 +322,7 @@ bld('Огороды', lambda lv: garden_lv('2 Огород', lv) + garden_lv('3 
 FARM = ('rake', 'plow', 'vase1', 'aybed2')
 # мебель 4 ур. (Егор: «поиграй в симс», жителям нужно где спать, есть и хранить вещи): у каждого дома по 3-4 кровати, 2-3 полки или
 # шкафа у стен, стол со стульями посередине и своя «изюминка» (печь, холодильник, письменный стол, сундук, сушилка)
-BEDS = ['bed1.frm', 'bed2.frm', 'bed3.frm', 'bed4.frm', 'bed5.frm', 'bed6.frm', 'bed7.frm', 'aybed1.frm']
+BEDS = ['bed3.frm', 'bed4.frm', 'bed8.frm', 'aybed1.frm', 'aybed2.frm']        # прямые, невысокие (без спинок, торчащих за стену)
 STORE = [('bokcas1.frm', 'items'), ('bokcas5.frm', 'items'), ('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('dresr1.frm', 'items'),
          ('dresr3.frm', 'items'), ('abkshlf1.frm', 'items'), ('chest1.frm', 'items')]        # полки, шкафы, комоды, сундук
 CHAIRS = ['char01.frm', 'char02.frm', 'char03.frm', 'chair3.frm']
@@ -322,7 +344,7 @@ def house4(i):
     drop = ('aybed2',) if i in (0, 6) else FARM               # кровать у двери (в НКР стояла на пороге) убираем у всех
     objs = [o for o in objs if not (fidpath(o['fid']) or '').split('\\')[-1].lower().startswith(drop)]
     r = random.Random(900 + i)
-    objs = furnish(objs, [(b,) for b in r.sample(BEDS, 3)], seed=40 + i, mode='wall')            # кровати у стен: 3 места для сна
+    objs = furnish(objs, [(b,) for b in r.sample(BEDS, 3)], seed=40 + i, mode='open')            # кровати у стен: 3 места для сна
     objs = furnish(objs, [(c,) for c in r.sample(CHAIRS, 2)], seed=60 + i, mode='open')           # и стулья
     opt = [([(r.choice(TABLES),)], 'open'), ([x if isinstance(x, tuple) else (x,) for x in [r.choice(STORE)]], 'wall'),
            (EXTRA[i][:1], 'wall'), ([x if isinstance(x, tuple) else (x,) for x in [r.choice(STORE)]], 'wall'), (EXTRA[i][1:], 'open')]
@@ -356,7 +378,7 @@ bld('Мастерская', lambda lv: fit(spr_piece([('ltable2.frm', 0, 0), ('T
     else furnish(fit(SHACK, B['9 Автомастерская']), [('ltable2.frm',), ('TIRE001.frm',)], seed=21) if lv == 2
     else furnish(fit(with_extra(MHOUSE, [('ltable1.frm', 7, 4), ('ltable2.frm', -6, 4)]), B['9 Автомастерская']),
                  [('ltable2.frm',), ('ltable1.frm',), ('TIRE001.frm',), ('brl1000.frm',)], seed=22) if lv == 3
-    else L4['9 Автомастерская'] + CRAFTER)
+    else [o for o in L4['9 Автомастерская'] if (fidpath(o['fid']) or '').split('\\')[-1].lower() not in ('trapdr.frm', 'hole1.frm')] + CRAFTER)   # люк в малом здании лишний (Егор)
 GATEPOST = untagged('CONBAR01.frm') + untagged('vclight1.frm')
 bld('Охрана', lambda lv: [at('CONBAR01.frm', 92, 164), at('BRAZR001.frm', 95, 164)] if lv == 1
     else GATEPOST + ([at('shack.frm', 89, 165)] if lv == 3 else [])   # будка охраны у ворот, как у военной базы (mbclose)
@@ -374,26 +396,49 @@ def pen_inside():
     X0 = (cx - 7) & ~1; Y0 = (cy - 6) & ~1
     return {y * 200 + x for x in range(X0 + 1, X0 + 15) for y in range(Y0 + 1, Y0 + 13)}
 # брамины на каждом уровне (Егор): 2, 3, 4, 6
+def stall_brahmins(objs, n, seed):
+    """Брамины стоят в стойлах: на сене (haybed) между жердями; клетки сена вдоль дальней стены и в двух нижних рядах."""
+    hay = {o['tile'] for o in objs if (fidpath(o['fid']) or str(o.get('path'))).lower().split('\\')[-1].startswith('haybed')}
+    return furnish(objs, [('crit', PID_BRAHMIN)] * n, seed, 'free', hay)
 bld('Ферма браминов', lambda lv: brahmins(fit(spr_piece([('HAYBED01.frm', 0, 0), ('barrel2.frm', 3, 2), ('HAYBED04.frm', 5, -1)]), B['4 Ранчо']), 2, 81,
                                           area(B['4 Ранчо'], 14, 12)) if lv == 1
     else brahmins(ranch_pen(), 3, 82, pen_inside()) if lv == 2
-    else brahmins(fit(P['stall'], B['4 Ранчо']), 4, 83, area(B['4 Ранчо'], 26, 40)) if lv == 3
+    else stall_brahmins(fit(P['stall'], B['4 Ранчо']), 4, 83) if lv == 3
     else brahmins(L4['4 Ранчо'], 6, 84, area(B['4 Ранчо'], 26, 40)))
 STILLS = OTHER['still']
+BAR2 = house_piece('gecksetl', 19470)                                     # дощатый бар Геккo: Г-образная стойка, столы, стулья, бочки (Егор: нормальный бар на 2 ур.)
 bld('Бар', lambda lv: fit(OUTBAR, B['11 Бар']) if lv == 1
-    else fit(with_extra(RTENT, [('barrel2.frm', 7, 2), ('barrel3.frm', 8, 4), ('crate1.frm', -7, 3)]), B['11 Бар']) if lv == 2
+    else fit(BAR2, B['11 Бар']) if lv == 2
     else fit(MBAR, B['11 Бар'], dy=-2) + STILLS if lv == 3 else L4['11 Бар'] + STILLS)
 # 1 ур. — армейская палатка с хирургическим столом, 2 — палатка пустыни с кроватями и двумя столами (Егор);
 # автодок на 3 и 4 уровне не стоит: его ставит квест (Егор), место под него на 4 уровне свободно (town_max.py)
+def hospital4(autodoc=bool(os.environ.get('AUTODOC'))):
+    """Госпиталь 4 ур. (дом Реддинга): полку, наполовину скрытую перегородкой, переставляем на видное место; место автодока —
+    на месте хирургического стола medtbl03 (автодок появится по квесту: стол заменяется). autodoc=True — только для картинки."""
+    def nm(o): return (fidpath(o['fid']) or '').split('\\')[-1].lower()
+    objs = [o for o in L4['14 Госпиталь'] if nm(o) != 'bkshlf3.frm']
+    if autodoc:
+        tbl = [o for o in objs if nm(o) == 'medtbl03.frm']
+        objs = [o for o in objs if nm(o) != 'medtbl03.frm'] + [dict(o, path='art\\scenery\\holo.frm', pid=0, fid=0) for o in tbl]
+    return furnish(objs, [('bkshlf3.frm', 'items')], seed=131, mode='wall')
 bld('Медпункт', lambda lv: furnish(fit(MILTENT[2], B['14 Госпиталь']), [('medtbl01.frm',)], seed=101) if lv == 1
     else furnish(fit(CLINIC2, B['14 Госпиталь']), [('medtbl01.frm',), ('medtbl01.frm',)], seed=102) if lv == 2
     else fit(sub(VCCLINIC, lambda n: n != 'holo.frm'), B['14 Госпиталь']) if lv == 3
-    else L4['14 Госпиталь'])
+    else hospital4())
 HD = [0, 0]                             # сдвиг палатки 1 ур., чтобы люк подвала был внутри нее (ниже)
+def hero4():
+    """Дом героя 4 ур. (Убежище): убираем таблички «Центр распределения слуг» и полку, наполовину скрытую стеной; добавляем
+    вместительные (250 ед.) шкафы вдоль стен: полки, шкафчик, сундуки (Егор: 3-4 на этаж, остальное хранить ниже, в подвале)."""
+    def nm(o): return (fidpath(o['fid']) or '').split('\\')[-1].lower()
+    objs = [o for o in L4['8 Дом героя'] if nm(o) not in ('sign36.frm', 'sign37.frm', 'bkshlf5.frm', 'footlkr4.frm')]
+    reg = inside_cells(objs) | {t for t in inner_cells(objs, loose=True) if t // 200 < wallbb(objs)[3] - 2}   # шире обычного, но не у фасада
+    objs = furnish(objs, [('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('abkshlf1.frm', 'items')], seed=121, mode='wall', region=reg)
+    objs = furnish(objs, [('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('abkshlf1.frm', 'items'), ('locker5.frm', 'items')], seed=122, mode='open', region=reg)   # что не встало у стены — свободно в зале
+    return furnish(objs, [('chest1.frm', 'items'), ('chest1.frm', 'items')], seed=123, mode='wall', region=reg)
 bld('Дом героя', lambda lv: fit(with_extra(ARTENT, [('footlkr1.frm', 0, 1, 'items')]), B['8 Дом героя'], *HD) if lv == 1
     else fit(with_extra(MHOUSE, [('footlkr1.frm', 0, 1, 'items')]), B['8 Дом героя']) if lv == 2
     else furnish(fit(HERO3, B['8 Дом героя']), [('footlkr1.frm', 'items'), ('locker5.frm', 'items')], seed=111) if lv == 3   # был туалет НКР (Егор)
-    else L4['8 Дом героя'])
+    else hero4())
 YARD = untagged('CCART01.FRM') + untagged('CCART02.FRM')
 bld('Рынок', lambda lv: fit(spr_piece([('CCART01.FRM', 0, 0, 'items')]), B['18 Рынок']) if lv == 1
     else fit(spr_piece([('bigshlf1.frm', 0, 0), ('bigshlf2.frm', 4, 0), ('barrel.frm', 8, 2)]), B['18 Рынок']) if lv == 2
@@ -470,7 +515,7 @@ def _find():
     raise SystemExit('люк не попал в палатку 1 уровня')
 HATCH_T = _find()
 print('люк', HATCH_T, 'сдвиг палатки 1 ур.', HD)
-HATCH = [dict(tile=HATCH_T, path='art\\scenery\\trapdr.frm', pid=0, fid=0, flags=0)]
+HATCH = [dict(tile=HATCH_T, path='art\\scenery\\hole1.frm', pid=0, fid=0, flags=0)]
 
 # ---- проверка: все PID есть, считаем объекты
 def normall(objs): return [norm(o) for o in objs if keep(o)]
