@@ -210,8 +210,10 @@ def inside_cells(objs):
             r, c = rows.get(y, ()), cols.get(x, ())
             if any(v < x for v in r) and any(v > x for v in r) and any(v < y for v in c) and any(v > y for v in c): out.add(y * 200 + x)
     return out
+LOOSE = False                                                 # шкафы: достаточно, чтобы перед ними была свободная клетка
+STRICT = False                                                 # шкафы не прячем за стенами здания
 BIGN = ('bed', 'aybed', 'sstove', 'fridge', 'desk', 'tbl', 'table')
-BACK = {n: 'ur' for n in ('bokcas1', 'bokcas5', 'bkshlf5', 'locker5', 'dresr1', 'dresr3')}; BACK['abkshlf1'] = 'ul'   # к какой стене прижата спина
+BACK = {n: 'ur' for n in ('bokcas1', 'bokcas5', 'bkshlf5', 'locker1', 'locker2', 'locker3', 'locker4', 'locker5', 'dresr1', 'dresr3')}; BACK['abkshlf1'] = 'ul'   # к какой стене прижата спина
 def back_nb(t, side):
     """Соседняя клетка в сторону верха-вправо ('ur') или верха-влево ('ul') на экране."""
     x0, y0 = hexxy(t); best = None
@@ -220,7 +222,7 @@ def back_nb(t, side):
         sc = {'ur': dx - dy, 'ul': -dx - dy, 'dl': -dx + dy, 'dr': dx + dy}[side]
         if best is None or sc > best[0]: best = (sc, n)
     return best[1]
-def furnish(objs, items, seed, mode='wall', region=None):
+def furnish(objs, items, seed, mode='wall', region=None, cluster=False):
     """Ставит items (файл, вид) или ('crit', pid) на свободные клетки внутри постройки (или в region): у стены (mode='wall')
     или на открытом месте ('open'), не у дверей, не вплотную к другим вещам; каждый раз проверяем, что проход не перекрыт."""
     rnd = random.Random(seed); objs = list(objs)
@@ -235,7 +237,7 @@ def furnish(objs, items, seed, mode='wall', region=None):
         busy.add(o['tile'])
         if o.get('crit') or opid(o) >> 24 == 2: busy |= ring1(o['tile'])
     for d in door: busy |= {n for m in ring1(d) for n in ring1(m)}
-    blk0 = set(blk); WALLS = {o['tile'] for o in objs if not o.get('crit') and opid(o) >> 24 == 3}
+    placed = []; blk0 = set(blk); WALLS = {o['tile'] for o in objs if not o.get('crit') and opid(o) >> 24 == 3}
     for it in items:
         c = [t for t in region if t in R0 and t not in blk and t not in busy]
         nm0 = it[0][:-4].lower()
@@ -246,14 +248,17 @@ def furnish(objs, items, seed, mode='wall', region=None):
         def shown(t):                                     # перед полкой (к зрителю) в 2 клетках нет стены: иначе ее закрывает часть здания
             for sd in ('dl', 'dr'):
                 n1 = back_nb(t, sd); n2 = back_nb(n1, sd)
-                if n1 in WALLS or n2 in WALLS: return False
+                if sd == 'dr' and LOOSE: continue
+                if n1 in WALLS or (n2 in WALLS and not LOOSE): return False
             return True
         base = list(c); wall = mode in ('wall', 'wall+')
+        if os.environ.get('DBG') and nm0 == 'locker1': print('DBG f', len(base), [(t % 200, t // 200) for t in base if back_nb(t, 'ur') in WALLS], [(t % 200, t // 200) for t in base if back_nb(t, 'ur') in WALLS and shown(t)], 'busyNearWalls', [(t % 200, t // 200) for t in region if t in R0 and t not in blk and back_nb(t, 'ur') in WALLS and t in busy][:20])
         if it[0][:-4] in BACK and wall:
             c = [t for t in base if back_nb(t, BACK[it[0][:-4]]) in WALLS]     # шкаф и полка только спиной вплотную к стене (Егор)
-            c = [t for t in c if shown(t)] or c                               # лучше там, где не закрыты зданием, но стена важнее
+            c = [t for t in c if shown(t)] if nm0.startswith('locker') and STRICT else [t for t in c if shown(t)] or c   # лучше там, где не закрыты зданием
         elif it[0][:-4] in BACK: c = [t for t in base if shown(t)]
         nb = lambda t: any(n in blk0 for n in ring1(t) - {t})
+        if cluster and placed: c = [t for t in c if any(t in ring1(q) for q in placed)]               # ящики группой вплотную друг к другу
         c = sorted(t for t in c if mode == 'free' or nb(t) == wall); rnd.shuffle(c)
         if not c and mode == 'wall+' and it[0][:-4] not in BACK:                                          # у стены нет места: чуть дальше, но проход вокруг (ring1 свободен)
             c = sorted(t for t in base if not nb(t)); rnd.shuffle(c)
@@ -262,7 +267,7 @@ def furnish(objs, items, seed, mode='wall', region=None):
                 dict(tile=t, path=f'art\\{it[1] if len(it) > 1 else "scenery"}\\{it[0]}', pid=0, fid=0, flags=0)
             R1, blk1, _ = reach(objs + [o], bb)
             if (R0 - {t}) <= R1:
-                objs.append(o); R0, blk = R1, blk1
+                objs.append(o); R0, blk = R1, blk1; placed.append(t)
                 small = (it[0].startswith(('char', 'chair', 'bokcas', 'bkshlf', 'locker', 'dresr', 'abkshlf', 'chest', 'footlkr', 'ss1')))
                 busy |= {t} if small else ring1(t); break
         else: print('  не влезло:', it)
@@ -432,14 +437,16 @@ bld('Медпункт', lambda lv: furnish(fit(MILTENT[2], B['14 Госпита�
     else fit(sub(VCCLINIC, lambda n: n != 'holo.frm'), B['14 Госпиталь']) if lv == 3
     else hospital4())
 HD = [0, 0]                             # сдвиг палатки 1 ур., чтобы люк подвала был внутри нее (ниже)
+HERO_LOCKERS = [(45, 67, 'locker1.frm'), (45, 68, 'locker2.frm'), (45, 69, 'locker3.frm'), (45, 70, 'locker4.frm')]   # 4 металлических шкафа рядом у стены зала (место предложено, Егор поправит)
 def hero4():
     """Дом героя 4 ур. (Убежище): убираем таблички «Центр распределения слуг» и полку, наполовину скрытую стеной; добавляем
     вместительные (250 ед.) шкафы вдоль стен: полки, шкафчик, сундуки (Егор: 3-4 на этаж, остальное хранить ниже, в подвале)."""
     def nm(o): return (fidpath(o['fid']) or '').split('\\')[-1].lower()
-    objs = [o for o in L4['8 Дом героя'] if nm(o) not in ('sign36.frm', 'sign37.frm', 'bkshlf5.frm', 'footlkr4.frm', 'stbed01.frm')]   # stbed01 — черные полки-кровати в боковых комнатах (Егор: убрать)
-    reg = inside_cells(objs) | {t for t in inner_cells(objs, loose=True) if t // 200 < wallbb(objs)[3] - 2}   # шире обычного, но не у фасада
-    return furnish(objs, [('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('abkshlf1.frm', 'items'), ('bkshlf5.frm', 'items'),
-                          ('locker5.frm', 'items'), ('chest1.frm', 'items'), ('chest1.frm', 'items')], seed=121, mode='wall+', region=reg)
+    objs = [o for o in L4['8 Дом героя'] if nm(o) not in ('sign36.frm', 'sign37.frm', 'bkshlf5.frm', 'footlkr4.frm')]      # черные полки-кровати stbed01 остаются (Егор)
+    # Егор (06.10): мои полки и шкафы убраны, черные полки-кровати на месте; металлические шкафы (locker1-4, 3-4 рядом) он расставит сам:
+    # HERO_LOCKERS — список (x, y, файл), заполняется по его выбору мест
+    for x, y, fn in HERO_LOCKERS: objs.append(dict(tile=y * 200 + x, path=f'art\\items\\{fn}', pid=0, fid=0, flags=0))
+    return objs
 bld('Дом героя', lambda lv: fit(with_extra(ARTENT, [('footlkr1.frm', 0, 1, 'items')]), B['8 Дом героя'], *HD) if lv == 1
     else fit(with_extra(MHOUSE, [('footlkr1.frm', 0, 1, 'items')]), B['8 Дом героя']) if lv == 2
     else furnish(fit(HERO3, B['8 Дом героя']), [('footlkr1.frm', 'items'), ('locker5.frm', 'items')], seed=111) if lv == 3   # был туалет НКР (Егор)

@@ -6495,6 +6495,7 @@ procedure tb_b11(variable lv) begin
       call tb_o(33554445, 10843, 0);
       call tb_o(50332546, 10844, 0);
       call tb_o(50332546, 10848, 0);
+      call tb_o(33554622, 10849, 0);
       call tb_o(33554499, 10850, 0);
       call tb_o(33554499, 10851, 0);
       call tb_o(33554499, 10852, 0);
@@ -6555,6 +6556,7 @@ procedure tb_b11(variable lv) begin
       call tb_o(50332537, 12036, 0);
       call tb_o(33554499, 12037, 0);
       call tb_o(50332550, 12048, 0);
+      call tb_o(33554622, 12049, 0);
       call tb_o(33554499, 12050, 0);
       call tb_o(33554499, 12051, 0);
       call tb_o(33554499, 12052, 0);
@@ -6600,6 +6602,7 @@ procedure tb_b11(variable lv) begin
       call tb_o(50332497, 13056, 0);
       call tb_o(50332269, 13236, 0);
       call tb_o(50332550, 13248, 0);
+      call tb_o(33554622, 13249, 0);
       call tb_o(33554499, 13250, 0);
       call tb_o(33554499, 13252, 0);
       call tb_o(50332498, 13256, 0);
@@ -6645,13 +6648,10 @@ procedure tb_b11(variable lv) begin
       call tb_o(50332516, 14451, 0);
       call tb_o(50332514, 14453, 0);
       call tb_o(50332516, 14455, 0);
-      call tb_o(149, 12850, 0);
-      call tb_o(188, 14049, 0);
-      call tb_o(246, 13247, 0);
-      call tb_o(149, 11445, 0);
-      call tb_o(188, 11654, 0);
-      call tb_o(245, 12849, 0);
-      call tb_o(245, 11037, 0);
+      call tb_o(132, 13445, 0);
+      call tb_o(133, 13645, 0);
+      call tb_o(134, 13845, 0);
+      call tb_o(135, 14045, 0);
    end
 end
 
