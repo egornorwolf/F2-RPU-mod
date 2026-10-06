@@ -316,7 +316,7 @@ def garden_lv(key, lv):
     else: gx = (X0 + X1) // 2; Y0 = (min(ys) - 3) & ~1
     Y1 = ((max(ys) + 3) | 1)
     gx = max(X0 + 2, min(X1 - 3, gx))
-    return plants + gate + wood_rect(X0, X1, Y0, Y1, gapN=range(gx - 1, gx + 2))
+    return plants + wood_rect(X0, X1, Y0, Y1, gapN=range(gx - 1, gx + 2))      # ворота убраны (Егор): в проеме просто пусто
 
 # ---- здания: (имя в диалоге, ключи участков, функция уровня -> объекты)
 BOX = lambda k: B[k]
@@ -386,8 +386,8 @@ CRAFTER = untagged('crafter1.frm')
 # теперь только декорации — верстаки ltable, покрышки, бочки, ящики
 bld('Мастерская', lambda lv: fit(spr_piece([('ltable2.frm', 0, 0), ('TIRE001.frm', 4, -2), ('TIRE002.frm', 6, 1), ('crate1.frm', -4, 2),
                                             ('brl1000.frm', -5, -1)]), B['9 Автомастерская']) if lv == 1
-    else furnish(fit(SHACK, B['9 Автомастерская']), [('ltable2.frm',), ('TIRE001.frm',)], seed=21) if lv == 2
-    else furnish(fit(with_extra(MHOUSE, [('ltable1.frm', 7, 4), ('ltable2.frm', -6, 4)]), B['9 Автомастерская']),
+    else furnish(fit(SHACK, B['9 Автомастерская']), [('TIRE001.frm',)], seed=21) if lv == 2
+    else furnish(fit(MHOUSE, B['9 Автомастерская']),
                  [('ltable2.frm',), ('ltable1.frm',), ('TIRE001.frm',), ('brl1000.frm',)], seed=22) if lv == 3
     else [o for o in L4['9 Автомастерская'] if (fidpath(o['fid']) or '').split('\\')[-1].lower() not in ('trapdr.frm', 'hole1.frm')] + CRAFTER)   # люк в малом здании лишний (Егор)
 GATEPOST = untagged('CONBAR01.frm') + untagged('vclight1.frm')
@@ -420,7 +420,7 @@ STILLS = OTHER['still']
 BAR2 = house_piece('gecksetl', 19470)                                     # дощатый бар Геккo: Г-образная стойка, столы, стулья, бочки (Егор: нормальный бар на 2 ур.)
 bld('Бар', lambda lv: fit(OUTBAR, B['11 Бар']) if lv == 1
     else fit(BAR2, B['11 Бар']) if lv == 2
-    else fit(MBAR, B['11 Бар'], dy=-2) + STILLS if lv == 3 else L4['11 Бар'] + STILLS)
+    else fit(MBAR, B['11 Бар'], dy=-2) if lv == 3 else L4['11 Бар'])   # самогонные аппараты ставит скрипт по квесту, по одному (Егор)
 # 1 ур. — армейская палатка с хирургическим столом, 2 — палатка пустыни с кроватями и двумя столами (Егор);
 # автодок на 3 и 4 уровне не стоит: его ставит квест (Егор), место под него на 4 уровне свободно (town_max.py)
 def hospital4(autodoc=bool(os.environ.get('AUTODOC'))):
