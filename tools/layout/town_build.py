@@ -212,7 +212,7 @@ def inside_cells(objs):
     return out
 LOOSE = False                                                 # шкафы: достаточно, чтобы перед ними была свободная клетка
 STRICT = False                                                 # шкафы не прячем за стенами здания
-BIGN = ('bed', 'aybed', 'sstove', 'fridge', 'desk', 'tbl', 'table')
+BIGN = ('bed', 'aybed', 'sstove', 'fridge', 'desk', 'tbl', 'table', 'ltable')
 BACK = {n: 'ur' for n in ('bokcas1', 'bokcas5', 'bkshlf5', 'locker1', 'locker2', 'locker3', 'locker4', 'locker5', 'dresr1', 'dresr3')}; BACK['abkshlf1'] = 'ul'   # к какой стене прижата спина
 def back_nb(t, side):
     """Соседняя клетка в сторону верха-вправо ('ur') или верха-влево ('ul') на экране."""

@@ -3873,8 +3873,8 @@ procedure tb_b6(variable lv) begin
       call tb_o(33554499, 24552, 0);
       call tb_o(50332270, 24553, 0);
       call tb_o(33554499, 24554, 0);
-      call tb_o(33554926, 23553, 0);
-      call tb_o(33554925, 24146, 0);
+      call tb_o(33556394, 23553, 0);
+      call tb_o(33554437, 24146, 0);
    end else if (lv == 4) then begin
       call tb_o(33554711, 21358, 0);
       call tb_o(50331786, 21554, 0);
