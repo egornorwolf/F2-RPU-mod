@@ -390,9 +390,16 @@ bld('Мастерская', lambda lv: fit(spr_piece([('ltable2.frm', 0, 0), ('T
     else furnish(fit(MHOUSE, B['9 Автомастерская']),
                  [('ltable2.frm',), ('ltable1.frm',), ('TIRE001.frm',), ('brl1000.frm',)], seed=22) if lv == 3
     else [o for o in L4['9 Автомастерская'] if (fidpath(o['fid']) or '').split('\\')[-1].lower() not in ('trapdr.frm', 'hole1.frm')] + CRAFTER)   # люк в малом здании лишний (Егор)
-GATEPOST = untagged('CONBAR01.frm') + untagged('vclight1.frm')
+def gate_blocks():
+    """У каждых ворот (север y=30, юг y=169; арка занимает 4 ряда внутрь): по 2 бетонных блока зеркально (CONBAR02 и CONBAR01), рядом по горящей бочке со светом. Без будок (Егор)."""
+    out = []
+    for y, a, b in ((33, 'CONBAR02.frm', 'CONBAR01.frm'), (160, 'CONBAR01.frm', 'CONBAR02.frm')):
+        out += [at(a, 96, y), at(b, 105, y)]
+        out += [dict(at('barrel.frm', u, y), lit=(4, 100)) for u in (94, 107)]
+    return out
+GATEPOST = gate_blocks()   # на посту горящие бочки со светом, не светильники (Егор)
 bld('Охрана', lambda lv: [at('CONBAR01.frm', 92, 164), at('BRAZR001.frm', 95, 164)] if lv == 1
-    else GATEPOST + ([at('shack.frm', 89, 165)] if lv == 3 else [])   # будка охраны у ворот, как у военной базы (mbclose)
+    else GATEPOST
     + (L4['16 Казарма'] + OTHER['range'] if lv == 4 else []))
 def ranch_pen():
     """Загон из жердей (те же куски, что у частокола) с проемом внизу, сено и бочка с водой внутри."""
@@ -461,8 +468,9 @@ bld('Рынок', lambda lv: fit(spr_piece([('CCART01.FRM', 0, 0, 'items')]), B[
 def nm(o): return (o.get('path') or fidpath(o['fid']) or '').split('\\')[-1].lower()
 TREES = [o for o in OTHER['deco'] + OTHER[None] if any(s in nm(o) for s in ('tree', 'bush'))]
 TRASH = OTHER['trash']
-LAMPS = [o for o in OTHER['deco'] if 'strlit' in nm(o)]
-BARRELS = [dict(o, path='art\\scenery\\barrel.frm') for o in LAMPS]
+STRLIT = [o for o in OTHER['deco'] if 'strlit' in nm(o)]
+LAMPS = [dict(o, path='art\\scenery\\vclight1.frm') for o in STRLIT]      # 3-4 ур.: вместо столбов strlit пилоны (Егор)
+BARRELS = [dict(o, path='art\\scenery\\barrel.frm', lit=(4, 100)) for o in STRLIT]
 F0, F1 = D['F']; M0, M1 = D['M']; GX0 = D['GX0']
 GW = range(GX0 - 2, GX0 + 12)          # ворота (арка Города-Убежища) в линии забора: town_max.py
 GATEF = OTHER['gateF']                  # арка с воротами в линии забора (север и юг), одна на все виды забора
@@ -565,7 +573,7 @@ def settle(objs, also=()):
             e['tile'] = t; moved += 1
         BUSY.update(ring1(e['tile']))
     return moved
-for e in SYS['lamps']: e['light'] = (5, 100)     # у фонарей strlit в прототипе и на картах F2 света нет: даем свет, как у пилонов vclight1 (радиус 5 вместо 3)
+for e in SYS['lamps']: e['light'] = (5, 100)     # свет пилонов vclight1 с радиусом 5 вместо 3
 MOVED = dict(lamps=settle(SYS['lamps']), trash=settle(SYS['trash']), trees=settle(SYS['trees']))
 for a, b in zip(SYS['barrels'], SYS['lamps']): a['tile'] = b['tile']      # бочки-костры стоят там же, где фонари
 rep = []
@@ -598,7 +606,7 @@ if os.environ.get('IMG'):
         objs = [e for L in LEVELS for e in L[lv - 1]] + SYS['trees'] + SYS['trash']
         objs += (SYS['barrels'] if lv < 3 else SYS['lamps'])
         objs += {1: SYS['palisade'], 2: SYS['mesh'], 3: SYS['wall'], 4: SYS['wall'] + SYS['outer']}[lv]
-        im, *_ = draw(objs, OUT + f'town_lv{lv}_full.png')
+        im, *_ = draw(objs, OUT + f'town_lv{lv}_full.png', marks=[(e['tile'], 'G', (255, 0, 0)) for e in LEVELS[[n for n, _ in BUILD].index('Охрана')][lv - 1]] if os.environ.get('MARKG') else ())
         sm = im.copy(); sm.thumbnail((2600, 2600)); sm.save(OUT + f'town_lv{lv}.jpg', quality=88)
         print('img', lv, im.size)
 pickle.dump(LOW, open(OUT + 'low_pieces.pkl', 'wb'))
