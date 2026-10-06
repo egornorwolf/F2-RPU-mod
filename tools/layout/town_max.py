@@ -30,9 +30,11 @@ def T(u, y): return y * 200 + (199 - u)
 def U(t): return 199 - t % 200, t // 200
 objs = []; floor = {}; labels = []; build = {}
 NOBLOCK = 0x10
-def put(name, u0, y0, label=None, key=None):
+def put(name, u0, y0, label=None, key=None, box=None):
     p = P[name]; w = p['bb'][2] - p['bb'][0] + 1; h = p['bb'][3] - p['bb'][1] + 1
-    o, f = place(p, 199 - u0 - w + 1, y0)
+    du = dy = 0
+    if box: du, dy = ((box[0] - w) // 2) & ~1, ((box[1] - h) // 2) & ~1; w, h = box   # участок прежнего размера, здание по центру
+    o, f = place(p, 199 - u0 - du - (p['bb'][2] - p['bb'][0]), y0 + dy)
     for x in o: x['tag'] = 'b:' + (key or label or name)   # для тестовой стройки (town_build.py): чье это здание
     objs.extend(o); floor.update(f)
     if label: labels.append((label, u0 + w // 2, y0 + h // 2))
@@ -48,11 +50,11 @@ put('ranch', 35, 58, '4 Ранчо')
 put('workshop', 35, 107, '9 Автомастерская'); spr('crafter1.frm', 33, 130)
 put('storage', 36, 132, '10 Склад')
 put('garden', 68, 35, '2 Огород', '2 Огород'); put('garden', 68, 64, '3 Огород', '3 Огород')
-put('bar', 68, 108, '11 Бар'); put('clinic', 70, 123, '14 Госпиталь')
+put('bar', 68, 108, '11 Бар'); put('clinic', 70, 123, '14 Госпиталь', box=(22, 25))
 HOUSES = [(102 + i * 13, 35) for i in range(5)] + [(102 + i * 13, 51) for i in range(3)]
 for i, (u, y) in enumerate(HOUSES): put('house', u, y, None, f'Дом {i + 1}')
 labels.append(('6-7 Жилье', 128, 50))
-put('hero', 143, 54, '8 Дом героя')
+put('hero', 143, 54, '8 Дом героя', box=(22, 20))
 put('hall', 102, 70, '12 Ратуша')
 put('barracks', 134, 116, '16 Казарма')
 put('market', 50, 147, '18 Рынок')
@@ -112,7 +114,7 @@ for x in range(M0, M1 + 1):
         if x not in GW: mesh[(x, y)] = MX[x % 4]
 for y in range(M0, M1 + 1):
     for x in (M0, M1): mesh[(x, y)] = MY[y % 4]
-mesh[(M0, M0)] = mesh[(M1, M0)] = 'fence23'; mesh[(M0, M1)] = 'fence22'; mesh[(M1, M1)] = 'fence00'   # углы и концы, как на картах F2
+mesh[(M0, M0)] = 'fence03'; mesh[(M1, M0)] = 'fence12'; mesh[(M0, M1)] = 'fence22'; mesh[(M1, M1)] = 'fence00'   # углы и концы, как на картах F2
 for y in list(range(F1 + 1, M1)) + list(range(M0 + 1, F0)):   # коридор от ворот стены к воротам сетки закрыт с боков: в кольцо турелей не пройти
     mesh[(GX0 + 2, y)] = MY[y % 4]; mesh[(GX0 + 6, y)] = MY[y % 4]
 for (x, y), a in mesh.items():
@@ -187,9 +189,7 @@ def open_passage(k):
     t = best[1]['tile']
     objs[:] = [o for o in objs if not (o['tile'] == t and o['pid'] >> 24 in (3, 5))]
     FIXED.append((k, t)); return True
-for k in list(build):
-    for _ in range(3):
-        if not open_passage(k): break
+# здания теперь вырезаны целиком с дверями (preprod.building), проходы не прорубаем: пробивало стену водокачки (Егор)
 # ---- дорожки: плитка Города-Убежища (brick33, BRICK20), 1 квадрат пола = 2x2 клетки
 def inbox(u, y, m=0):
     for k, (u0, y0, u1, y1, _) in build.items():
@@ -242,9 +242,9 @@ PATHHEX = {h for sq in PATH for h in sq_hexes(*sq)}
 u0, y0, u1, y1, _ = build['14 Госпиталь']
 def _nm(o): return ((o.get('path') or render.fidpath(o['fid']) or '').split('\\')[-1]).lower()
 inside = [o for o in objs if u0 <= U(o['tile'])[0] <= u1 and y0 <= U(o['tile'])[1] <= y1]
-table = next((o for o in inside if _nm(o) == 'ss102.frm'), None)
+table = next((o for o in inside if _nm(o) == 'ss102.frm'), None) or next((o for o in inside if _nm(o) == 'tbl2000.frm'), None)
 AUTODOC = U(table['tile']) if table else None
-objs[:] = [o for o in objs if not (o in inside and _nm(o) in ('ss102.frm', 'ss106.frm', 'ss107.frm', 'ss116.frm', 'ss117.frm'))]
+objs[:] = [o for o in objs if not (o in inside and _nm(o) in ('ss102.frm', 'tbl2000.frm', 'ss106.frm', 'ss107.frm', 'ss116.frm', 'ss117.frm'))]
 if AUTODOC: spr('holo.frm', *AUTODOC, tag='autodoc')
 _, _, res_ref = check()
 # ---- убранство: фонари, деревья, кусты, стрельбище; ничего не ставим на дорожки и вплотную к зданиям

@@ -66,26 +66,11 @@ def keep(o):
 
 # ---- куски для уровней 1-3
 SK = ('tree', 'weed', 'rock', 'eggs', 'bush', 'cac', 'drock')   # невидимые стены block.frm нужны: они держат проходимость
-def comp_piece(mapname, tile, pad=1, rpu=False, walls_only=False):
-    """Постройка из стен вокруг клетки tile (связная группа стен) и все декорации внутри ее рамки."""
-    m = load(mapname, rpu)
-    w = [o for o in m['objs'] if o['elev'] == 0 and o['pid'] >> 24 == 3]
-    pts = {id(o): hexxy(o['tile']) for o in w}
-    start = next(o for o in w if o['tile'] == tile)
-    comp = [start]; seen = {id(start)}; k = 0
-    while k < len(comp):
-        a = pts[id(comp[k])]; k += 1
-        for o in w:
-            if id(o) not in seen and (pts[id(o)][0] - a[0]) ** 2 + (pts[id(o)][1] - a[1]) ** 2 <= 70 * 70:
-                seen.add(id(o)); comp.append(o)
-    xs = [o['tile'] % 200 for o in comp]; ys = [o['tile'] // 200 for o in comp]
-    bb = (min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad)
-    objs = [dict(o) for o in m['objs'] if o['elev'] == 0 and o['pid'] >> 24 in (0, 2, 3)
-            and bb[0] <= o['tile'] % 200 <= bb[2] and bb[1] <= o['tile'] // 200 <= bb[3]
-            and not any(s in (fidpath(o['fid']) or '').lower() for s in SK)]
-    if walls_only: objs = [o for o in objs if o['pid'] >> 24 == 3]
-    xs = [o['tile'] % 200 for o in objs]; ys = [o['tile'] // 200 for o in objs]
-    return dict(objs=objs, floor={}, bb=(min(xs), min(ys), max(xs), max(ys)))
+def comp_piece(mapname, tile, pad=1, rpu=False):
+    """Постройка из стен вокруг клетки tile (связная группа стен без невидимых блоков, блоки вплотную к ней) и все
+    декорации внутри ее рамки (preprod.building). Через блоки группа не растет: иначе цепляла соседние заборы."""
+    from preprod import building
+    return building(load(mapname, rpu), [tile], excl=('block',), skip=SK, pad=pad)
 def spr_piece(items):
     """Набор отдельных объектов: (файл, du, dy[, вид]) относительно угла."""
     objs = []
@@ -157,7 +142,8 @@ mv = load('vctyctyd'); VCCLINIC = rebuild(mv, main_part(cut(mv, (840, 230, 1500,
 def org_render(c, rad): X, Y = hexxy(c); return X - rad[0], Y - rad[1]
 mn = load('navarro', rpu=True); NAVHOUSE = rebuild(mn, main_part(cut(mn, (150, 50, 480, 300), org_render(24696, (560, 300)), SK), 90), skip=SK)
 m1 = load('ncr1'); NCRSMALL = rebuild(m1, main_part(cut(m1, (1350, 1330, 1680, 1560), ov_origin(m1), SK), 90), skip=SK)
-TENT = tent_piece(); TENTBEDS = tent_piece(True)
+TENT = tent_piece()
+TENTBEDS = comp_piece('desert7', 16100)                                # палатка пустыни целиком, с тремя кроватями
 LOW = dict(SHACK=('modmain', SHACK), MHOUSE_BIG=('modmain', MHOUSE_BIG), MWARE=('modmain', MWARE), MBAR=('modinn', MBAR),
            VCCLINIC=('vctyctyd', VCCLINIC), NAVHOUSE=('navarro', NAVHOUSE), NCRSMALL=('ncr1', NCRSMALL))   # для проверки (pathcheck)
 
@@ -175,7 +161,7 @@ BUILD = []
 def bld(name, fn): BUILD.append((name, fn))
 
 W1 = untagged('WELL001.frm'); TANK5 = untagged('gektank5.frm'); W2 = untagged('well1.frm')
-bld('Старый колодец', lambda lv: W1 + ([at('pumpnec.frm', 49, 52)] if lv >= 2 and lv < 4 else []) + (TANK5 if lv >= 3 else [])   # насос рядом с колодцем, а не на нем (Егор)
+bld('Старый колодец', lambda lv: W1 + ([at('pumpnec.frm', 49, 52)] if lv >= 2 and lv < 4 else []) + (TANK5 if lv == 3 else [])   # на 4 уровне бак стоял в стене водокачки (Егор)   # насос рядом с колодцем, а не на нем (Егор)
     + (L4['1 Водокачка'] if lv == 4 else []))
 bld('Новый колодец', lambda lv: W2 + ([at('watrtank.frm', 58, 46)] if lv == 2 else []) + (L4['Цистерна'] if lv >= 3 else [])
     + ([at('pipes1.frm', 51, 44), at('pipe003.frm', 50, 41)] if lv == 4 else []))
@@ -205,8 +191,16 @@ GATEPOST = untagged('CONBAR01.frm') + untagged('vclight1.frm')
 bld('Охрана', lambda lv: [at('CONBAR01.frm', 92, 164), at('BRAZR001.frm', 95, 164)] if lv == 1
     else GATEPOST + ([at('shack.frm', 89, 165)] if lv == 3 else [])   # будка охраны у ворот, как у военной базы (mbclose)
     + (L4['16 Казарма'] + OTHER['range'] if lv == 4 else []))
+def ranch_pen():
+    """Загон из жердей (те же куски, что у частокола) с проемом внизу, сено и бочка с водой внутри."""
+    u0, y0, u1, y1 = B['4 Ранчо'][:4]
+    cx, cy = 199 - (u0 + u1) // 2, (y0 + y1) // 2
+    X0 = (cx - 7) & ~1; Y0 = (cy - 6) & ~1; X1 = X0 + 15; Y1 = Y0 + 13
+    gx = X0 + 6
+    return wood_rect(X0, X1, Y0, Y1, gapS=range(gx, gx + 3)) + [
+        at('HAYBED01.frm', 199 - (X0 + 4), Y0 + 4), at('HAYBED04.frm', 199 - (X0 + 9), Y0 + 5), at('barrel2.frm', 199 - (X1 - 2), Y0 + 3)]
 bld('Ферма браминов', lambda lv: fit(spr_piece([('HAYBED01.frm', 0, 0), ('barrel2.frm', 3, 2), ('HAYBED04.frm', 5, -1)]), B['4 Ранчо']) if lv == 1
-    else fit(KPEN, B['4 Ранчо']) if lv == 2 else fit(P['stall'], B['4 Ранчо']) if lv == 3 else L4['4 Ранчо'])
+    else ranch_pen() if lv == 2 else fit(P['stall'], B['4 Ранчо']) if lv == 3 else L4['4 Ранчо'])
 STILLS = OTHER['still']
 bld('Бар', lambda lv: fit(spr_piece([('barrel2.frm', 0, 0), ('table1.frm', 3, 1), ('barrel3.frm', 6, 0)]), B['11 Бар']) if lv == 1
     else fit(with_extra(RTENT, [('barrel2.frm', 7, 2), ('barrel3.frm', 8, 4), ('crate1.frm', -7, 3)]), B['11 Бар']) if lv == 2
@@ -238,25 +232,24 @@ GAP = range(GX0, GX0 + 8)               # частокол и сетка: про
 # Концы и углы — те же куски, что на картах F2 (статистика по всем картам): дерево — угол fen8000 (верх-лево) и fen1000
 # (низ-право), концы рядов fen6000/fen9008 (ряд fen7), fen9001/fen9000 (ряд fen3); сетка — углы fence22/fence00,
 # столбы fence12/fence13/fence23. Так заборы не висят в воздухе, а кончаются столбом.
-PALISADE = {}
-def pal(name, x, y): PALISADE[y * 200 + x] = mk(name, x, y)
-for x in range(F0, F1 + 1):
-    if x % 2 == 0: pal('fen7001', x, F0)
-    else: pal('fen7000', x, F0 + 1)
-    if x in GAP: continue
-    if x % 2 == 0: pal('fen3001', x, F1 - 1)
-    else: pal('fen3000', x, F1)
-for y in range(F0 + 1, F1):                 # с F0 + 1: иначе в углу у (F0, F0 + 1) дыра (Егор нашел в игре)
-    pal('fen2000' if y % 3 == 0 else 'fen2001', F1, y)
-    pal('fen5000' if y % 3 == 0 else 'fen5001', F0, y)
-for x in GAP:                               # северный проем
-    PALISADE.pop((F0 if x % 2 == 0 else F0 + 1) * 200 + x, None)
-def pal_end(x, ry, name): pal(name, x, ry(x))
-r7 = lambda x: F0 if x % 2 == 0 else F0 + 1; r3 = lambda x: F1 - 1 if x % 2 == 0 else F1
-pal('fen8000', F0, F0); pal('fen1000', F1, F1); pal('fen6000', F1, r7(F1)); pal('fen4000', F0, r3(F0))   # углы
-pal_end(GAP[0] - 1, r7, 'fen6000'); pal_end(GAP[-1] + 1, r7, 'fen9008')      # столбы у проема на севере
-pal_end(GAP[0] - 1, r3, 'fen9001'); pal_end(GAP[-1] + 1, r3, 'fen9000')      # и на юге
-PALISADE = list(PALISADE.values())
+def wood_rect(X0, X1, Y0, Y1, gapN=(), gapS=()):
+    """Деревянный забор прямоугольником (X0, Y0 четные, X1, Y1 нечетные, как у частокола), с проемами в верхнем (gapN)
+    и нижнем (gapS) ряду; у проемов и в углах столбы."""
+    out = {}
+    def put(name, x, y): out[y * 200 + x] = mk(name, x, y)
+    r7 = lambda x: Y0 if x % 2 == 0 else Y0 + 1; r3 = lambda x: Y1 - 1 if x % 2 == 0 else Y1
+    for x in range(X0, X1 + 1):
+        if x not in gapN: put('fen7001' if x % 2 == 0 else 'fen7000', x, r7(x))
+        if x not in gapS: put('fen3001' if x % 2 == 0 else 'fen3000', x, r3(x))
+    for y in range(Y0 + 1, Y1):                 # с Y0 + 1: иначе в углу у (X0, Y0 + 1) дыра (Егор нашел в игре)
+        put('fen2000' if y % 3 == 0 else 'fen2001', X1, y)
+        put('fen5000' if y % 3 == 0 else 'fen5001', X0, y)
+    put('fen8000', X0, Y0); put('fen1000', X1, Y1); put('fen6000', X1, r7(X1)); put('fen4000', X0, r3(X0))   # углы
+    for g, r, a, b in ((gapN, r7, 'fen6000', 'fen9008'), (gapS, r3, 'fen9001', 'fen9000')):
+        if g: put(a, g[0] - 1, r(g[0] - 1)); put(b, g[-1] + 1, r(g[-1] + 1))                               # столбы у проема
+    return list(out.values())
+PALISADE = wood_rect(F0, F1, F0, F1, GAP, GAP)
+
 MX = ['fence03', 'fence01', 'fence05', 'fence04']; MY = ['fence15', 'fence16', 'fence17', 'fence18']
 MESH = {}
 def ms(name, x, y): MESH[y * 200 + x] = mk(name, x, y)
@@ -264,7 +257,7 @@ for x in range(F0, F1 + 1):
     if x not in GAP: ms(MX[x % 4], x, F0); ms(MX[x % 4], x, F1)
 for y in range(F0 + 1, F1):
     ms(MY[y % 4], F0, y); ms(MY[y % 4], F1, y)
-ms('fence23', F0, F0); ms('fence23', F1, F0); ms('fence22', F0, F1); ms('fence00', F1, F1)   # углы
+ms('fence03', F0, F0); ms('fence12', F1, F0); ms('fence22', F0, F1); ms('fence00', F1, F1)   # углы (верхние подобраны по картинке: замкнуты, один столб)
 for y in (F0, F1): ms('fence12', GAP[0] - 1, y); ms('fence13', GAP[-1] + 1, y)             # столбы у проема
 MESH = list(MESH.values())
 TUR = D['TUR']

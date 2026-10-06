@@ -58,6 +58,10 @@ SRCM=dict(pump=m,storage=m,house=m,hall=m2,bar=mv,clinic=mv,hero=mv,barracks=mv,
 for k,src in SRCM.items():
     old=len(P[k]['objs']); P[k]=rebuild(src,P[k],skip=SK+(('vclight',) if k in ('barracks','hero') else ()))
     print('целиком',k,old,'->',len(P[k]['objs']))
+# 4 уровень клиники и дома героя: в домах Города-Убежища силовые поля (forcfd), за них не зайти (Егор). Берем целые здания:
+# клиника доктора в Реддинге, дом-контора из Дена
+P['clinic']=building(load('reddown'),[20322],skip=SK)
+P['hero']=building(load('denbus1'),[16302],skip=SK)
 for k,p in pieces.items():
     b=p['bb']; print(k,len(p['objs']),'size',b[2]-b[0]+1,'x',b[3]-b[1]+1)
 import pickle; pickle.dump(pieces,open('/tmp/claude-0/m3/pieces.pkl','wb'))
