@@ -425,15 +425,15 @@ def make_mines():
     rnd = random.Random(55); pts = []
     keep_out = [(80, 18), (120, 18), (70, 181), (130, 181), (18, 80), (18, 120), (181, 80), (181, 120)]   # точки появления налетчиков в песочнице (f2mtbld.ssl)
     def ok(x, y):
-        if any(abs(x - a) < 6 and abs(y - b) < 6 for a, b in keep_out): return False
-        if 87 <= x <= 111 and (y < 30 or y > 169): return False                      # коридоры к воротам
+        if any(abs(x - a) < 2 and abs(y - b) < 2 for a, b in keep_out): return False        # рядом с точками налетчиков можно, но не под ними
+        if 95 <= x <= 101 and (y < 30 or y > 169): return False                      # коридоры к воротам шириной в дорогу (7 клеток)
         if PET_PEN[0] - 4 <= x <= PET_PEN[2] + 4 and PET_PEN[1] - 4 <= y <= PET_PEN[3] + 4: return False
-        return all(abs(x - a) >= 5 or abs(y - b) >= 5 for a, b in pts)
-    for _ in range(4000):
+        return all(abs(x - a) >= 4 or abs(y - b) >= 4 for a, b in pts)
+    for _ in range(20000):
         x, y = rnd.randint(12, 187), rnd.randint(12, 187)
         if not (x < 24 or x > 175 or y < 24 or y > 175): continue
         if ok(x, y): pts.append((x, y))
-        if len(pts) >= 70: break
+        if len(pts) >= 110: break
     return [dict(tile=y * 200 + x, path='art\\scenery\\CAVTRAP1.frm', pid=0, fid=0, flags=0) for x, y in pts]
 MINES = make_mines()
 def ranch_pen():
