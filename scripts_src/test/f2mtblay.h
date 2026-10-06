@@ -4122,14 +4122,13 @@ procedure tb_b6(variable lv) begin
    end
 end
 
-// Охрана: объектов по уровням 2, 8, 8, 242
+// Охрана: объектов по уровням 2, 7, 7, 241
 procedure tb_b7(variable lv) begin
    if (lv == 1) then begin
       call tb_o(33556361, 32907, 0);
       call tb_o(33556348, 32904, 0);
    end else if (lv == 2) then begin
-      call tb_o(33556362, 6703, 0);
-      call tb_o(33556361, 6694, 0);
+      call tb_o(33556361, 6695, 0);
       call tb_o(33554433, 6705, 0);
       call tb_lit(4, 100);
       call tb_o(33554433, 6692, 0);
@@ -4141,8 +4140,7 @@ procedure tb_b7(variable lv) begin
       call tb_o(33554433, 32092, 0);
       call tb_lit(4, 100);
    end else if (lv == 3) then begin
-      call tb_o(33556362, 6703, 0);
-      call tb_o(33556361, 6694, 0);
+      call tb_o(33556361, 6695, 0);
       call tb_o(33554433, 6705, 0);
       call tb_lit(4, 100);
       call tb_o(33554433, 6692, 0);
@@ -4154,8 +4152,7 @@ procedure tb_b7(variable lv) begin
       call tb_o(33554433, 32092, 0);
       call tb_lit(4, 100);
    end else if (lv == 4) then begin
-      call tb_o(33556362, 6703, 0);
-      call tb_o(33556361, 6694, 0);
+      call tb_o(33556361, 6695, 0);
       call tb_o(33554433, 6705, 0);
       call tb_lit(4, 100);
       call tb_o(33554433, 6692, 0);
@@ -7143,7 +7140,7 @@ procedure tb_sys(variable s) begin
       call tb_o(33554707, 32714, 0);
       call tb_o(33554684, 32512, 0);
       call tb_o(33554708, 33115, 0);
-   end else if (s == 2) then begin   // barrels: 23
+   end else if (s == 2) then begin   // barrels: 22
       call tb_o(33554433, 7702, 0);
       call tb_lit(4, 100);
       call tb_o(33554433, 12302, 0);
@@ -7182,15 +7179,13 @@ procedure tb_sys(variable s) begin
       call tb_lit(4, 100);
       call tb_o(33554433, 20739, 0);
       call tb_lit(4, 100);
-      call tb_o(33554433, 32497, 0);
-      call tb_lit(4, 100);
       call tb_o(33554433, 7333, 0);
       call tb_lit(4, 100);
       call tb_o(33554433, 20721, 0);
       call tb_lit(4, 100);
       call tb_o(33554433, 21633, 0);
       call tb_lit(4, 100);
-   end else if (s == 3) then begin   // lamps: 23
+   end else if (s == 3) then begin   // lamps: 22
       call tb_o(33555818, 7702, 0);
       call tb_lit(5, 100);
       call tb_o(33555818, 12302, 0);
@@ -7228,8 +7223,6 @@ procedure tb_sys(variable s) begin
       call tb_o(33555818, 30121, 0);
       call tb_lit(5, 100);
       call tb_o(33555818, 20739, 0);
-      call tb_lit(5, 100);
-      call tb_o(33555818, 32497, 0);
       call tb_lit(5, 100);
       call tb_o(33555818, 7333, 0);
       call tb_lit(5, 100);

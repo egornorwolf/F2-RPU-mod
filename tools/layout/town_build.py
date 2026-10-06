@@ -394,7 +394,7 @@ def gate_blocks():
     """У каждых ворот (север y=30, юг y=169; арка занимает 4 ряда внутрь): по 2 бетонных блока зеркально (CONBAR02 и CONBAR01), рядом по горящей бочке со светом. Без будок (Егор)."""
     out = []
     for y, a, b in ((33, 'CONBAR02.frm', 'CONBAR01.frm'), (160, 'CONBAR01.frm', 'CONBAR02.frm')):
-        out += [at(a, 96, y), at(b, 105, y)]
+        out += [at(a, 96, y), at(b, 105, y)] if y > 100 else [at(b, 104, y)]   # северный левый блок убран (Егор: стоял под аркой за деревом)
         out += [dict(at('barrel.frm', u, y), lit=(4, 100)) for u in (94, 107)]
     return out
 GATEPOST = gate_blocks()   # на посту горящие бочки со светом, не светильники (Егор)
@@ -576,6 +576,7 @@ def settle(objs, also=()):
 for e in SYS['lamps']: e['light'] = (5, 100)     # свет пилонов vclight1 с радиусом 5 вместо 3
 MOVED = dict(lamps=settle(SYS['lamps']), trash=settle(SYS['trash']), trees=settle(SYS['trees']))
 for a, b in zip(SYS['barrels'], SYS['lamps']): a['tile'] = b['tile']      # бочки-костры стоят там же, где фонари
+SYS['lamps'] = [e for e in SYS['lamps'] if e['tile'] != T(102, 162)]; SYS['barrels'] = [e for e in SYS['barrels'] if e['tile'] != T(102, 162)]   # пилон у южных ворот мешал (Егор)
 rep = []
 for (name, _), lv in zip(BUILD, LEVELS): rep.append(f'{name}: ' + ', '.join(str(len(x)) for x in lv))
 for k, v in SYS.items(): rep.append(f'{k}: {len(v)}')
