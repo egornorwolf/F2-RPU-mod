@@ -52,7 +52,7 @@ procedure enemies_left begin
 end
 
 procedure map_enter_p_proc begin
-   variable stage, extra, killed;
+   variable stage, extra, killed, killed_before;
    set_map_exit_tiles(0, 0);
    Lighting;
    Check_Create_Car(CAR_HEX, 0)
@@ -60,6 +60,7 @@ procedure map_enter_p_proc begin
    if (spawned or is_loading_game or get_sfall_global_int(GV_CARAVAN) != CARAVAN_ESCORT) then return;
    spawned := 1;
    stage := get_sfall_global_int(GV_ESCORT_STAGE);
+   killed_before := get_sfall_global_int(GV_ESCORT_S3) bwand 8;   // гекконы здесь уже были (повтор после брошенной дороги)
 
    // Караван: только те, кто уцелел на прошлых участках
    call cv_ted(at(1, 4));
@@ -103,12 +104,14 @@ procedure map_enter_p_proc begin
    if (extra < 0) then extra := 0;
    if (extra > ESCORT_EXTRA_MAX) then extra := ESCORT_EXTRA_MAX;
    if (stage == 1) then begin
-      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 5, 9, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      // Оружие по модели: у налетчика (nmlthr) есть анимации пистолета и винтовки, но нет пистолета-пулемета;
+      // у налетчицы (nfmaxx) есть пистолет-пулемет, но нет винтовки и дробовика
+      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 5, 9, PID_HUNTING_RIFLE, PID_223_FMJ);
       call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 0, 10, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
       call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 5, 11, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
       call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 0, 9, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
-      if (extra > 0) then call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 4, 10, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
-      if (extra > 1) then call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 1, 10, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
+      if (extra > 0) then call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 4, 10, PID_10MM_PISTOL, PID_10MM_JHP);
+      if (extra > 1) then call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 1, 10, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
       display_msg(mstr(100));
    end else if (stage == 2) then begin
       call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 5, 9, 0, 0);
@@ -125,7 +128,11 @@ procedure map_enter_p_proc begin
       call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 4, 9, PID_FLAME_BREATH, 0);
       if (extra > 0) then call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 1, 9, PID_FLAME_BREATH, 0);
       if (extra > 1) then call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 5, 10, PID_FLAME_BREATH, 0);
-      display_msg(mstr(102));
+      // Погибшие до прихода героя есть только при первом заходе на этот участок
+      if (((get_sfall_global_int(GV_ESCORT_S3) bwand 7) != 0) and not killed_before) then
+         display_msg(mstr(102));
+      else
+         display_msg(mstr(104));
    end
 end
 

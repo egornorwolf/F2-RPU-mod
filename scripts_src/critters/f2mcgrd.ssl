@@ -102,7 +102,10 @@ procedure Node001 begin
 end
 
 procedure Node002 begin
-   Reply(140);
+   if (cv_is_dead(CV_SLOT_GUARD) or cv_is_dead(CV_SLOT_SARA)) then
+      Reply(142);
+   else
+      Reply(140);
    NOption(141, Node001, 4);
    NOption(134, Node999, 4);
    NLowOption(135, Node999);

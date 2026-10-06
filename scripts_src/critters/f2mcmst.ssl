@@ -119,7 +119,10 @@ end
 
 procedure destroy_p_proc begin
    if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
-   if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT) then begin
+   // Погиб в пути или при встрече: караван больше не встречается (иначе на следующей встрече
+   // карта снова ставила живого Теда со всем караваном)
+   if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT
+       or (get_sfall_global_int(GV_CARAVAN) == CARAVAN_NONE and cur_map_index == MAP_F2MOD_CARAVAN)) then begin
       set_sfall_global(GV_CARAVAN, CARAVAN_FAILED);
       display_msg(mstr(210));
    end
@@ -388,7 +391,9 @@ procedure Node022 begin
 end
 
 procedure Node023 begin
-   if (cv_is_dead(CV_SLOT_GUARD)) then
+   if (cv_is_dead(CV_SLOT_GUARD) and cv_is_dead(CV_SLOT_SARA)) then
+      Reply(252);
+   else if (cv_is_dead(CV_SLOT_GUARD)) then
       Reply(251);
    else
       Reply(250);
