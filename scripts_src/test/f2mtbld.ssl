@@ -63,6 +63,7 @@ procedure Nfence1;
 procedure Nfence2;
 procedure Nfence3;
 procedure Nouter;
+procedure Nmines;
 procedure Ntur0;
 procedure Ntur1;
 procedure Ntur2;
@@ -84,6 +85,7 @@ procedure Nhatch;
 #define ACT_TUR     (8)     // 0 нет, 1 пулеметные, 2 плазменные, 3 лазерные, 4 вперемешку
 #define ACT_ENEMY   (9)
 #define ACT_WORLD   (10)
+#define ACT_MINES   (12)    // мины CAVTRAP1 в наружной зоне: поставить или убрать
 #define ACT_HATCH   (11)    // люк в подвал дома героя (одна клетка на всех уровнях дома)
 
 // Состояние песочницы в глобальных переменных sfall (сохраняется в игре)
@@ -93,6 +95,7 @@ procedure Nhatch;
 #define GV_TB_LIGHT     "f2mtlite"
 #define GV_TB_FENCE     "f2mtfenc"
 #define GV_TB_OUTER     "f2mtoutr"
+#define GV_TB_MINES     "f2mtmine"
 #define GV_TB_TUR       "f2mtturr"
 #define GV_TB_HATCH     "f2mthtch"
 
@@ -232,6 +235,10 @@ procedure do_action begin
       cur := get_sfall_global_int(GV_TB_HATCH);
       if (cur) then call sys_swap(TB_SYS_HATCH, -1); else call sys_swap(-1, TB_SYS_HATCH);
       set_sfall_global(GV_TB_HATCH, not cur);
+   end else if (act == ACT_MINES) then begin
+      cur := get_sfall_global_int(GV_TB_MINES);
+      if (cur) then call sys_swap(TB_SYS_MINES, -1); else call sys_swap(-1, TB_SYS_MINES);
+      set_sfall_global(GV_TB_MINES, not cur);
    end else if (act == ACT_OUTER) then begin
       cur := get_sfall_global_int(GV_TB_OUTER);
       if (cur) then call sys_swap(TB_SYS_OUTER, -1); else call sys_swap(-1, TB_SYS_OUTER);
@@ -346,6 +353,7 @@ procedure Node040 begin
    Reply(170);
    NOption(171, Node041, 1);
    NOption(172, Node050, 1);
+   NOption(186, Nmines, 1);
    NOption(122, Node001, 1);
 end
 
@@ -402,6 +410,7 @@ procedure Nfence1 begin act := ACT_FENCE; arg := 1; end
 procedure Nfence2 begin act := ACT_FENCE; arg := 2; end
 procedure Nfence3 begin act := ACT_FENCE; arg := 3; end
 procedure Nouter begin act := ACT_OUTER; end
+procedure Nmines begin act := ACT_MINES; end
 procedure Ntur0 begin act := ACT_TUR; arg := 0; end
 procedure Ntur1 begin act := ACT_TUR; arg := 1; end
 procedure Ntur2 begin act := ACT_TUR; arg := 2; end

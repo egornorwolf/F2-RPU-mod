@@ -23,7 +23,7 @@ o = ['// Тестовая стройка города (песочница): ра
      f'#define TB_COUNT       ({len(D["NAMES"])})    // зданий в списке (жилье — все 8 домов сразу, огороды — оба)',
      '#define TB_SYS_TREES   (0)', '#define TB_SYS_TRASH   (1)', '#define TB_SYS_BARRELS (2)', '#define TB_SYS_LAMPS   (3)',
      '#define TB_SYS_PALISADE (4)', '#define TB_SYS_MESH    (5)', '#define TB_SYS_WALL    (6)', '#define TB_SYS_OUTER   (7)',
-     '#define TB_SYS_HATCH   (8)    // люк в подвал дома героя', '#define TB_SYS_PYLONS  (9)    // свет 3: пилоны',
+     '#define TB_SYS_HATCH   (8)    // люк в подвал дома героя', '#define TB_SYS_PYLONS  (9)    // свет 3: пилоны', '#define TB_SYS_MINES   (10)   // мины CAVTRAP1 в наружной зоне',
      f'#define TB_CAR_HEX     ({T(*D["CAR"])})', '',
      'variable tb_mode;   // 1 ставим, 0 убираем', 'variable tb_last;   // последний поставленный объект', '',
      'procedure tb_o(variable pid, variable tile, variable rf);', 'procedure tb_flg(variable fset, variable fclr);',
@@ -63,7 +63,7 @@ for i, (name, L) in enumerate(zip(D['NAMES'], D['LEVELS'])):
 o += ['procedure tb_bld(variable b, variable lv) begin']
 for i in range(len(D['NAMES'])): o.append(f'   {"if" if i == 0 else "else if"} (b == {i}) then call tb_b{i}(lv);')
 o += ['end', '']
-SYS = ['trees', 'trash', 'barrels', 'lamps', 'palisade', 'mesh', 'wall', 'outer', 'hatch', 'pylons']
+SYS = ['trees', 'trash', 'barrels', 'lamps', 'palisade', 'mesh', 'wall', 'outer', 'hatch', 'pylons', 'mines']
 o += ['procedure tb_sys(variable s) begin']
 for i, k in enumerate(SYS):
     o.append(f'   {"if" if i == 0 else "end else if"} (s == {i}) then begin   // {k}: {len(D["SYS"][k])}')

@@ -401,7 +401,7 @@ bld('Охрана', lambda lv: [at('CONBAR01.frm', 92, 164), at('BRAZR001.frm', 
     else gate_blocks(lv)   # на посту горящие бочки со светом (4 ур.: пилоны), без светильников и будок (Егор)
     + (L4['16 Казарма'] + OTHER['range'] if lv == 4 else []))
 B['Радиорубка'] = (156, 116, 165, 127)      # рядом с охраной и казармой, у восточной стены внутри забора (Егор: сарай с радио, пульт scomp у стены)
-bld('Радиорубка', lambda lv: furnish(fit(SHACK, B['Радиорубка']), [('scomp1.frm',)], seed=41))
+bld('Радиорубка', lambda lv: furnish(fit(SHACK, B['Радиорубка']), [('comp1.frm',)], seed=41))
 MXN = ['fence03', 'fence01', 'fence05', 'fence04']; MYN = ['fence15', 'fence16', 'fence17', 'fence18']
 def mesh_rect(X0, X1, Y0, Y1, gapN=()):
     """Загон из проволочной сетки (те же куски, что внешняя сетка), проем gapN в верхнем ряду, столбы у проема и в углах."""
@@ -415,9 +415,26 @@ def mesh_rect(X0, X1, Y0, Y1, gapN=()):
     put('fence03', X0, Y0); put('fence12', X1, Y0); put('fence22', X0, Y1); put('fence00', X1, Y1)
     if gapN: put('fence12', gapN[0] - 1, Y0); put('fence13', gapN[-1] + 1, Y0)
     return list(out.values())
-PET_PEN = (105, 176, 121, 187)       # снаружи внешней сетки, у южных ворот (x и y клеток)
+PET_PEN = (105, 179, 121, 190)       # снаружи внешней сетки, у южных ворот (x и y клеток)
 bld('Загон питомцев', lambda lv: mesh_rect(PET_PEN[0], PET_PEN[2], PET_PEN[1], PET_PEN[3], range(PET_PEN[0] + 2, PET_PEN[0] + 6)) + [
     at('HAYBED01.frm', 199 - (PET_PEN[0] + 9), PET_PEN[1] + 4), at('HAYBED04.frm', 199 - (PET_PEN[0] + 12), PET_PEN[1] + 7), at('barrel2.frm', 199 - (PET_PEN[0] + 4), PET_PEN[1] + 8)])
+def make_mines():
+    """Мины CAVTRAP1 (Егор) в наружной зоне за внешней сеткой: полоса 12-23 и 176-187 клеток от края, не ближе 5 клеток друг к другу,
+    к проходам у ворот, к загону питомцев и местам, где появляются налетчики."""
+    rnd = random.Random(55); pts = []
+    keep_out = [(70, 181), (130, 181), (70, 18), (130, 18), (18, 80), (18, 120), (181, 80), (181, 120)]
+    def ok(x, y):
+        if any(abs(x - a) < 6 and abs(y - b) < 6 for a, b in keep_out): return False
+        if 87 <= x <= 111 and (y < 30 or y > 169): return False                      # коридоры к воротам
+        if PET_PEN[0] - 4 <= x <= PET_PEN[2] + 4 and PET_PEN[1] - 4 <= y <= PET_PEN[3] + 4: return False
+        return all(abs(x - a) >= 5 or abs(y - b) >= 5 for a, b in pts)
+    for _ in range(4000):
+        x, y = rnd.randint(12, 187), rnd.randint(12, 187)
+        if not (x < 24 or x > 175 or y < 24 or y > 175): continue
+        if ok(x, y): pts.append((x, y))
+        if len(pts) >= 70: break
+    return [dict(tile=y * 200 + x, path='art\\scenery\\CAVTRAP1.frm', pid=0, fid=0, flags=0) for x, y in pts]
+MINES = make_mines()
 def ranch_pen():
     """Загон из жердей (те же куски, что у частокола) с проемом внизу, сено и бочка с водой внутри."""
     u0, y0, u1, y1 = B['4 Ранчо'][:4]
@@ -559,7 +576,7 @@ HATCH = [dict(tile=HATCH_T, path='art\\scenery\\hole1.frm', pid=0, fid=0, flags=
 # ---- проверка: все PID есть, считаем объекты
 def normall(objs): return [norm(o) for o in objs if keep(o)]
 LEVELS = [[normall(fn(lv)) for lv in (1, 2, 3, 4)] for name, fn in BUILD]
-SYS = dict(trees=normall(TREES), trash=normall(TRASH), lamps=normall(LAMPS), barrels=normall(BARRELS), pylons=normall(PYLONS),
+SYS = dict(trees=normall(TREES), trash=normall(TRASH), lamps=normall(LAMPS), barrels=normall(BARRELS), pylons=normall(PYLONS), mines=normall(MINES),
            palisade=normall(PALISADE), mesh=normall(MESH), wall=normall(WALL3), outer=normall(OUTER), hatch=normall(HATCH))
 # ---- фонари, мусор, деревья и кусты не должны стоять на зданиях (любого уровня), друг на друге и на дорогах:
 # мешающий объект переносим на ближайшую свободную клетку (Егор: кусты на мусоре — мусор оставить, кусты перенести)
@@ -625,6 +642,7 @@ if os.environ.get('IMG'):
     for lv in lvls:
         objs = [e for L in LEVELS for e in L[lv - 1]] + SYS['trees'] + SYS['trash']
         objs += (SYS['barrels'] if lv < 2 else SYS['lamps'] if lv < 4 else SYS['pylons'])
+        if os.environ.get('SHOWMINES'): objs += SYS['mines']
         objs += {1: SYS['palisade'], 2: SYS['mesh'], 3: SYS['wall'], 4: SYS['wall'] + SYS['outer']}[lv]
         im, *_ = draw(objs, OUT + f'town_lv{lv}_full.png', marks=[(e['tile'], 'G', (255, 0, 0)) for e in LEVELS[[n for n, _ in BUILD].index('Охрана')][lv - 1]] if os.environ.get('MARKG') else ())
         sm = im.copy(); sm.thumbnail((2600, 2600)); sm.save(OUT + f'town_lv{lv}.jpg', quality=88)
