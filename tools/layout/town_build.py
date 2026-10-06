@@ -298,18 +298,29 @@ TABLES = ['tbl1000.frm', 'tbl2000.frm', 'table3.frm']
 EXTRA = [[('sstove2.frm',), ('fridge.frm', 'items')], [('desk1.frm', 'items'), ('chair3.frm',)], [('sstove2.frm',), ('footlkr1.frm', 'items')],
          [('fridge.frm', 'items'), ('ss118.frm',)], [('desk1.frm', 'items'), ('ss105.frm',)], [('sstove2.frm',), ('ss118.frm',)],
          [('footlkr1.frm', 'items'), ('ss105.frm',)], [('fridge.frm', 'items'), ('sstove2.frm',)]]   # печь, холодильник, письменный стол, сундук-ноги кровати
-def kit(i):
-    """4 кровати разных моделей, 3 места хранения, стол с тремя стульями и своя кухня или кабинет: у каждого дома набор свой."""
-    r = random.Random(900 + i)
-    beds = r.sample(BEDS, 4); store = r.sample(STORE, 3); ch = r.sample(CHAIRS, 3)
-    return beds + store + EXTRA[i][:1], [(r.choice(TABLES),)] + [(c,) for c in ch] + EXTRA[i][1:]
+def free_share(objs):
+    """Доля внутренних клеток, куда еще можно поставить вещь: дойти можно, клетка не занята и не вплотную к вещи."""
+    ins = inside_cells(objs); bb = tuple(v + d for v, d in zip(wallbb(objs), (-4, -4, 4, 4)))
+    R, blk, door = reach(objs, bb); busy = set()
+    for o in objs:
+        if opid(o) >> 24 == 2 or o.get('crit'): busy |= ring1(o['tile'])
+    return len([c for c in ins if c in R and c not in blk and c not in busy]) / max(1, len(ins))
 def house4(i):
+    """Обязательно только кровати и стулья (Егор 2026-10-06); остальное (стол, шкафы, печь и т. д.) — пока есть свободное место:
+    ставим вещи по одной, пока свободно больше трети внутренних клеток; набор и порядок у каждого дома свои."""
     objs = L4[f'Дом {i + 1}']
     drop = ('aybed2',) if i in (0, 6) else FARM               # кровать у двери (в НКР стояла на пороге) убираем у всех
     objs = [o for o in objs if not (fidpath(o['fid']) or '').split('\\')[-1].lower().startswith(drop)]
-    wall, mid = kit(i)
-    objs = furnish(objs, [x if isinstance(x, tuple) else (x,) for x in wall], seed=40 + i, mode='wall')
-    return furnish(objs, mid, seed=60 + i, mode='open')
+    r = random.Random(900 + i)
+    objs = furnish(objs, [(b,) for b in r.sample(BEDS, 3)], seed=40 + i, mode='wall')            # кровати у стен: 3 места для сна
+    objs = furnish(objs, [(c,) for c in r.sample(CHAIRS, 2)], seed=60 + i, mode='open')           # и стулья
+    opt = [([(r.choice(TABLES),)], 'open'), ([x if isinstance(x, tuple) else (x,) for x in [r.choice(STORE)]], 'wall'),
+           (EXTRA[i][:1], 'wall'), ([x if isinstance(x, tuple) else (x,) for x in [r.choice(STORE)]], 'wall'), (EXTRA[i][1:], 'open')]
+    r.shuffle(opt)
+    for k, (items, mode) in enumerate(opt[:(1, 3, 2, 4, 2, 3, 1, 4)[i]]):          # у каждого дома своё число добавок (1-4)
+        if free_share(objs) <= 0.3: break
+        objs = furnish(objs, items, seed=80 + i * 7 + k, mode=mode)
+    return objs
 def houses(lv):
     """1 ур. — армейские палатки (можно одинаковые, Егор), 2 — палатки из шкур, у каждой своя начинка,
     3 — 8 разных дощатых и кирпичных домов, 4 — дом НКР с разной начинкой."""
