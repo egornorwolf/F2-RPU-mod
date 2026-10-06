@@ -4153,16 +4153,16 @@ procedure tb_b7(variable lv) begin
       call tb_lit(4, 100);
    end else if (lv == 4) then begin
       call tb_o(33556361, 7103, 0);
-      call tb_o(33554433, 6705, 0);
-      call tb_lit(4, 100);
-      call tb_o(33554433, 6692, 0);
-      call tb_lit(4, 100);
+      call tb_o(33555818, 6705, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 6692, 0);
+      call tb_lit(5, 100);
       call tb_o(33556361, 32103, 0);
       call tb_o(33556362, 32094, 0);
-      call tb_o(33554433, 32105, 0);
-      call tb_lit(4, 100);
-      call tb_o(33554433, 32092, 0);
-      call tb_lit(4, 100);
+      call tb_o(33555818, 32105, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 32092, 0);
+      call tb_lit(5, 100);
       call tb_o(50332539, 23044, 0);
       call tb_o(50332269, 23045, 0);
       call tb_o(50332534, 23046, 0);

@@ -390,16 +390,15 @@ bld('Мастерская', lambda lv: fit(spr_piece([('ltable2.frm', 0, 0), ('T
     else furnish(fit(MHOUSE, B['9 Автомастерская']),
                  [('ltable2.frm',), ('ltable1.frm',), ('TIRE001.frm',), ('brl1000.frm',)], seed=22) if lv == 3
     else [o for o in L4['9 Автомастерская'] if (fidpath(o['fid']) or '').split('\\')[-1].lower() not in ('trapdr.frm', 'hole1.frm')] + CRAFTER)   # люк в малом здании лишний (Егор)
-def gate_blocks():
+def gate_blocks(lv=2):
     """У каждых ворот (север y=30, юг y=169; арка занимает 4 ряда внутрь): по 2 бетонных блока зеркально (CONBAR02 и CONBAR01), рядом по горящей бочке со светом. Без будок (Егор)."""
     out = []
     for y, a, b in ((33, 'CONBAR02.frm', 'CONBAR01.frm'), (160, 'CONBAR01.frm', 'CONBAR02.frm')):
         out += [at(a, 96, y), at(b, 105, y)] if y > 100 else [at(b, 96, 35)]   # север: один блок, левее и ниже (к дереву у дорожки, Егор)
-        out += [dict(at('barrel.frm', u, y), lit=(4, 100)) for u in (94, 107)]
+        out += [dict(at('vclight1.frm', u, y), lit=(5, 100)) if lv == 4 else dict(at('barrel.frm', u, y), lit=(4, 100)) for u in (94, 107)]   # казарма 4 ур.: бочки становятся пилонами (Егор)
     return out
-GATEPOST = gate_blocks()   # на посту горящие бочки со светом, не светильники (Егор)
 bld('Охрана', lambda lv: [at('CONBAR01.frm', 92, 164), at('BRAZR001.frm', 95, 164)] if lv == 1
-    else GATEPOST
+    else gate_blocks(lv)   # на посту горящие бочки со светом (4 ур.: пилоны), без светильников и будок (Егор)
     + (L4['16 Казарма'] + OTHER['range'] if lv == 4 else []))
 def ranch_pen():
     """Загон из жердей (те же куски, что у частокола) с проемом внизу, сено и бочка с водой внутри."""
