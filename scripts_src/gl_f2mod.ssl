@@ -14,7 +14,7 @@
 #include "command.h"
 #include "f2mod.h"
 
-#define F2MOD_VERSION "0.3.27"
+#define F2MOD_VERSION "0.3.28"
 
 procedure start;
 procedure encounter_handler;

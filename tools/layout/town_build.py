@@ -403,26 +403,27 @@ bld('Охрана', lambda lv: [at('CONBAR01.frm', 92, 164), at('BRAZR001.frm', 
 B['Радиорубка'] = (156, 116, 165, 127)      # рядом с охраной и казармой, у восточной стены внутри забора (Егор: сарай с радио, пульт scomp у стены)
 bld('Радиорубка', lambda lv: furnish(fit(SHACK, B['Радиорубка']), [('comp1.frm',)], seed=41))
 MXN = ['fence03', 'fence01', 'fence05', 'fence04']; MYN = ['fence15', 'fence16', 'fence17', 'fence18']
-def mesh_rect(X0, X1, Y0, Y1, gapN=()):
+def mesh_rect(X0, X1, Y0, Y1, gapN=(), gapS=()):
     """Загон из проволочной сетки (те же куски, что внешняя сетка), проем gapN в верхнем ряду, столбы у проема и в углах."""
     out = {}
     def put(name, x, y): out[(x, y)] = mk(name, x, y)
     for x in range(X0, X1 + 1):
         if x not in gapN: put(MXN[x % 4], x, Y0)
-        put(MXN[x % 4], x, Y1)
+        if x not in gapS: put(MXN[x % 4], x, Y1)
     for y in range(Y0 + 1, Y1):
         put(MYN[y % 4], X0, y); put(MYN[y % 4], X1, y)
     put('fence03', X0, Y0); put('fence12', X1, Y0); put('fence22', X0, Y1); put('fence00', X1, Y1)
     if gapN: put('fence12', gapN[0] - 1, Y0); put('fence13', gapN[-1] + 1, Y0)
+    if gapS: put('fence12', gapS[0] - 1, Y1); put('fence13', gapS[-1] + 1, Y1)
     return list(out.values())
-PET_PEN = (105, 179, 121, 190)       # снаружи внешней сетки, у южных ворот (x и y клеток)
-bld('Загон питомцев', lambda lv: mesh_rect(PET_PEN[0], PET_PEN[2], PET_PEN[1], PET_PEN[3], range(PET_PEN[0] + 2, PET_PEN[0] + 6)) + [
-    at('HAYBED01.frm', 199 - (PET_PEN[0] + 9), PET_PEN[1] + 4), at('HAYBED04.frm', 199 - (PET_PEN[0] + 12), PET_PEN[1] + 7), at('barrel2.frm', 199 - (PET_PEN[0] + 4), PET_PEN[1] + 8)])
+PET_PEN = (104, 4, 118, 14)          # снаружи внешней сетки, у северных ворот: нападают в основном с севера (Егор); x и y клеток
+bld('Загон питомцев', lambda lv: mesh_rect(PET_PEN[0], PET_PEN[2], PET_PEN[1], PET_PEN[3], gapS=range(PET_PEN[0] + 2, PET_PEN[0] + 6)) + [
+    at('HAYBED01.frm', 199 - (PET_PEN[0] + 9), PET_PEN[3] - 4), at('HAYBED04.frm', 199 - (PET_PEN[0] + 12), PET_PEN[3] - 7), at('barrel2.frm', 199 - (PET_PEN[0] + 4), PET_PEN[3] - 8)])
 def make_mines():
     """Мины CAVTRAP1 (Егор) в наружной зоне за внешней сеткой: полоса 12-23 и 176-187 клеток от края, не ближе 5 клеток друг к другу,
     к проходам у ворот, к загону питомцев и местам, где появляются налетчики."""
     rnd = random.Random(55); pts = []
-    keep_out = [(70, 181), (130, 181), (70, 18), (130, 18), (18, 80), (18, 120), (181, 80), (181, 120)]
+    keep_out = [(80, 18), (120, 18), (70, 181), (130, 181), (18, 80), (18, 120), (181, 80), (181, 120)]   # точки появления налетчиков в песочнице (f2mtbld.ssl)
     def ok(x, y):
         if any(abs(x - a) < 6 and abs(y - b) < 6 for a, b in keep_out): return False
         if 87 <= x <= 111 and (y < 30 or y > 169): return False                      # коридоры к воротам
