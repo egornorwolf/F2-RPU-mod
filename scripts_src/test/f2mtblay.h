@@ -6195,7 +6195,7 @@ procedure tb_b10(variable lv) begin
    end
 end
 
-// Дом героя: объектов по уровням 65, 65, 135, 188
+// Дом героя: объектов по уровням 65, 65, 135, 185
 procedure tb_b11(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332577, 11640, 0);
@@ -6495,7 +6495,6 @@ procedure tb_b11(variable lv) begin
       call tb_o(33554445, 10843, 0);
       call tb_o(50332546, 10844, 0);
       call tb_o(50332546, 10848, 0);
-      call tb_o(33554622, 10849, 0);
       call tb_o(33554499, 10850, 0);
       call tb_o(33554499, 10851, 0);
       call tb_o(33554499, 10852, 0);
@@ -6556,7 +6555,6 @@ procedure tb_b11(variable lv) begin
       call tb_o(50332537, 12036, 0);
       call tb_o(33554499, 12037, 0);
       call tb_o(50332550, 12048, 0);
-      call tb_o(33554622, 12049, 0);
       call tb_o(33554499, 12050, 0);
       call tb_o(33554499, 12051, 0);
       call tb_o(33554499, 12052, 0);
@@ -6602,7 +6600,6 @@ procedure tb_b11(variable lv) begin
       call tb_o(50332497, 13056, 0);
       call tb_o(50332269, 13236, 0);
       call tb_o(50332550, 13248, 0);
-      call tb_o(33554622, 13249, 0);
       call tb_o(33554499, 13250, 0);
       call tb_o(33554499, 13252, 0);
       call tb_o(50332498, 13256, 0);

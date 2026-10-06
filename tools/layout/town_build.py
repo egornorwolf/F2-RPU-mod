@@ -436,7 +436,7 @@ def hero4():
     """Дом героя 4 ур. (Убежище): убираем таблички «Центр распределения слуг» и полку, наполовину скрытую стеной; добавляем
     вместительные (250 ед.) шкафы вдоль стен: полки, шкафчик, сундуки (Егор: 3-4 на этаж, остальное хранить ниже, в подвале)."""
     def nm(o): return (fidpath(o['fid']) or '').split('\\')[-1].lower()
-    objs = [o for o in L4['8 Дом героя'] if nm(o) not in ('sign36.frm', 'sign37.frm', 'bkshlf5.frm', 'footlkr4.frm')]
+    objs = [o for o in L4['8 Дом героя'] if nm(o) not in ('sign36.frm', 'sign37.frm', 'bkshlf5.frm', 'footlkr4.frm', 'stbed01.frm')]   # stbed01 — черные полки-кровати в боковых комнатах (Егор: убрать)
     reg = inside_cells(objs) | {t for t in inner_cells(objs, loose=True) if t // 200 < wallbb(objs)[3] - 2}   # шире обычного, но не у фасада
     return furnish(objs, [('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('abkshlf1.frm', 'items'), ('bkshlf5.frm', 'items'),
                           ('locker5.frm', 'items'), ('chest1.frm', 'items'), ('chest1.frm', 'items')], seed=121, mode='wall+', region=reg)
