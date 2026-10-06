@@ -400,6 +400,24 @@ def gate_blocks(lv=2):
 bld('Охрана', lambda lv: [at('CONBAR01.frm', 92, 164), at('BRAZR001.frm', 95, 164)] if lv == 1
     else gate_blocks(lv)   # на посту горящие бочки со светом (4 ур.: пилоны), без светильников и будок (Егор)
     + (L4['16 Казарма'] + OTHER['range'] if lv == 4 else []))
+B['Радиорубка'] = (156, 116, 165, 127)      # рядом с охраной и казармой, у восточной стены внутри забора (Егор: сарай с радио, пульт scomp у стены)
+bld('Радиорубка', lambda lv: furnish(fit(SHACK, B['Радиорубка']), [('scomp1.frm',)], seed=41))
+MXN = ['fence03', 'fence01', 'fence05', 'fence04']; MYN = ['fence15', 'fence16', 'fence17', 'fence18']
+def mesh_rect(X0, X1, Y0, Y1, gapN=()):
+    """Загон из проволочной сетки (те же куски, что внешняя сетка), проем gapN в верхнем ряду, столбы у проема и в углах."""
+    out = {}
+    def put(name, x, y): out[(x, y)] = mk(name, x, y)
+    for x in range(X0, X1 + 1):
+        if x not in gapN: put(MXN[x % 4], x, Y0)
+        put(MXN[x % 4], x, Y1)
+    for y in range(Y0 + 1, Y1):
+        put(MYN[y % 4], X0, y); put(MYN[y % 4], X1, y)
+    put('fence03', X0, Y0); put('fence12', X1, Y0); put('fence22', X0, Y1); put('fence00', X1, Y1)
+    if gapN: put('fence12', gapN[0] - 1, Y0); put('fence13', gapN[-1] + 1, Y0)
+    return list(out.values())
+PET_PEN = (105, 176, 121, 187)       # снаружи внешней сетки, у южных ворот (x и y клеток)
+bld('Загон питомцев', lambda lv: mesh_rect(PET_PEN[0], PET_PEN[2], PET_PEN[1], PET_PEN[3], range(PET_PEN[0] + 2, PET_PEN[0] + 6)) + [
+    at('HAYBED01.frm', 199 - (PET_PEN[0] + 9), PET_PEN[1] + 4), at('HAYBED04.frm', 199 - (PET_PEN[0] + 12), PET_PEN[1] + 7), at('barrel2.frm', 199 - (PET_PEN[0] + 4), PET_PEN[1] + 8)])
 def ranch_pen():
     """Загон из жердей (те же куски, что у частокола) с проемом внизу, сено и бочка с водой внутри."""
     u0, y0, u1, y1 = B['4 Ранчо'][:4]

@@ -3,7 +3,7 @@
 #ifndef F2MTBLAY_H
 #define F2MTBLAY_H
 
-#define TB_COUNT       (13)    // зданий в списке (жилье — все 8 домов сразу, огороды — оба)
+#define TB_COUNT       (15)    // зданий в списке (жилье — все 8 домов сразу, огороды — оба)
 #define TB_SYS_TREES   (0)
 #define TB_SYS_TRASH   (1)
 #define TB_SYS_BARRELS (2)
@@ -39,6 +39,8 @@ procedure tb_b9(variable lv);
 procedure tb_b10(variable lv);
 procedure tb_b11(variable lv);
 procedure tb_b12(variable lv);
+procedure tb_b13(variable lv);
+procedure tb_b14(variable lv);
 
 // Ставит объект (tb_mode = 1) или убирает такой же с этой клетки (tb_mode = 0). rf: поворот + 8 * кадр
 procedure tb_o(variable pid, variable tile, variable rf) begin
@@ -4401,8 +4403,330 @@ procedure tb_b7(variable lv) begin
    end
 end
 
-// Ферма браминов: объектов по уровням 5, 57, 279, 332
+// Радиорубка: объектов по уровням 23, 23, 23, 23
 procedure tb_b8(variable lv) begin
+   if (lv == 1) then begin
+      call tb_o(50331786, 23836, 0);
+      call tb_o(50331777, 23837, 0);
+      call tb_o(50331778, 23838, 0);
+      call tb_o(50331777, 23839, 0);
+      call tb_o(50332015, 23840, 0);
+      call tb_o(50331768, 24036, 0);
+      call tb_o(50332270, 24037, 0);
+      call tb_o(50332270, 24039, 0);
+      call tb_o(50331754, 24040, 0);
+      call tb_o(50331898, 24236, 0);
+      call tb_o(33555375, 24435, 0);
+      call tb_o(50332269, 24436, 0);
+      call tb_o(50331755, 24440, 0);
+      call tb_o(33555375, 24635, 0);
+      call tb_o(50331787, 24636, 0);
+      call tb_o(50331747, 24637, 0);
+      call tb_o(50331744, 24638, 0);
+      call tb_o(50331745, 24639, 0);
+      call tb_o(50332382, 24640, 0);
+      call tb_o(50332270, 24837, 0);
+      call tb_o(33555376, 24837, 0);
+      call tb_o(50332270, 24839, 0);
+      call tb_o(33555267, 24038, 0);
+   end else if (lv == 2) then begin
+      call tb_o(50331786, 23836, 0);
+      call tb_o(50331777, 23837, 0);
+      call tb_o(50331778, 23838, 0);
+      call tb_o(50331777, 23839, 0);
+      call tb_o(50332015, 23840, 0);
+      call tb_o(50331768, 24036, 0);
+      call tb_o(50332270, 24037, 0);
+      call tb_o(50332270, 24039, 0);
+      call tb_o(50331754, 24040, 0);
+      call tb_o(50331898, 24236, 0);
+      call tb_o(33555375, 24435, 0);
+      call tb_o(50332269, 24436, 0);
+      call tb_o(50331755, 24440, 0);
+      call tb_o(33555375, 24635, 0);
+      call tb_o(50331787, 24636, 0);
+      call tb_o(50331747, 24637, 0);
+      call tb_o(50331744, 24638, 0);
+      call tb_o(50331745, 24639, 0);
+      call tb_o(50332382, 24640, 0);
+      call tb_o(50332270, 24837, 0);
+      call tb_o(33555376, 24837, 0);
+      call tb_o(50332270, 24839, 0);
+      call tb_o(33555267, 24038, 0);
+   end else if (lv == 3) then begin
+      call tb_o(50331786, 23836, 0);
+      call tb_o(50331777, 23837, 0);
+      call tb_o(50331778, 23838, 0);
+      call tb_o(50331777, 23839, 0);
+      call tb_o(50332015, 23840, 0);
+      call tb_o(50331768, 24036, 0);
+      call tb_o(50332270, 24037, 0);
+      call tb_o(50332270, 24039, 0);
+      call tb_o(50331754, 24040, 0);
+      call tb_o(50331898, 24236, 0);
+      call tb_o(33555375, 24435, 0);
+      call tb_o(50332269, 24436, 0);
+      call tb_o(50331755, 24440, 0);
+      call tb_o(33555375, 24635, 0);
+      call tb_o(50331787, 24636, 0);
+      call tb_o(50331747, 24637, 0);
+      call tb_o(50331744, 24638, 0);
+      call tb_o(50331745, 24639, 0);
+      call tb_o(50332382, 24640, 0);
+      call tb_o(50332270, 24837, 0);
+      call tb_o(33555376, 24837, 0);
+      call tb_o(50332270, 24839, 0);
+      call tb_o(33555267, 24038, 0);
+   end else if (lv == 4) then begin
+      call tb_o(50331786, 23836, 0);
+      call tb_o(50331777, 23837, 0);
+      call tb_o(50331778, 23838, 0);
+      call tb_o(50331777, 23839, 0);
+      call tb_o(50332015, 23840, 0);
+      call tb_o(50331768, 24036, 0);
+      call tb_o(50332270, 24037, 0);
+      call tb_o(50332270, 24039, 0);
+      call tb_o(50331754, 24040, 0);
+      call tb_o(50331898, 24236, 0);
+      call tb_o(33555375, 24435, 0);
+      call tb_o(50332269, 24436, 0);
+      call tb_o(50331755, 24440, 0);
+      call tb_o(33555375, 24635, 0);
+      call tb_o(50331787, 24636, 0);
+      call tb_o(50331747, 24637, 0);
+      call tb_o(50331744, 24638, 0);
+      call tb_o(50331745, 24639, 0);
+      call tb_o(50332382, 24640, 0);
+      call tb_o(50332270, 24837, 0);
+      call tb_o(33555376, 24837, 0);
+      call tb_o(50332270, 24839, 0);
+      call tb_o(33555267, 24038, 0);
+   end
+end
+
+// Загон питомцев: объектов по уровням 53, 53, 53, 53
+procedure tb_b9(variable lv) begin
+   if (lv == 1) then begin
+      call tb_o(50332451, 35305, 0);
+      call tb_o(50332470, 37505, 0);
+      call tb_o(50332460, 35306, 0);
+      call tb_o(50332453, 37506, 0);
+      call tb_o(50332452, 37507, 0);
+      call tb_o(50332451, 37508, 0);
+      call tb_o(50332449, 37509, 0);
+      call tb_o(50332453, 37510, 0);
+      call tb_o(50332461, 35311, 0);
+      call tb_o(50332452, 37511, 0);
+      call tb_o(50332451, 35312, 0);
+      call tb_o(50332451, 37512, 0);
+      call tb_o(50332449, 35313, 0);
+      call tb_o(50332449, 37513, 0);
+      call tb_o(50332453, 35314, 0);
+      call tb_o(50332453, 37514, 0);
+      call tb_o(50332452, 35315, 0);
+      call tb_o(50332452, 37515, 0);
+      call tb_o(50332451, 35316, 0);
+      call tb_o(50332451, 37516, 0);
+      call tb_o(50332449, 35317, 0);
+      call tb_o(50332449, 37517, 0);
+      call tb_o(50332453, 35318, 0);
+      call tb_o(50332453, 37518, 0);
+      call tb_o(50332452, 35319, 0);
+      call tb_o(50332452, 37519, 0);
+      call tb_o(50332451, 35320, 0);
+      call tb_o(50332451, 37520, 0);
+      call tb_o(50332460, 35321, 0);
+      call tb_o(50332448, 37521, 0);
+      call tb_o(50332464, 35505, 0);
+      call tb_o(50332464, 35521, 0);
+      call tb_o(50332465, 35705, 0);
+      call tb_o(50332465, 35721, 0);
+      call tb_o(50332466, 35905, 0);
+      call tb_o(50332466, 35921, 0);
+      call tb_o(50332463, 36105, 0);
+      call tb_o(50332463, 36121, 0);
+      call tb_o(50332464, 36305, 0);
+      call tb_o(50332464, 36321, 0);
+      call tb_o(50332465, 36505, 0);
+      call tb_o(50332465, 36521, 0);
+      call tb_o(50332466, 36705, 0);
+      call tb_o(50332466, 36721, 0);
+      call tb_o(50332463, 36905, 0);
+      call tb_o(50332463, 36921, 0);
+      call tb_o(50332464, 37105, 0);
+      call tb_o(50332464, 37121, 0);
+      call tb_o(50332465, 37305, 0);
+      call tb_o(50332465, 37321, 0);
+      call tb_o(33555680, 36114, 0);
+      call tb_o(33555683, 36717, 0);
+      call tb_o(33554828, 36909, 0);
+   end else if (lv == 2) then begin
+      call tb_o(50332451, 35305, 0);
+      call tb_o(50332470, 37505, 0);
+      call tb_o(50332460, 35306, 0);
+      call tb_o(50332453, 37506, 0);
+      call tb_o(50332452, 37507, 0);
+      call tb_o(50332451, 37508, 0);
+      call tb_o(50332449, 37509, 0);
+      call tb_o(50332453, 37510, 0);
+      call tb_o(50332461, 35311, 0);
+      call tb_o(50332452, 37511, 0);
+      call tb_o(50332451, 35312, 0);
+      call tb_o(50332451, 37512, 0);
+      call tb_o(50332449, 35313, 0);
+      call tb_o(50332449, 37513, 0);
+      call tb_o(50332453, 35314, 0);
+      call tb_o(50332453, 37514, 0);
+      call tb_o(50332452, 35315, 0);
+      call tb_o(50332452, 37515, 0);
+      call tb_o(50332451, 35316, 0);
+      call tb_o(50332451, 37516, 0);
+      call tb_o(50332449, 35317, 0);
+      call tb_o(50332449, 37517, 0);
+      call tb_o(50332453, 35318, 0);
+      call tb_o(50332453, 37518, 0);
+      call tb_o(50332452, 35319, 0);
+      call tb_o(50332452, 37519, 0);
+      call tb_o(50332451, 35320, 0);
+      call tb_o(50332451, 37520, 0);
+      call tb_o(50332460, 35321, 0);
+      call tb_o(50332448, 37521, 0);
+      call tb_o(50332464, 35505, 0);
+      call tb_o(50332464, 35521, 0);
+      call tb_o(50332465, 35705, 0);
+      call tb_o(50332465, 35721, 0);
+      call tb_o(50332466, 35905, 0);
+      call tb_o(50332466, 35921, 0);
+      call tb_o(50332463, 36105, 0);
+      call tb_o(50332463, 36121, 0);
+      call tb_o(50332464, 36305, 0);
+      call tb_o(50332464, 36321, 0);
+      call tb_o(50332465, 36505, 0);
+      call tb_o(50332465, 36521, 0);
+      call tb_o(50332466, 36705, 0);
+      call tb_o(50332466, 36721, 0);
+      call tb_o(50332463, 36905, 0);
+      call tb_o(50332463, 36921, 0);
+      call tb_o(50332464, 37105, 0);
+      call tb_o(50332464, 37121, 0);
+      call tb_o(50332465, 37305, 0);
+      call tb_o(50332465, 37321, 0);
+      call tb_o(33555680, 36114, 0);
+      call tb_o(33555683, 36717, 0);
+      call tb_o(33554828, 36909, 0);
+   end else if (lv == 3) then begin
+      call tb_o(50332451, 35305, 0);
+      call tb_o(50332470, 37505, 0);
+      call tb_o(50332460, 35306, 0);
+      call tb_o(50332453, 37506, 0);
+      call tb_o(50332452, 37507, 0);
+      call tb_o(50332451, 37508, 0);
+      call tb_o(50332449, 37509, 0);
+      call tb_o(50332453, 37510, 0);
+      call tb_o(50332461, 35311, 0);
+      call tb_o(50332452, 37511, 0);
+      call tb_o(50332451, 35312, 0);
+      call tb_o(50332451, 37512, 0);
+      call tb_o(50332449, 35313, 0);
+      call tb_o(50332449, 37513, 0);
+      call tb_o(50332453, 35314, 0);
+      call tb_o(50332453, 37514, 0);
+      call tb_o(50332452, 35315, 0);
+      call tb_o(50332452, 37515, 0);
+      call tb_o(50332451, 35316, 0);
+      call tb_o(50332451, 37516, 0);
+      call tb_o(50332449, 35317, 0);
+      call tb_o(50332449, 37517, 0);
+      call tb_o(50332453, 35318, 0);
+      call tb_o(50332453, 37518, 0);
+      call tb_o(50332452, 35319, 0);
+      call tb_o(50332452, 37519, 0);
+      call tb_o(50332451, 35320, 0);
+      call tb_o(50332451, 37520, 0);
+      call tb_o(50332460, 35321, 0);
+      call tb_o(50332448, 37521, 0);
+      call tb_o(50332464, 35505, 0);
+      call tb_o(50332464, 35521, 0);
+      call tb_o(50332465, 35705, 0);
+      call tb_o(50332465, 35721, 0);
+      call tb_o(50332466, 35905, 0);
+      call tb_o(50332466, 35921, 0);
+      call tb_o(50332463, 36105, 0);
+      call tb_o(50332463, 36121, 0);
+      call tb_o(50332464, 36305, 0);
+      call tb_o(50332464, 36321, 0);
+      call tb_o(50332465, 36505, 0);
+      call tb_o(50332465, 36521, 0);
+      call tb_o(50332466, 36705, 0);
+      call tb_o(50332466, 36721, 0);
+      call tb_o(50332463, 36905, 0);
+      call tb_o(50332463, 36921, 0);
+      call tb_o(50332464, 37105, 0);
+      call tb_o(50332464, 37121, 0);
+      call tb_o(50332465, 37305, 0);
+      call tb_o(50332465, 37321, 0);
+      call tb_o(33555680, 36114, 0);
+      call tb_o(33555683, 36717, 0);
+      call tb_o(33554828, 36909, 0);
+   end else if (lv == 4) then begin
+      call tb_o(50332451, 35305, 0);
+      call tb_o(50332470, 37505, 0);
+      call tb_o(50332460, 35306, 0);
+      call tb_o(50332453, 37506, 0);
+      call tb_o(50332452, 37507, 0);
+      call tb_o(50332451, 37508, 0);
+      call tb_o(50332449, 37509, 0);
+      call tb_o(50332453, 37510, 0);
+      call tb_o(50332461, 35311, 0);
+      call tb_o(50332452, 37511, 0);
+      call tb_o(50332451, 35312, 0);
+      call tb_o(50332451, 37512, 0);
+      call tb_o(50332449, 35313, 0);
+      call tb_o(50332449, 37513, 0);
+      call tb_o(50332453, 35314, 0);
+      call tb_o(50332453, 37514, 0);
+      call tb_o(50332452, 35315, 0);
+      call tb_o(50332452, 37515, 0);
+      call tb_o(50332451, 35316, 0);
+      call tb_o(50332451, 37516, 0);
+      call tb_o(50332449, 35317, 0);
+      call tb_o(50332449, 37517, 0);
+      call tb_o(50332453, 35318, 0);
+      call tb_o(50332453, 37518, 0);
+      call tb_o(50332452, 35319, 0);
+      call tb_o(50332452, 37519, 0);
+      call tb_o(50332451, 35320, 0);
+      call tb_o(50332451, 37520, 0);
+      call tb_o(50332460, 35321, 0);
+      call tb_o(50332448, 37521, 0);
+      call tb_o(50332464, 35505, 0);
+      call tb_o(50332464, 35521, 0);
+      call tb_o(50332465, 35705, 0);
+      call tb_o(50332465, 35721, 0);
+      call tb_o(50332466, 35905, 0);
+      call tb_o(50332466, 35921, 0);
+      call tb_o(50332463, 36105, 0);
+      call tb_o(50332463, 36121, 0);
+      call tb_o(50332464, 36305, 0);
+      call tb_o(50332464, 36321, 0);
+      call tb_o(50332465, 36505, 0);
+      call tb_o(50332465, 36521, 0);
+      call tb_o(50332466, 36705, 0);
+      call tb_o(50332466, 36721, 0);
+      call tb_o(50332463, 36905, 0);
+      call tb_o(50332463, 36921, 0);
+      call tb_o(50332464, 37105, 0);
+      call tb_o(50332464, 37121, 0);
+      call tb_o(50332465, 37305, 0);
+      call tb_o(50332465, 37321, 0);
+      call tb_o(33555680, 36114, 0);
+      call tb_o(33555683, 36717, 0);
+      call tb_o(33554828, 36909, 0);
+   end
+end
+
+// Ферма браминов: объектов по уровням 5, 57, 279, 332
+procedure tb_b10(variable lv) begin
    if (lv == 1) then begin
       call tb_o(33555680, 16151, 0);
       call tb_o(33554828, 16548, 0);
@@ -5096,7 +5420,7 @@ procedure tb_b8(variable lv) begin
 end
 
 // Бар: объектов по уровням 52, 168, 164, 202
-procedure tb_b9(variable lv) begin
+procedure tb_b11(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332270, 22912, 0);
       call tb_o(50332270, 22913, 0);
@@ -5705,7 +6029,7 @@ procedure tb_b9(variable lv) begin
 end
 
 // Медпункт: объектов по уровням 72, 98, 162, 150
-procedure tb_b10(variable lv) begin
+procedure tb_b12(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332577, 25714, 0);
       call tb_o(50332270, 25715, 0);
@@ -6204,7 +6528,7 @@ procedure tb_b10(variable lv) begin
 end
 
 // Дом героя: объектов по уровням 65, 65, 135, 187
-procedure tb_b11(variable lv) begin
+procedure tb_b13(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332577, 11640, 0);
       call tb_o(50332270, 11641, 0);
@@ -6666,7 +6990,7 @@ procedure tb_b11(variable lv) begin
 end
 
 // Рынок: объектов по уровням 1, 3, 135, 143
-procedure tb_b12(variable lv) begin
+procedure tb_b14(variable lv) begin
    if (lv == 1) then begin
       call tb_o(434, 31335, 0);
    end else if (lv == 2) then begin
@@ -6970,6 +7294,8 @@ procedure tb_bld(variable b, variable lv) begin
    else if (b == 10) then call tb_b10(lv);
    else if (b == 11) then call tb_b11(lv);
    else if (b == 12) then call tb_b12(lv);
+   else if (b == 13) then call tb_b13(lv);
+   else if (b == 14) then call tb_b14(lv);
 end
 
 procedure tb_sys(variable s) begin
@@ -7032,7 +7358,7 @@ procedure tb_sys(variable s) begin
       call tb_o(33556288, 15234, 0);
       call tb_o(33555378, 22640, 0);
       call tb_o(33556275, 22476, 0);
-      call tb_o(33555377, 24038, 0);
+      call tb_o(33555377, 23438, 0);
       call tb_o(33556274, 29034, 0);
       call tb_o(33556275, 27034, 0);
       call tb_o(33555006, 20263, 0);
