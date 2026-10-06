@@ -1,5 +1,5 @@
 // Строитель песочницы (только с f2mod_test.dat). Ставит любое здание на любой уровень 1-4 без квестов и без
-// ожидания: экран гаснет, и все уже стоит. Отдельно: деревья, мусор, свет (бочки или фонари), забор
+// ожидания: экран гаснет, и все уже стоит. Отдельно: деревья, мусор, свет (бочки, столбы или пилоны), забор
 // (частокол, сетка, стена Убежища), внешняя сетка, турели и враги по 2 с каждой стороны города.
 // Расстановка: f2mtblay.h (tools/layout/town_emit.py).
 #define SCRIPT_REALNAME "f2mtbld"
@@ -18,6 +18,7 @@ procedure description_p_proc;
 procedure do_action;
 procedure tb_set(variable b, variable lv);
 procedure sys_swap(variable old_s, variable new_s);
+procedure light_sys(variable lv);
 procedure put_enemy(variable pid, variable tile, variable weapon, variable ammo);
 
 procedure Node001;
@@ -54,6 +55,7 @@ procedure Ntrash;
 procedure Nlight0;
 procedure Nlight1;
 procedure Nlight2;
+procedure Nlight3;
 procedure Nfence0;
 procedure Nfence1;
 procedure Nfence2;
@@ -143,6 +145,13 @@ procedure tb_set(variable b, variable lv) begin
 end
 
 // Набор объектов: убрать old_s, поставить new_s (-1 = ничего)
+// свет: 1 бочки, 2 столбы, 3 пилоны
+procedure light_sys(variable lv) begin
+   if (lv == 0) then return -1;
+   if (lv == 3) then return TB_SYS_PYLONS;
+   return TB_SYS_BARRELS + lv - 1;
+end
+
 procedure sys_swap(variable old_s, variable new_s) begin
    if (old_s >= 0) then begin
       tb_mode := 0;
@@ -208,7 +217,7 @@ procedure do_action begin
    end else if (act == ACT_LIGHT) then begin
       cur := get_sfall_global_int(GV_TB_LIGHT);
       if (cur != arg) then begin
-         call sys_swap((TB_SYS_BARRELS + cur - 1) if cur else -1, (TB_SYS_BARRELS + arg - 1) if arg else -1);
+         call sys_swap(light_sys(cur), light_sys(arg));
          set_sfall_global(GV_TB_LIGHT, arg);
       end
    end else if (act == ACT_FENCE) then begin
@@ -322,6 +331,7 @@ procedure Node030 begin
    NOption(162, Ntrash, 1);
    NOption(163, Nlight1, 1);
    NOption(164, Nlight2, 1);
+   NOption(167, Nlight3, 1);
    NOption(165, Nlight0, 1);
    NOption(166, Nhatch, 1);
    NOption(122, Node001, 1);
@@ -380,6 +390,7 @@ procedure Ntrash begin act := ACT_TRASH; end
 procedure Nlight0 begin act := ACT_LIGHT; arg := 0; end
 procedure Nlight1 begin act := ACT_LIGHT; arg := 1; end
 procedure Nlight2 begin act := ACT_LIGHT; arg := 2; end
+procedure Nlight3 begin act := ACT_LIGHT; arg := 3; end
 procedure Nfence0 begin act := ACT_FENCE; arg := 0; end
 procedure Nfence1 begin act := ACT_FENCE; arg := 1; end
 procedure Nfence2 begin act := ACT_FENCE; arg := 2; end

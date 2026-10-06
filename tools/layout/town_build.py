@@ -468,7 +468,8 @@ def nm(o): return (o.get('path') or fidpath(o['fid']) or '').split('\\')[-1].low
 TREES = [o for o in OTHER['deco'] + OTHER[None] if any(s in nm(o) for s in ('tree', 'bush'))]
 TRASH = OTHER['trash']
 STRLIT = [o for o in OTHER['deco'] if 'strlit' in nm(o)]
-LAMPS = [dict(o, path='art\\scenery\\vclight1.frm') for o in STRLIT]      # 3-4 ур.: вместо столбов strlit пилоны (Егор)
+LAMPS = list(STRLIT)                                                          # свет 2: столбы strlit на местах, где их расставил Егор
+PYLONS = [dict(o, path='art\\scenery\\vclight1.frm') for o in STRLIT]         # свет 3: пилоны на тех же местах (Егор)
 BARRELS = [dict(o, path='art\\scenery\\barrel.frm', lit=(4, 100)) for o in STRLIT]
 F0, F1 = D['F']; M0, M1 = D['M']; GX0 = D['GX0']
 GW = range(GX0 - 2, GX0 + 12)          # ворота (арка Города-Убежища) в линии забора: town_max.py
@@ -540,7 +541,7 @@ HATCH = [dict(tile=HATCH_T, path='art\\scenery\\hole1.frm', pid=0, fid=0, flags=
 # ---- проверка: все PID есть, считаем объекты
 def normall(objs): return [norm(o) for o in objs if keep(o)]
 LEVELS = [[normall(fn(lv)) for lv in (1, 2, 3, 4)] for name, fn in BUILD]
-SYS = dict(trees=normall(TREES), trash=normall(TRASH), lamps=normall(LAMPS), barrels=normall(BARRELS),
+SYS = dict(trees=normall(TREES), trash=normall(TRASH), lamps=normall(LAMPS), barrels=normall(BARRELS), pylons=normall(PYLONS),
            palisade=normall(PALISADE), mesh=normall(MESH), wall=normall(WALL3), outer=normall(OUTER), hatch=normall(HATCH))
 # ---- фонари, мусор, деревья и кусты не должны стоять на зданиях (любого уровня), друг на друге и на дорогах:
 # мешающий объект переносим на ближайшую свободную клетку (Егор: кусты на мусоре — мусор оставить, кусты перенести)
@@ -572,10 +573,11 @@ def settle(objs, also=()):
             e['tile'] = t; moved += 1
         BUSY.update(ring1(e['tile']))
     return moved
-for e in SYS['lamps']: e['light'] = (5, 100)     # свет пилонов vclight1 с радиусом 5 вместо 3
+for e in SYS['lamps'] + SYS['pylons']: e['light'] = (5, 100)     # у strlit в прототипе света нет; у пилонов vclight1 радиус 5 вместо 3
 MOVED = dict(lamps=settle(SYS['lamps']), trash=settle(SYS['trash']), trees=settle(SYS['trees']))
-for a, b in zip(SYS['barrels'], SYS['lamps']): a['tile'] = b['tile']      # бочки-костры стоят там же, где фонари
-SYS['lamps'] = [e for e in SYS['lamps'] if e['tile'] != T(102, 162)]; SYS['barrels'] = [e for e in SYS['barrels'] if e['tile'] != T(102, 162)]   # пилон у южных ворот мешал (Егор)
+for k in ('barrels', 'pylons'):
+    for a, b in zip(SYS[k], SYS['lamps']): a['tile'] = b['tile']      # бочки и пилоны стоят там же, где столбы
+for k in ('lamps', 'barrels', 'pylons'): SYS[k] = [e for e in SYS[k] if e['tile'] != T(102, 162)]   # пилон у южных ворот мешал (Егор)
 rep = []
 for (name, _), lv in zip(BUILD, LEVELS): rep.append(f'{name}: ' + ', '.join(str(len(x)) for x in lv))
 for k, v in SYS.items(): rep.append(f'{k}: {len(v)}')
@@ -604,7 +606,7 @@ if os.environ.get('IMG'):
     lvls = [int(x) for x in os.environ['IMG'].split(',')]
     for lv in lvls:
         objs = [e for L in LEVELS for e in L[lv - 1]] + SYS['trees'] + SYS['trash']
-        objs += (SYS['barrels'] if lv < 3 else SYS['lamps'])
+        objs += (SYS['barrels'] if lv < 2 else SYS['lamps'] if lv < 4 else SYS['pylons'])
         objs += {1: SYS['palisade'], 2: SYS['mesh'], 3: SYS['wall'], 4: SYS['wall'] + SYS['outer']}[lv]
         im, *_ = draw(objs, OUT + f'town_lv{lv}_full.png', marks=[(e['tile'], 'G', (255, 0, 0)) for e in LEVELS[[n for n, _ in BUILD].index('Охрана')][lv - 1]] if os.environ.get('MARKG') else ())
         sm = im.copy(); sm.thumbnail((2600, 2600)); sm.save(OUT + f'town_lv{lv}.jpg', quality=88)

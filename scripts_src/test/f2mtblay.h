@@ -13,6 +13,7 @@
 #define TB_SYS_WALL    (6)
 #define TB_SYS_OUTER   (7)
 #define TB_SYS_HATCH   (8)    // люк в подвал дома героя
+#define TB_SYS_PYLONS  (9)    // свет 3: пилоны
 #define TB_CAR_HEX     (32283)
 
 variable tb_mode;   // 1 ставим, 0 убираем
@@ -7186,49 +7187,49 @@ procedure tb_sys(variable s) begin
       call tb_o(33554433, 21633, 0);
       call tb_lit(4, 100);
    end else if (s == 3) then begin   // lamps: 22
-      call tb_o(33555818, 7702, 0);
+      call tb_o(33554725, 7702, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 12302, 0);
+      call tb_o(33554725, 12302, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 17302, 0);
+      call tb_o(33554725, 17302, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 24497, 0);
+      call tb_o(33554724, 24497, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 26902, 0);
+      call tb_o(33554725, 26902, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 29297, 0);
+      call tb_o(33554724, 29297, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 31702, 0);
+      call tb_o(33554725, 31702, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 20755, 0);
+      call tb_o(33554726, 20755, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 20691, 0);
+      call tb_o(33554726, 20691, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 21679, 0);
+      call tb_o(33554723, 21679, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 20667, 0);
+      call tb_o(33554726, 20667, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 21655, 0);
+      call tb_o(33554723, 21655, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 20643, 0);
+      call tb_o(33554726, 20643, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 10502, 0);
+      call tb_o(33554724, 10502, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 14902, 0);
+      call tb_o(33554725, 14902, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 30049, 0);
+      call tb_o(33554726, 30049, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 30069, 0);
+      call tb_o(33554726, 30069, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 30121, 0);
+      call tb_o(33554723, 30121, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 20739, 0);
+      call tb_o(33554726, 20739, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 7333, 0);
+      call tb_o(33554723, 7333, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 20721, 0);
+      call tb_o(33554726, 20721, 0);
       call tb_lit(5, 100);
-      call tb_o(33555818, 21633, 0);
+      call tb_o(33554723, 21633, 0);
       call tb_lit(5, 100);
    end else if (s == 4) then begin   // palisade: 538
       call tb_o(50331800, 6030, 0);
@@ -9502,6 +9503,51 @@ procedure tb_sys(variable s) begin
       call tb_o(50332270, 34907, 0);
    end else if (s == 8) then begin   // hatch: 1
       call tb_o(33555015, 13043, 0);
+   end else if (s == 9) then begin   // pylons: 22
+      call tb_o(33555818, 7702, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 12302, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 17302, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 24497, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 26902, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 29297, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 31702, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 20755, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 20691, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 21679, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 20667, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 21655, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 20643, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 10502, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 14902, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 30049, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 30069, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 30121, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 20739, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 7333, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 20721, 0);
+      call tb_lit(5, 100);
+      call tb_o(33555818, 21633, 0);
+      call tb_lit(5, 100);
    end
 end
 
