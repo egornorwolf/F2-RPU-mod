@@ -248,9 +248,15 @@ def furnish(objs, items, seed, mode='wall', region=None):
                 n1 = back_nb(t, sd); n2 = back_nb(n1, sd)
                 if n1 in WALLS or n2 in WALLS: return False
             return True
-        if it[0][:-4] in BACK: c = [t for t in c if (mode != 'wall' or back_nb(t, BACK[it[0][:-4]]) in WALLS) and shown(t)]   # полка спиной к стене
+        base = list(c); wall = mode in ('wall', 'wall+')
+        if it[0][:-4] in BACK and wall:
+            c = [t for t in base if back_nb(t, BACK[it[0][:-4]]) in WALLS]     # шкаф и полка только спиной вплотную к стене (Егор)
+            c = [t for t in c if shown(t)] or c                               # лучше там, где не закрыты зданием, но стена важнее
+        elif it[0][:-4] in BACK: c = [t for t in base if shown(t)]
         nb = lambda t: any(n in blk0 for n in ring1(t) - {t})
-        c = sorted(t for t in c if mode == 'free' or nb(t) == (mode == 'wall')); rnd.shuffle(c)
+        c = sorted(t for t in c if mode == 'free' or nb(t) == wall); rnd.shuffle(c)
+        if not c and mode == 'wall+' and it[0][:-4] not in BACK:                                          # у стены нет места: чуть дальше, но проход вокруг (ring1 свободен)
+            c = sorted(t for t in base if not nb(t)); rnd.shuffle(c)
         for t in c:
             o = dict(tile=t, pid=it[1], rot=rnd.randrange(6), crit=True, fid=0, flags=0) if it[0] == 'crit' else \
                 dict(tile=t, path=f'art\\{it[1] if len(it) > 1 else "scenery"}\\{it[0]}', pid=0, fid=0, flags=0)
@@ -432,9 +438,8 @@ def hero4():
     def nm(o): return (fidpath(o['fid']) or '').split('\\')[-1].lower()
     objs = [o for o in L4['8 Дом героя'] if nm(o) not in ('sign36.frm', 'sign37.frm', 'bkshlf5.frm', 'footlkr4.frm')]
     reg = inside_cells(objs) | {t for t in inner_cells(objs, loose=True) if t // 200 < wallbb(objs)[3] - 2}   # шире обычного, но не у фасада
-    objs = furnish(objs, [('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('abkshlf1.frm', 'items')], seed=121, mode='wall', region=reg)
-    objs = furnish(objs, [('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('abkshlf1.frm', 'items'), ('locker5.frm', 'items')], seed=122, mode='open', region=reg)   # что не встало у стены — свободно в зале
-    return furnish(objs, [('chest1.frm', 'items'), ('chest1.frm', 'items')], seed=123, mode='wall', region=reg)
+    return furnish(objs, [('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('abkshlf1.frm', 'items'), ('bkshlf5.frm', 'items'),
+                          ('locker5.frm', 'items'), ('chest1.frm', 'items'), ('chest1.frm', 'items')], seed=121, mode='wall+', region=reg)
 bld('Дом героя', lambda lv: fit(with_extra(ARTENT, [('footlkr1.frm', 0, 1, 'items')]), B['8 Дом героя'], *HD) if lv == 1
     else fit(with_extra(MHOUSE, [('footlkr1.frm', 0, 1, 'items')]), B['8 Дом героя']) if lv == 2
     else furnish(fit(HERO3, B['8 Дом героя']), [('footlkr1.frm', 'items'), ('locker5.frm', 'items')], seed=111) if lv == 3   # был туалет НКР (Егор)

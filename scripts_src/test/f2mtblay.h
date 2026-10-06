@@ -813,7 +813,7 @@ procedure tb_b2(variable lv) begin
    end
 end
 
-// Жилье (8 домов): объектов по уровням 562, 488, 523, 405
+// Жилье (8 домов): объектов по уровням 562, 488, 523, 406
 procedure tb_b3(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332577, 7288, 0);
@@ -2752,6 +2752,7 @@ procedure tb_b3(variable lv) begin
       call tb_o(33555380, 11492, 0);
       call tb_o(33554663, 11290, 0);
       call tb_o(33554529, 12693, 0);
+      call tb_o(246, 10491, 0);
       call tb_o(33555108, 12090, 0);
       call tb_o(50332539, 10274, 0);
       call tb_o(50332269, 10275, 0);
@@ -6194,7 +6195,7 @@ procedure tb_b10(variable lv) begin
    end
 end
 
-// Дом героя: объектов по уровням 65, 65, 134, 187
+// Дом героя: объектов по уровням 65, 65, 135, 188
 procedure tb_b11(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332577, 11640, 0);
@@ -6464,6 +6465,7 @@ procedure tb_b11(variable lv) begin
       call tb_o(33554800, 14050, 0);
       call tb_o(50332270, 14051, 0);
       call tb_o(128, 12051, 0);
+      call tb_o(188, 13644, 0);
    end else if (lv == 4) then begin
       call tb_o(50332539, 10636, 0);
       call tb_o(50332269, 10637, 0);
@@ -6646,12 +6648,13 @@ procedure tb_b11(variable lv) begin
       call tb_o(50332516, 14451, 0);
       call tb_o(50332514, 14453, 0);
       call tb_o(50332516, 14455, 0);
-      call tb_o(149, 12245, 0);
-      call tb_o(188, 12646, 0);
-      call tb_o(246, 12453, 0);
-      call tb_o(188, 12241, 0);
-      call tb_o(245, 11652, 0);
-      call tb_o(245, 12852, 0);
+      call tb_o(149, 12850, 0);
+      call tb_o(188, 14049, 0);
+      call tb_o(246, 13247, 0);
+      call tb_o(149, 11445, 0);
+      call tb_o(188, 11654, 0);
+      call tb_o(245, 12849, 0);
+      call tb_o(245, 11037, 0);
    end
 end
 
