@@ -54,7 +54,7 @@ put('bar', 68, 108, '11 Бар'); put('clinic', 70, 123, '14 Госпиталь'
 HOUSES = [(102 + i * 13, 35) for i in range(5)] + [(102 + i * 13, 51) for i in range(3)]
 for i, (u, y) in enumerate(HOUSES): put('house', u, y, None, f'Дом {i + 1}')
 labels.append(('6-7 Жилье', 128, 50))
-put('hero', 143, 54, '8 Дом героя', box=(22, 20))
+put('herov', 143, 54, '8 Дом героя', box=(22, 20))   # дом Города-Убежища (Егор)
 put('hall', 102, 70, '12 Ратуша')
 put('barracks', 134, 116, '16 Казарма')
 put('market', 50, 147, '18 Рынок')
@@ -89,7 +89,7 @@ for (x, y), (a, fl) in list(wall.items()):
     if not near: continue
     if y in (F0, F1) and x not in (F0, F1): wall[(x, y)] = ('adw1006' if x % 2 == 0 else 'adw1007', fl)
     elif x in (F0, F1) and y not in (F0, F1): wall[(x, y)] = (('adw1010', 'adw1011', 'adw1012')[y % 3], fl)
-CORNER = {(F0, F0): 'adw1017', (F1, F0): 'adw1017', (F0, F1): 'adw1017', (F1, F1): 'adw1019'}
+CORNER = {(F0, F0): 'adw1019', (F1, F0): 'adw1017', (F0, F1): 'adw1018', (F1, F1): 'adw1016'}   # как в НКР (ncr1, ncr2): верх, лево, право, низ; правые углы не сходились (Егор)
 for c, a in CORNER.items(): wall[c] = (a, 0)
 for (x, y), (a, fl) in wall.items():
     objs.append(dict(tile=y * 200 + x, pid=0x3000001, fid=0, elev=0, flags=fl, sid=-1, path=f'art\\walls\\{a}.frm', tag='wall'))
@@ -316,10 +316,14 @@ for _ in range(900):
         placed.append((u, y)); trees += 0 if bush else 1
 bushes = len(placed)
 # всё убранство не должно перекрывать входы: если перекрыло, снимаем последнее поставленное
-def worse(r): return any(r[k]['inner_ok'] < res_ref[k]['inner_ok'] or (res_ref[k]['near'] and not r[k]['near']) for k in r)
+def worse(r):   # стало больше закрытых клеток (а не просто меньше клеток: дерево или фонарь в рамке здания занимает клетку)
+    return any(r[k]['inner'] - r[k]['inner_ok'] > res_ref[k]['inner'] - res_ref[k]['inner_ok'] or (res_ref[k]['near'] and not r[k]['near']) for k in r)
 removed = 0
-while worse(check()[2]):
-    o = DECO.pop(); objs.remove(o); removed += 1
+if worse(check()[2]):                                           # снимаем только то, что само перекрывает проход (раньше снимали все с конца:
+    for o in list(reversed(DECO)):                              # пропали деревья, кусты, стрельбище и часть фонарей, Егор)
+        objs.remove(o); r = check()[2]; objs.append(o)
+        if not worse(r): objs.remove(o); DECO.remove(o); removed += 1
+        if not worse(check()[2]): break
 
 # ---- мусор: на видных местах у дорог, не на проходе и не у дверей; во дворе каравана большая куча из 5
 TRASH = ['junk2', 'njunk5', 'njunk6', 'trash1', 'trash3', 'trash4', 'pipes2', 'junk1']

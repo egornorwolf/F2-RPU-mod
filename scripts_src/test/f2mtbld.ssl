@@ -66,6 +66,7 @@ procedure Ntur3;
 procedure Ntur4;
 procedure Nenemy;
 procedure Nworld;
+procedure Nhatch;
 
 // Что делать после диалога (экран гаснет, все ставится, экран загорается)
 #define ACT_NONE    (0)
@@ -79,6 +80,7 @@ procedure Nworld;
 #define ACT_TUR     (8)     // 0 нет, 1 пулеметные, 2 плазменные, 3 лазерные, 4 вперемешку
 #define ACT_ENEMY   (9)
 #define ACT_WORLD   (10)
+#define ACT_HATCH   (11)    // люк в подвал дома героя (одна клетка на всех уровнях дома)
 
 // Состояние песочницы в глобальных переменных sfall (сохраняется в игре)
 #define gv_bld(b)       ("f2mtb_" + ((b) / 10) + ((b) % 10))
@@ -88,6 +90,7 @@ procedure Nworld;
 #define GV_TB_FENCE     "f2mtfenc"
 #define GV_TB_OUTER     "f2mtoutr"
 #define GV_TB_TUR       "f2mtturr"
+#define GV_TB_HATCH     "f2mthtch"
 
 // Турели: пулеметная (модель magunn, у нее анимации пулемета L — «Спаренный миниган» 518)
 // и плазменная (модель magun2, анимации пистолета H — «Спаренная плазменная пушка» 498, как в Наварро).
@@ -214,6 +217,10 @@ procedure do_action begin
          call sys_swap((TB_SYS_PALISADE + cur - 1) if cur else -1, (TB_SYS_PALISADE + arg - 1) if arg else -1);
          set_sfall_global(GV_TB_FENCE, arg);
       end
+   end else if (act == ACT_HATCH) then begin
+      cur := get_sfall_global_int(GV_TB_HATCH);
+      if (cur) then call sys_swap(TB_SYS_HATCH, -1); else call sys_swap(-1, TB_SYS_HATCH);
+      set_sfall_global(GV_TB_HATCH, not cur);
    end else if (act == ACT_OUTER) then begin
       cur := get_sfall_global_int(GV_TB_OUTER);
       if (cur) then call sys_swap(TB_SYS_OUTER, -1); else call sys_swap(-1, TB_SYS_OUTER);
@@ -316,6 +323,7 @@ procedure Node030 begin
    NOption(163, Nlight1, 1);
    NOption(164, Nlight2, 1);
    NOption(165, Nlight0, 1);
+   NOption(166, Nhatch, 1);
    NOption(122, Node001, 1);
 end
 
@@ -384,6 +392,7 @@ procedure Ntur3 begin act := ACT_TUR; arg := 3; end
 procedure Ntur4 begin act := ACT_TUR; arg := 4; end
 procedure Nenemy begin act := ACT_ENEMY; end
 procedure Nworld begin act := ACT_WORLD; end
+procedure Nhatch begin act := ACT_HATCH; end
 
 procedure Node999 begin
 end

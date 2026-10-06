@@ -61,6 +61,7 @@ for k,src in SRCM.items():
 # 4 уровень клиники и дома героя: в домах Города-Убежища силовые поля (forcfd), за них не зайти (Егор). Берем целые здания:
 # клиника доктора в Реддинге, дом-контора из Дена
 P['clinic']=building(load('reddown'),[20322],skip=SK)
+P['herov']=rebuild(mv,P['hero'],skip=SK+('vclight','forcfd'))   # дом Города-Убежища без силовых полей (Егор: дом героя 4 ур. из Убежища)
 P['hero']=building(load('denbus1'),[16302],skip=SK)
 for k,p in pieces.items():
     b=p['bb']; print(k,len(p['objs']),'size',b[2]-b[0]+1,'x',b[3]-b[1]+1)
