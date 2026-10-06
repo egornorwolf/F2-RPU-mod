@@ -49,6 +49,7 @@ procedure tb_o(variable pid, variable tile, variable rf) begin
    variable obj;
    if (tb_mode) then begin
       obj := create_object(pid, tile, 0);
+      if (pid == 16777232 or pid == 16777221 or pid == 16777296 or pid == 16777223 or pid == 16777456) then critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);   // растения и питомцы: свои
       if (rf bwand 7) then anim(obj, 1000, rf bwand 7);
       if (rf / 8) then anim(obj, 1010, rf / 8);
       tb_last := obj;
@@ -4703,28 +4704,44 @@ procedure tb_b9(variable lv) begin
    end
 end
 
-// Растения у ворот: объектов по уровням 4, 4, 4, 4
+// Растения у ворот: объектов по уровням 8, 8, 8, 8
 procedure tb_b10(variable lv) begin
    if (lv == 1) then begin
       call tb_o(16777232, 4693, 0);
       call tb_o(16777232, 4703, 0);
       call tb_o(16777232, 35293, 0);
       call tb_o(16777232, 35303, 0);
+      call tb_o(16777221, 1507, 0);
+      call tb_o(16777296, 1510, 0);
+      call tb_o(16777223, 1513, 0);
+      call tb_o(16777456, 1516, 0);
    end else if (lv == 2) then begin
       call tb_o(16777232, 4693, 0);
       call tb_o(16777232, 4703, 0);
       call tb_o(16777232, 35293, 0);
       call tb_o(16777232, 35303, 0);
+      call tb_o(16777221, 1507, 0);
+      call tb_o(16777296, 1510, 0);
+      call tb_o(16777223, 1513, 0);
+      call tb_o(16777456, 1516, 0);
    end else if (lv == 3) then begin
       call tb_o(16777232, 4693, 0);
       call tb_o(16777232, 4703, 0);
       call tb_o(16777232, 35293, 0);
       call tb_o(16777232, 35303, 0);
+      call tb_o(16777221, 1507, 0);
+      call tb_o(16777296, 1510, 0);
+      call tb_o(16777223, 1513, 0);
+      call tb_o(16777456, 1516, 0);
    end else if (lv == 4) then begin
       call tb_o(16777232, 4693, 0);
       call tb_o(16777232, 4703, 0);
       call tb_o(16777232, 35293, 0);
       call tb_o(16777232, 35303, 0);
+      call tb_o(16777221, 1507, 0);
+      call tb_o(16777296, 1510, 0);
+      call tb_o(16777223, 1513, 0);
+      call tb_o(16777456, 1516, 0);
    end
 end
 

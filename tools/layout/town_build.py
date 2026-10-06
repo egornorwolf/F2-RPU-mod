@@ -421,7 +421,9 @@ bld('Загон питомцев', lambda lv: mesh_rect(PET_PEN[0], PET_PEN[2], 
     at('HAYBED01.frm', 199 - (PET_PEN[0] + 9), PET_PEN[3] - 4), at('HAYBED04.frm', 199 - (PET_PEN[0] + 12), PET_PEN[3] - 7), at('barrel2.frm', 199 - (PET_PEN[0] + 4), PET_PEN[3] - 8)])
 PID_SPORE_PLANT = 16777232
 GATE_PLANTS = [(93, 23), (103, 23), (93, 176), (103, 176)]     # саженцы-растения (events.md 8.4): по 2 у каждых ворот, снаружи внешней сетки, по сторонам дороги (Егор)
-bld('Растения у ворот', lambda lv: [dict(crit=True, pid=PID_SPORE_PLANT, tile=y * 200 + x, rot=0) for x, y in GATE_PLANTS])
+PET_PIDS = [16777221, 16777296, 16777223, 16777456]            # скорпион (малый радскорпион), геккон, детеныш когтя смерти, огненный геккон
+bld('Растения у ворот', lambda lv: [dict(crit=True, pid=PID_SPORE_PLANT, tile=y * 200 + x, rot=0) for x, y in GATE_PLANTS]
+    + [dict(crit=True, pid=pid, tile=(PET_PEN[1] + 3) * 200 + PET_PEN[0] + 3 + 3 * i, rot=0) for i, pid in enumerate(PET_PIDS)])   # + дружественные питомцы в загоне (Егор)
 def make_mines():
     """Мины CAVTRAP1 (Егор) в наружной зоне за внешней сеткой: полоса 12-23 и 176-187 клеток от края, не ближе 5 клеток друг к другу,
     к проходам у ворот, к загону питомцев и местам, где появляются налетчики."""
