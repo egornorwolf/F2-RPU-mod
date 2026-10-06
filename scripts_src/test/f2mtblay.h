@@ -6651,10 +6651,10 @@ procedure tb_b11(variable lv) begin
       call tb_o(135, 11045, 0);
       call tb_o(135, 11245, 0);
       call tb_o(135, 11445, 0);
-      call tb_o(135, 13445, 0);
-      call tb_o(135, 13645, 0);
       call tb_o(134, 13845, 0);
       call tb_o(135, 14045, 0);
+      call tb_o(135, 13849, 0);
+      call tb_o(135, 14049, 0);
    end
 end
 

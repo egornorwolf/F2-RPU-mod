@@ -437,7 +437,7 @@ bld('Медпункт', lambda lv: furnish(fit(MILTENT[2], B['14 Госпита�
     else fit(sub(VCCLINIC, lambda n: n != 'holo.frm'), B['14 Госпиталь']) if lv == 3
     else hospital4())
 HD = [0, 0]                             # сдвиг палатки 1 ур., чтобы люк подвала был внутри нее (ниже)
-HERO_LOCKERS = [(45, y, 'locker4.frm') for y in (55, 56, 57, 67, 68)] + [(45, 69, 'locker3.frm'), (45, 70, 'locker4.frm')]   # места 11-17 с картинки (Егор): модель с места 17 на 11-15, 16 как было
+HERO_LOCKERS = [(45, y, 'locker4.frm') for y in (55, 56, 57)] + [(45, 69, 'locker3.frm'), (45, 70, 'locker4.frm'), (49, 69, 'locker4.frm'), (49, 70, 'locker4.frm')]   # места 11-13, 16, 17, 18, 19 с картинки (Егор): 14, 15 перенесены на 18, 19
 def hero4():
     """Дом героя 4 ур. (Убежище): убираем таблички «Центр распределения слуг» и полку, наполовину скрытую стеной; добавляем
     вместительные (250 ед.) шкафы вдоль стен: полки, шкафчик, сундуки (Егор: 3-4 на этаж, остальное хранить ниже, в подвале)."""
@@ -518,6 +518,7 @@ _hc = [inner_cells(HERO_FN(lv)) for lv in (2, 3, 4)]       # дома 2-4 уро
 _u0, _y0, _u1, _y1 = B['8 Дом героя'][:4]
 _ctr = T((_u0 + _u1) // 2, (_y0 + _y1) // 2)
 def _d(t): return abs(t % 200 - _ctr % 200) + abs(t // 200 - _ctr // 200)
+if os.environ.get('DBG2'): print('DBG2', sorted((t % 200, t // 200) for t in set.intersection(*_hc)))
 def _find():
     offs = sorted(((a, b) for a in range(-8, 9, 2) for b in range(-8, 9, 2)), key=lambda p: abs(p[0]) + abs(p[1]))
     for t in sorted(set.intersection(*_hc), key=_d):
