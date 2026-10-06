@@ -747,7 +747,7 @@ procedure tb_b2(variable lv) begin
    end
 end
 
-// Жилье (8 домов): объектов по уровням 562, 488, 523, 416
+// Жилье (8 домов): объектов по уровням 562, 488, 523, 412
 procedure tb_b3(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332577, 7288, 0);
@@ -2542,7 +2542,6 @@ procedure tb_b3(variable lv) begin
       call tb_o(33554663, 8267, 0);
       call tb_o(33554528, 7467, 0);
       call tb_o(33554436, 7666, 0);
-      call tb_o(188, 7669, 0);
       call tb_o(50332539, 7048, 0);
       call tb_o(50332269, 7049, 0);
       call tb_o(50332528, 7050, 0);
@@ -2594,7 +2593,6 @@ procedure tb_b3(variable lv) begin
       call tb_o(42, 9055, 0);
       call tb_o(33554435, 9254, 0);
       call tb_o(33555108, 8251, 0);
-      call tb_o(188, 7254, 0);
       call tb_o(50332539, 7036, 0);
       call tb_o(50332269, 7037, 0);
       call tb_o(50332528, 7038, 0);
@@ -2644,7 +2642,6 @@ procedure tb_b3(variable lv) begin
       call tb_o(33554527, 8041, 0);
       call tb_o(33554528, 8038, 0);
       call tb_o(66, 8443, 0);
-      call tb_o(60, 7243, 0);
       call tb_o(50332539, 10288, 0);
       call tb_o(50332269, 10289, 0);
       call tb_o(50332528, 10290, 0);
@@ -2693,9 +2690,9 @@ procedure tb_b3(variable lv) begin
       call tb_o(33554642, 10492, 0);
       call tb_o(33554663, 12292, 0);
       call tb_o(33554529, 10893, 0);
-      call tb_o(246, 12695, 0);
+      call tb_o(246, 10495, 0);
       call tb_o(33555108, 11292, 0);
-      call tb_o(33555115, 11495, 0);
+      call tb_o(33555115, 11695, 0);
       call tb_o(50332539, 10274, 0);
       call tb_o(50332269, 10275, 0);
       call tb_o(50332528, 10276, 0);
@@ -2802,7 +2799,6 @@ procedure tb_b3(variable lv) begin
       call tb_o(33555115, 11668, 0);
       call tb_o(42, 12868, 0);
       call tb_o(33554435, 11068, 0);
-      call tb_o(149, 12866, 0);
    end
 end
 
@@ -6289,7 +6285,7 @@ procedure tb_b11(variable lv) begin
       call tb_o(33554800, 14050, 0);
       call tb_o(50332270, 14051, 0);
       call tb_o(128, 12051, 0);
-      call tb_o(188, 13645, 0);
+      call tb_o(188, 13644, 0);
    end else if (lv == 4) then begin
       call tb_o(50332539, 10636, 0);
       call tb_o(50332269, 10637, 0);

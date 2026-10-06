@@ -210,6 +210,15 @@ def inside_cells(objs):
             r, c = rows.get(y, ()), cols.get(x, ())
             if any(v < x for v in r) and any(v > x for v in r) and any(v < y for v in c) and any(v > y for v in c): out.add(y * 200 + x)
     return out
+BACK = {n: 'ur' for n in ('bokcas1', 'bokcas5', 'bkshlf5', 'locker5', 'dresr1', 'dresr3')}; BACK['abkshlf1'] = 'ul'   # к какой стене прижата спина
+def back_nb(t, side):
+    """Соседняя клетка в сторону верха-вправо ('ur') или верха-влево ('ul') на экране."""
+    x0, y0 = hexxy(t); best = None
+    for r in range(6):
+        n = tdir(t, r, 1); x, y = hexxy(n); dx, dy = x - x0, y - y0
+        sc = (dx - dy) if side == 'ur' else (-dx - dy)
+        if best is None or sc > best[0]: best = (sc, n)
+    return best[1]
 def furnish(objs, items, seed, mode='wall', region=None):
     """Ставит items (файл, вид) или ('crit', pid) на свободные клетки внутри постройки (или в region): у стены (mode='wall')
     или на открытом месте ('open'), не у дверей, не вплотную к другим вещам; каждый раз проверяем, что проход не перекрыт."""
@@ -224,9 +233,10 @@ def furnish(objs, items, seed, mode='wall', region=None):
         busy.add(o['tile'])
         if o.get('crit') or opid(o) >> 24 == 2: busy |= ring1(o['tile'])
     for d in door: busy |= {n for m in ring1(d) for n in ring1(m)}
-    blk0 = set(blk)
+    blk0 = set(blk); WALLS = {o['tile'] for o in objs if not o.get('crit') and opid(o) >> 24 == 3}
     for it in items:
         c = [t for t in region if t in R0 and t not in blk and t not in busy]
+        if it[0][:-4] in BACK and mode == 'wall': c = [t for t in c if back_nb(t, BACK[it[0][:-4]]) in WALLS]   # полка спиной к стене
         nb = lambda t: any(n in blk0 for n in ring1(t) - {t})
         c = sorted(t for t in c if nb(t) == (mode == 'wall')); rnd.shuffle(c)
         for t in c:
