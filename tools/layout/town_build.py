@@ -164,6 +164,7 @@ HIDETENT = [tent_at('arvillag', t, ('sklpole',)) for t in (13306, 18112, 18896, 
            [tent_at('coast12', t, ('sklpole',)) for t in (18484, 22896)]             # палатки из шкур Арройо и побережья, у всех своя начинка
 HOUSE3 = [MHOUSE, house_piece('sfchina', 10642), house_piece('geckjunk', 27122), house_piece('broken2', 23124),
           house_piece('klagraz', 23522), house_piece('klatrap', 19528), house_piece('broken2', 18644), house_piece('broken2', 23108)]
+CLINIC2 = house_piece('redment', 24740)                                # маленький дощатый дом (Реддинг, 11x11, койки), 2 стола добавляем (Егор)
 WARE2 = house_piece('klamall', 12666)                                  # дощатый склад Кламата 13x17 (бочки, покрышки)
 HERO3 = house_piece('reddown', 24724)                                  # дощатый дом Реддинга: кровать, печь, полки, сундук
 
@@ -214,6 +215,7 @@ def furnish(objs, items, seed, mode='wall', region=None):
     или на открытом месте ('open'), не у дверей, не вплотную к другим вещам; каждый раз проверяем, что проход не перекрыт."""
     rnd = random.Random(seed); objs = list(objs)
     if region is None: region = inside_cells(objs)
+    if not region: print('  пустое здание:', len(objs)); return objs
     xs = [t % 200 for t in region]; ys = [t // 200 for t in region]
     bb = (min(xs) - 4, min(ys) - 4, max(xs) + 4, max(ys) + 4)
     R0, blk, door = reach(objs, bb)
@@ -232,7 +234,9 @@ def furnish(objs, items, seed, mode='wall', region=None):
                 dict(tile=t, path=f'art\\{it[1] if len(it) > 1 else "scenery"}\\{it[0]}', pid=0, fid=0, flags=0)
             R1, blk1, _ = reach(objs + [o], bb)
             if (R0 - {t}) <= R1:
-                objs.append(o); R0, blk = R1, blk1; busy |= ring1(t); break
+                objs.append(o); R0, blk = R1, blk1
+                small = (it[0].startswith(('char', 'chair', 'bokcas', 'bkshlf', 'locker', 'dresr', 'abkshlf', 'chest', 'footlkr', 'ss1')))
+                busy |= {t} if small else ring1(t); break
         else: print('  не влезло:', it)
     return objs
 PID_BRAHMIN = 16777226
@@ -284,19 +288,28 @@ bld('Новый колодец', lambda lv: W2 + ([at('watrtank.frm', 58, 46)] i
 bld('Огороды', lambda lv: garden_lv('2 Огород', lv) + garden_lv('3 Огород', lv))
 # 4 уровень: тот же дом НКР, начинка у каждого своя (Егор). 0 и 6 — фермеры (грабли, плуг), остальные без них
 FARM = ('rake', 'plow', 'vase1', 'aybed2')
-KITS = [[('aybed1.frm',)],
-        [('bed4.frm',), ('dresr1.frm', 'items'), ('tbl1000.frm',), ('ss105.frm',), ('ss108.frm',)],
-        [('bed2.frm',), ('locker5.frm', 'items'), ('bokcas5.frm', 'items'), ('sstove2.frm',)],
-        [('aybed1.frm',), ('footlkr1.frm', 'items'), ('tbl2000.frm',), ('char03.frm',), ('abkshlf1.frm', 'items')],
-        [('bed3.frm',), ('bed5.frm',), ('dresr3.frm', 'items'), ('table3.frm',)],
-        [('bed6.frm',), ('sstove2.frm',), ('fridge.frm', 'items'), ('tbl1000.frm',), ('ss118.frm',)],
-        [('bed1.frm',), ('chest1.frm', 'items'), ('bokcas1.frm', 'items')],
-        [('bed7.frm',), ('desk1.frm', 'items'), ('bkshlf5.frm', 'items'), ('chair3.frm',)]]
+# мебель 4 ур. (Егор: «поиграй в симс», жителям нужно где спать, есть и хранить вещи): у каждого дома по 3-4 кровати, 2-3 полки или
+# шкафа у стен, стол со стульями посередине и своя «изюминка» (печь, холодильник, письменный стол, сундук, сушилка)
+BEDS = ['bed1.frm', 'bed2.frm', 'bed3.frm', 'bed4.frm', 'bed5.frm', 'bed6.frm', 'bed7.frm', 'aybed1.frm']
+STORE = [('bokcas1.frm', 'items'), ('bokcas5.frm', 'items'), ('bkshlf5.frm', 'items'), ('locker5.frm', 'items'), ('dresr1.frm', 'items'),
+         ('dresr3.frm', 'items'), ('abkshlf1.frm', 'items'), ('chest1.frm', 'items')]        # полки, шкафы, комоды, сундук
+CHAIRS = ['char01.frm', 'char02.frm', 'char03.frm', 'chair3.frm']
+TABLES = ['tbl1000.frm', 'tbl2000.frm', 'table3.frm']
+EXTRA = [[('sstove2.frm',), ('fridge.frm', 'items')], [('desk1.frm', 'items'), ('chair3.frm',)], [('sstove2.frm',), ('footlkr1.frm', 'items')],
+         [('fridge.frm', 'items'), ('ss118.frm',)], [('desk1.frm', 'items'), ('ss105.frm',)], [('sstove2.frm',), ('ss118.frm',)],
+         [('footlkr1.frm', 'items'), ('ss105.frm',)], [('fridge.frm', 'items'), ('sstove2.frm',)]]   # печь, холодильник, письменный стол, сундук-ноги кровати
+def kit(i):
+    """4 кровати разных моделей, 3 места хранения, стол с тремя стульями и своя кухня или кабинет: у каждого дома набор свой."""
+    r = random.Random(900 + i)
+    beds = r.sample(BEDS, 4); store = r.sample(STORE, 3); ch = r.sample(CHAIRS, 3)
+    return beds + store + EXTRA[i][:1], [(r.choice(TABLES),)] + [(c,) for c in ch] + EXTRA[i][1:]
 def house4(i):
     objs = L4[f'Дом {i + 1}']
     drop = ('aybed2',) if i in (0, 6) else FARM               # кровать у двери (в НКР стояла на пороге) убираем у всех
     objs = [o for o in objs if not (fidpath(o['fid']) or '').split('\\')[-1].lower().startswith(drop)]
-    return furnish(objs, KITS[i], seed=40 + i)
+    wall, mid = kit(i)
+    objs = furnish(objs, [x if isinstance(x, tuple) else (x,) for x in wall], seed=40 + i, mode='wall')
+    return furnish(objs, mid, seed=60 + i, mode='open')
 def houses(lv):
     """1 ур. — армейские палатки (можно одинаковые, Егор), 2 — палатки из шкур, у каждой своя начинка,
     3 — 8 разных дощатых и кирпичных домов, 4 — дом НКР с разной начинкой."""
@@ -352,7 +365,7 @@ bld('Бар', lambda lv: fit(OUTBAR, B['11 Бар']) if lv == 1
 # 1 ур. — армейская палатка с хирургическим столом, 2 — палатка пустыни с кроватями и двумя столами (Егор);
 # автодок на 3 и 4 уровне не стоит: его ставит квест (Егор), место под него на 4 уровне свободно (town_max.py)
 bld('Медпункт', lambda lv: furnish(fit(MILTENT[2], B['14 Госпиталь']), [('medtbl01.frm',)], seed=101) if lv == 1
-    else furnish(fit(TENTBEDS, B['14 Госпиталь']), [('medtbl01.frm',), ('medtbl01.frm',)], seed=102) if lv == 2
+    else furnish(fit(CLINIC2, B['14 Госпиталь']), [('medtbl01.frm',), ('medtbl01.frm',)], seed=102) if lv == 2
     else fit(sub(VCCLINIC, lambda n: n != 'holo.frm'), B['14 Госпиталь']) if lv == 3
     else L4['14 Госпиталь'])
 HD = [0, 0]                             # сдвиг палатки 1 ур., чтобы люк подвала был внутри нее (ниже)
