@@ -419,6 +419,9 @@ def mesh_rect(X0, X1, Y0, Y1, gapN=(), gapS=()):
 PET_PEN = (104, 4, 118, 14)          # снаружи внешней сетки, у северных ворот: нападают в основном с севера (Егор); x и y клеток
 bld('Загон питомцев', lambda lv: mesh_rect(PET_PEN[0], PET_PEN[2], PET_PEN[1], PET_PEN[3], gapS=range(PET_PEN[0] + 2, PET_PEN[0] + 6)) + [
     at('HAYBED01.frm', 199 - (PET_PEN[0] + 9), PET_PEN[3] - 4), at('HAYBED04.frm', 199 - (PET_PEN[0] + 12), PET_PEN[3] - 7), at('barrel2.frm', 199 - (PET_PEN[0] + 4), PET_PEN[3] - 8)])
+PID_SPORE_PLANT = 16777232
+GATE_PLANTS = [(93, 23), (103, 23), (93, 176), (103, 176)]     # саженцы-растения (events.md 8.4): по 2 у каждых ворот, снаружи внешней сетки, по сторонам дороги (Егор)
+bld('Растения у ворот', lambda lv: [dict(crit=True, pid=PID_SPORE_PLANT, tile=y * 200 + x, rot=0) for x, y in GATE_PLANTS])
 def make_mines():
     """Мины CAVTRAP1 (Егор) в наружной зоне за внешней сеткой: полоса 12-23 и 176-187 клеток от края, не ближе 5 клеток друг к другу,
     к проходам у ворот, к загону питомцев и местам, где появляются налетчики."""
@@ -426,6 +429,7 @@ def make_mines():
     keep_out = [(80, 18), (120, 18), (70, 181), (130, 181), (18, 80), (18, 120), (181, 80), (181, 120)]   # точки появления налетчиков в песочнице (f2mtbld.ssl)
     def ok(x, y):
         if any(abs(x - a) < 2 and abs(y - b) < 2 for a, b in keep_out): return False        # рядом с точками налетчиков можно, но не под ними
+        if any(abs(x - a) < 3 and abs(y - b) < 3 for a, b in GATE_PLANTS): return False          # места растений у ворот
         if 95 <= x <= 101 and (y < 30 or y > 169): return False                      # коридоры к воротам шириной в дорогу (7 клеток)
         if PET_PEN[0] - 4 <= x <= PET_PEN[2] + 4 and PET_PEN[1] - 4 <= y <= PET_PEN[3] + 4: return False
         return all(abs(x - a) >= 4 or abs(y - b) >= 4 for a, b in pts)

@@ -3,7 +3,7 @@
 #ifndef F2MTBLAY_H
 #define F2MTBLAY_H
 
-#define TB_COUNT       (15)    // зданий в списке (жилье — все 8 домов сразу, огороды — оба)
+#define TB_COUNT       (16)    // зданий в списке (жилье — все 8 домов сразу, огороды — оба)
 #define TB_SYS_TREES   (0)
 #define TB_SYS_TRASH   (1)
 #define TB_SYS_BARRELS (2)
@@ -42,6 +42,7 @@ procedure tb_b11(variable lv);
 procedure tb_b12(variable lv);
 procedure tb_b13(variable lv);
 procedure tb_b14(variable lv);
+procedure tb_b15(variable lv);
 
 // Ставит объект (tb_mode = 1) или убирает такой же с этой клетки (tb_mode = 0). rf: поворот + 8 * кадр
 procedure tb_o(variable pid, variable tile, variable rf) begin
@@ -4702,8 +4703,33 @@ procedure tb_b9(variable lv) begin
    end
 end
 
-// Ферма браминов: объектов по уровням 5, 57, 279, 332
+// Растения у ворот: объектов по уровням 4, 4, 4, 4
 procedure tb_b10(variable lv) begin
+   if (lv == 1) then begin
+      call tb_o(16777232, 4693, 0);
+      call tb_o(16777232, 4703, 0);
+      call tb_o(16777232, 35293, 0);
+      call tb_o(16777232, 35303, 0);
+   end else if (lv == 2) then begin
+      call tb_o(16777232, 4693, 0);
+      call tb_o(16777232, 4703, 0);
+      call tb_o(16777232, 35293, 0);
+      call tb_o(16777232, 35303, 0);
+   end else if (lv == 3) then begin
+      call tb_o(16777232, 4693, 0);
+      call tb_o(16777232, 4703, 0);
+      call tb_o(16777232, 35293, 0);
+      call tb_o(16777232, 35303, 0);
+   end else if (lv == 4) then begin
+      call tb_o(16777232, 4693, 0);
+      call tb_o(16777232, 4703, 0);
+      call tb_o(16777232, 35293, 0);
+      call tb_o(16777232, 35303, 0);
+   end
+end
+
+// Ферма браминов: объектов по уровням 5, 57, 279, 332
+procedure tb_b11(variable lv) begin
    if (lv == 1) then begin
       call tb_o(33555680, 16151, 0);
       call tb_o(33554828, 16548, 0);
@@ -5397,7 +5423,7 @@ procedure tb_b10(variable lv) begin
 end
 
 // Бар: объектов по уровням 52, 168, 164, 202
-procedure tb_b11(variable lv) begin
+procedure tb_b12(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332270, 22912, 0);
       call tb_o(50332270, 22913, 0);
@@ -6006,7 +6032,7 @@ procedure tb_b11(variable lv) begin
 end
 
 // Медпункт: объектов по уровням 72, 98, 162, 150
-procedure tb_b12(variable lv) begin
+procedure tb_b13(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332577, 25714, 0);
       call tb_o(50332270, 25715, 0);
@@ -6505,7 +6531,7 @@ procedure tb_b12(variable lv) begin
 end
 
 // Дом героя: объектов по уровням 65, 65, 135, 187
-procedure tb_b13(variable lv) begin
+procedure tb_b14(variable lv) begin
    if (lv == 1) then begin
       call tb_o(50332577, 11640, 0);
       call tb_o(50332270, 11641, 0);
@@ -6967,7 +6993,7 @@ procedure tb_b13(variable lv) begin
 end
 
 // Рынок: объектов по уровням 1, 3, 135, 143
-procedure tb_b14(variable lv) begin
+procedure tb_b15(variable lv) begin
    if (lv == 1) then begin
       call tb_o(434, 31335, 0);
    end else if (lv == 2) then begin
@@ -7273,6 +7299,7 @@ procedure tb_bld(variable b, variable lv) begin
    else if (b == 12) then call tb_b12(lv);
    else if (b == 13) then call tb_b13(lv);
    else if (b == 14) then call tb_b14(lv);
+   else if (b == 15) then call tb_b15(lv);
 end
 
 procedure tb_sys(variable s) begin

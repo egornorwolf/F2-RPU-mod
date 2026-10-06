@@ -46,6 +46,7 @@ procedure Nb11;
 procedure Nb12;
 procedure Nb13;
 procedure Nb14;
+procedure Nb15;
 procedure Nall;
 procedure Nl0;
 procedure Nl1;
@@ -317,6 +318,7 @@ procedure Node013 begin
    NOption(142, Nb12, 1);
    NOption(143, Nb13, 1);
    NOption(144, Nb14, 1);
+   NOption(145, Nb15, 1);
    NOption(123, Node010, 1);
    NOption(122, Node001, 1);
 end
@@ -392,6 +394,7 @@ procedure Nb11 begin sel := 11; call Node012; end
 procedure Nb12 begin sel := 12; call Node012; end
 procedure Nb13 begin sel := 13; call Node012; end
 procedure Nb14 begin sel := 14; call Node012; end
+procedure Nb15 begin sel := 15; call Node012; end
 procedure Nall begin sel := -1; call Node012; end
 
 procedure Nl0 begin arg := 0; act := ACT_ALL if sel < 0 else ACT_BLD; end
