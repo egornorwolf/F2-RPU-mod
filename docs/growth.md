@@ -80,7 +80,7 @@
 
 ## 7. Сквозная оборона
 
-Забор, внешняя сетка, ворота, турели, склад боеприпасов и мины: [map-plan.md](map-plan.md), [turrets.md](turrets.md). Цены и сроки: сводная таблица в [buildings-levels.md](buildings-levels.md#сводная-таблица-цен).
+Забор, внешняя сетка, ворота, турели и мины (патроны турелей — склад 3 ур.): [map-plan.md](map-plan.md), [turrets.md](turrets.md). Цены и сроки: сводная таблица в [buildings-levels.md](buildings-levels.md#сводная-таблица-цен).
 
 ## 8. Итого
 
