@@ -1,6 +1,7 @@
 # Вырезает здания 4 уровня из карт игры (preprod.cut) в pieces.pkl для town_preview.py.
 import sys; sys.path.insert(0,'/home/claude/f2-rpu-mod/tools/layout')
 from preprod import *
+from preprod import _near
 import render
 from render import hexxy
 COLS='ABCDEFGHIJKLMNOPQRST'
@@ -8,7 +9,7 @@ def plot_hex(c1,r1,c2,r2):
     # x растет влево: колонка = (199-x)//10
     xa=199-(COLS.index(c2)*10+9); xb=199-COLS.index(c1)*10
     return xa,(r1-1)*10,xb,r2*10-1
-SK=('tree','weed','rock','eggs','bush','cac','drock','block')
+SK=('tree','weed','rock','eggs','bush','cac','drock')   # block.frm (невидимые стены-блоки) оставляем: без них сквозь стены проходят
 def org_render(c,rad): X,Y=hexxy(c); return X-rad[0],Y-rad[1]
 pieces={}
 m=load('ncr3'); o=ov_origin(m)
@@ -42,12 +43,21 @@ def wallfloor(k):
     p['floor']={kk:v for kk,v in p['floor'].items() if min(xs)//2<=kk[0]<=max(xs)//2 and min(ys)//2<=kk[1]<=max(ys)//2}
 drop('hall',('adw',))
 for k in ('hall','clinic','hero','workshop','barracks','house','pump','storage'): wallfloor(k)
-g=cut(m,(300,90,1040,560),org_render(25131,(520,300)),SK+('adw','gate4','adb','ncrdoor'))
+g=cut(m,(300,90,1040,560),org_render(25131,(520,300)),SK+('adw','adb','ncrdoor'))   # калитки gate4 оставляем: без них у жердей висят концы (Егор)
 g=main_part(g,90); g['floor']={}; P['garden']=g
 b=main_part(cut(mv,(1470,1170,2340,1450),ov,SK+('adw','fen')),90); P['bar']=b; wallfloor('bar')
 mi=load('modinn'); P['stall']=main_part(cut(mi,(240,900,1170,1320),ov_origin(mi),SK),90)
 mnc=load('ncrent'); P['market']=main_part(cut(mnc,(2250,90,3080,620),ov_origin(mnc),SK+('fence','ccart','njunk')),120); P['market']['floor']={}
+# одинокая полка за палаткой (Егор отметил на фото): убираем ее и ее невидимые блоки
+_sh=[o for o in P['market']['objs'] if (fidpath(o['fid']) or '').lower().endswith('bigshlf1.frm')]
+for o in _sh:
+    _r=_near(o['tile'],1); P['market']['objs']=[x for x in P['market']['objs'] if x is not o and not (is_blocker(x) and x['tile'] in _r)]
 mr=load('redment'); P['corral']=main_part(cut(mr,(540,960,1980,1400),ov_origin(mr),SK),90)
+# здание целиком: стены, срезанные рамкой, возвращаем (связная группа стен из исходной карты, preprod.building)
+SRCM=dict(pump=m,storage=m,house=m,hall=m2,bar=mv,clinic=mv,hero=mv,barracks=mv,workshop=mn)
+for k,src in SRCM.items():
+    old=len(P[k]['objs']); P[k]=rebuild(src,P[k],skip=SK+(('vclight',) if k in ('barracks','hero') else ()))
+    print('целиком',k,old,'->',len(P[k]['objs']))
 for k,p in pieces.items():
     b=p['bb']; print(k,len(p['objs']),'size',b[2]-b[0]+1,'x',b[3]-b[1]+1)
 import pickle; pickle.dump(pieces,open('/tmp/claude-0/m3/pieces.pkl','wb'))

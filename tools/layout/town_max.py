@@ -48,14 +48,14 @@ put('ranch', 35, 58, '4 Ранчо')
 put('workshop', 35, 107, '9 Автомастерская'); spr('crafter1.frm', 33, 130)
 put('storage', 36, 132, '10 Склад')
 put('garden', 68, 35, '2 Огород', '2 Огород'); put('garden', 68, 64, '3 Огород', '3 Огород')
-put('bar', 68, 108, '11 Бар'); put('clinic', 70, 124, '14 Госпиталь')
+put('bar', 68, 108, '11 Бар'); put('clinic', 70, 123, '14 Госпиталь')
 HOUSES = [(102 + i * 13, 35) for i in range(5)] + [(102 + i * 13, 51) for i in range(3)]
 for i, (u, y) in enumerate(HOUSES): put('house', u, y, None, f'Дом {i + 1}')
 labels.append(('6-7 Жилье', 128, 50))
-put('hero', 143, 50, '8 Дом героя')
-put('hall', 102, 68, '12 Ратуша')
+put('hero', 143, 54, '8 Дом героя')
+put('hall', 102, 70, '12 Ратуша')
 put('barracks', 134, 116, '16 Казарма')
-put('market', 50, 148, '18 Рынок')
+put('market', 50, 147, '18 Рынок')
 for i, (u, y) in enumerate([(84, 152), (92, 154), (108, 152), (116, 154)]): spr('CCART0%d.FRM' % (1 + i % 2), u, y, 'items')
 labels.append(('15 Двор каравана', 100, 156))
 CAR = (116, 161); spr('CARSPEC1.FRM', *CAR, tag='car')
@@ -72,36 +72,49 @@ F0, F1 = 30, 169                       # линия стены: u и y от 30 �
 XRUN = ['adw1002', 'adw1001', 'adw1000', 'adw1009', 'adw1008', 'adw1007', 'adw1006', 'adw1007', 'adw1004', 'adw1003']
 YRUN = ['adw1013', 'adw1014', 'adw1015', 'adw1010', 'adw1011', 'adw1012']
 MX = ['fence03', 'fence01', 'fence05', 'fence04']; MY = ['fence15', 'fence16', 'fence17', 'fence18']
-ARCH = ['adw1027', 'adw1026', 'adw1025', 'adw1024', 'adw1023', 'adw1022', 'adw1021', 'adw1020']   # x растет
-ARCH_NB = {2, 3, 4, 5, 6}; ARCH_BLOCK = {2, 6}   # 1021–1025 без блока, по краям прохода невидимые блоки
-GX0 = 96                                          # x первой клетки арки на южной стене
+GX0 = 97                                          # ворота: арка Города-Убежища (vgat) с x = GX0 - 2 по GX0 + 11, дверь на GX0 + 4;
+                                                  # x нечетный, как в vctydwtn (иначе соты сдвигаются и арка разваливается)
+GW = range(GX0 - 2, GX0 + 12)                     # клетки ворот в линии забора/сетки
 wall = {}
 for x in range(F0, F1 + 1):
-    for y in (F0, F1): wall[(x, y)] = (XRUN[x % 10], 0)
+    for y in (F0, F1):
+        if x not in GW: wall[(x, y)] = (XRUN[x % 10], 0)
 for y in range(F0, F1 + 1):
     for x in (F0, F1): wall[(x, y)] = (YRUN[y % 6], 0)
-for i, a in enumerate(ARCH):
-    wall[(GX0 + i, F1)] = (a, NOBLOCK if i in ARCH_NB else 0)
+# у углов — гладкие куски без столбов (иначе рядом с угловым столбом торчат лишние), в самом углу угловой столб
+for (x, y), (a, fl) in list(wall.items()):
+    near = min(abs(x - F0), abs(x - F1)) <= 3 and min(abs(y - F0), abs(y - F1)) <= 3
+    if not near: continue
+    if y in (F0, F1) and x not in (F0, F1): wall[(x, y)] = ('adw1006' if x % 2 == 0 else 'adw1007', fl)
+    elif x in (F0, F1) and y not in (F0, F1): wall[(x, y)] = (('adw1010', 'adw1011', 'adw1012')[y % 3], fl)
+CORNER = {(F0, F0): 'adw1017', (F1, F0): 'adw1017', (F0, F1): 'adw1017', (F1, F1): 'adw1019'}
+for c, a in CORNER.items(): wall[c] = (a, 0)
 for (x, y), (a, fl) in wall.items():
     objs.append(dict(tile=y * 200 + x, pid=0x3000001, fid=0, elev=0, flags=fl, sid=-1, path=f'art\\walls\\{a}.frm', tag='wall'))
-for i in ARCH_BLOCK:
-    objs.append(dict(tile=F1 * 200 + GX0 + i, pid=0x5000002, fid=0, elev=0, flags=0, sid=-1, path=None, tag='block'))
 M0, M1 = F0 - 4, F1 + 4                 # внешняя сетка в 4 клетках от стены, как в Городе-Убежище
+
+# арка с воротами целиком из Города-Убежища (vctydwtn, x 111–124, y 143–144: vgat001–014, створки valtgate (дверь)
+# и valtgat2, невидимые блоки), без сетки и растений вокруг. Ставим в линию забора (F0, F1) и внешней сетки (M0, M1).
+from preprod import load as _load
+from render import fidpath as _fp
+_vc = _load('vctydwtn')
+GATE_SRC = [o for o in _vc['objs'] if o['elev'] == 0 and 111 <= o['tile'] % 200 <= 124 and o['tile'] // 200 in (143, 144)
+            and not (_fp(o['fid']) or '').split('\\')[-1].lower().startswith(('fence', 'tree', 'maryj'))]
+def gate_at(y, tag):
+    for o in GATE_SRC:
+        n = dict(o); n['tile'] = (o['tile'] // 200 - 143 + y) * 200 + o['tile'] % 200 - 111 + GX0 - 2; n['tag'] = tag; n['sid'] = -1
+        objs.append(n)
+for y in (F0, F1): gate_at(y, 'gateF')
+for y in (M0, M1): gate_at(y, 'gateM')
 mesh = {}
 for x in range(M0, M1 + 1):
     for y in (M0, M1):
-        if not (y == M1 and GX0 - 2 <= x <= GX0 + 11): mesh[(x, y)] = MX[x % 4]
+        if x not in GW: mesh[(x, y)] = MX[x % 4]
 for y in range(M0, M1 + 1):
     for x in (M0, M1): mesh[(x, y)] = MY[y % 4]
-for y in range(F1 + 1, M1):             # коридор от арки стены к воротам в сетке закрыт с боков: в коридор турелей не пройти
+mesh[(M0, M0)] = mesh[(M1, M0)] = 'fence23'; mesh[(M0, M1)] = 'fence22'; mesh[(M1, M1)] = 'fence00'   # углы и концы, как на картах F2
+for y in list(range(F1 + 1, M1)) + list(range(M0 + 1, F0)):   # коридор от ворот стены к воротам сетки закрыт с боков: в кольцо турелей не пройти
     mesh[(GX0 + 2, y)] = MY[y % 4]; mesh[(GX0 + 6, y)] = MY[y % 4]
-# большие ворота Города-Убежища в линии сетки (vctydwtn: vgat001–014 и створки valtgate/valtgat2), x растет
-VGAT = [('vgat014', 0), ('vgat013', 0), ('vgat012', 0), ('vgat011', 0), ('vgat010', NOBLOCK), ('vgat009', NOBLOCK), ('vgat008', NOBLOCK),
-        ('vgat007', 0), ('vgat006', 0), ('vgat005', 0), ('vgat004', 0), ('vgat003', 0), ('vgat002', 0), ('vgat001', 0)]
-for i, (a, fl) in enumerate(VGAT):
-    objs.append(dict(tile=M1 * 200 + GX0 - 2 + i, pid=0x3000004, fid=0, elev=0, flags=fl, sid=-1, path=f'art\\walls\\{a}.frm', tag='wall'))
-for dx, a in ((2, 'valtgat2'), (4, 'valtgate')):
-    objs.append(dict(tile=M1 * 200 + GX0 - 2 + dx, pid=0x2000005, fid=0, elev=0, flags=NOBLOCK, sid=-1, path=f'art\\scenery\\{a}.frm', tag='gate'))
 for (x, y), a in mesh.items():
     objs.append(dict(tile=y * 200 + x, pid=0x3000003, fid=0, elev=0, flags=0, sid=-1, path=f'art\\walls\\{a}.frm', tag='mesh'))
 TUR = []
@@ -109,9 +122,9 @@ R0, R1 = F0 - 2, F1 + 2                 # линия турелей между �
 ring = [(x, R0) for x in range(R0, R1 + 1, 12)] + [(x, R1) for x in range(R0, R1 + 1, 12)] + \
        [(R0, y) for y in range(R0 + 12, R1, 12)] + [(R1, y) for y in range(R0 + 12, R1, 12)]
 for x, y in ring:
-    if y == R1 and GX0 - 3 <= x <= GX0 + 12: continue
+    if y in (R0, R1) and GX0 - 3 <= x <= GX0 + 12: continue
     TUR.append((x, y))
-TUR += [(GX0 - 4, R1), (GX0 + 13, R1)]   # по одной у ворот
+TUR += [(GX0 - 4, R1), (GX0 + 13, R1), (GX0 - 4, R0), (GX0 + 13, R0)]   # по одной у каждых ворот
 for x, y in TUR:
     objs.append(dict(tile=y * 200 + x, pid=0x1000001, fid=0, elev=0, flags=0, sid=-1, path='art\\critters\\MAGUNNAA.FRM', rot=3, tag='turret'))
 
@@ -355,7 +368,7 @@ n_free = sum(1 for u, y in inside if not inbox(u, y) and (u, y) not in PATHHEX a
 # ---- все ли внутри забора
 out_of = []
 for o in objs:
-    if o.get('tag') in ('wall', 'mesh', 'turret', 'block', 'gate'): continue
+    if o.get('tag') in ('wall', 'mesh', 'turret', 'block', 'gateF', 'gateM'): continue
     u, y = U(o['tile'])
     if not (F0 < u < F1 and F0 < y < F1): out_of.append((o.get('path') or render.fidpath(o['fid']), u, y))
 

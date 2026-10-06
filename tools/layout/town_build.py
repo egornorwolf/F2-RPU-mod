@@ -7,7 +7,7 @@ import sys, os, pickle, struct, random, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render, mapparse
 from render import hexxy, fidpath
-from preprod import load, ov_origin, cut, main_part, place
+from preprod import load, ov_origin, cut, main_part, place, rebuild
 from hexlib import nearest
 from PIL import Image, ImageDraw, ImageFont
 
@@ -65,7 +65,7 @@ def keep(o):
     return pid >> 24 in (2, 3)
 
 # ---- куски для уровней 1-3
-SK = ('tree', 'weed', 'rock', 'eggs', 'bush', 'cac', 'drock', 'block')
+SK = ('tree', 'weed', 'rock', 'eggs', 'bush', 'cac', 'drock')   # невидимые стены block.frm нужны: они держат проходимость
 def comp_piece(mapname, tile, pad=1, rpu=False, walls_only=False):
     """Постройка из стен вокруг клетки tile (связная группа стен) и все декорации внутри ее рамки."""
     m = load(mapname, rpu)
@@ -140,22 +140,26 @@ def untagged(name):
 
 # куски из карт
 mm = load('modmain'); om = ov_origin(mm)
-SHACK = main_part(cut(mm, (240, 150, 520, 360), om, SK), 90)            # дощатый сарай Модока
-MHOUSE_BIG = main_part(cut(mm, (380, 260, 1180, 720), om, SK), 90)      # большой дощатый дом Модока
+# здания целиком (preprod.rebuild): рамка выреза только находит здание, стены берутся все, без чужих заборов
+SHACK = rebuild(mm, main_part(cut(mm, (240, 150, 520, 360), om, SK), 90), skip=SK)              # дощатый сарай Модока
+MHOUSE_BIG = rebuild(mm, main_part(cut(mm, (380, 260, 1180, 720), om, SK), 90), skip=SK)        # большой дощатый дом Модока
 MHOUSE = comp_piece('modmain', 11518)                                   # дощатый дом Модока 11x10
-MWARE = main_part(cut(mm, (210, 1000, 900, 1420), om, SK), 90)          # дощатый склад Модока
+MWARE = rebuild(mm, main_part(cut(mm, (210, 1000, 900, 1420), om, SK), 90), skip=SK)            # дощатый склад Модока
 mi = load('modinn')
-MBAR = sub(main_part(cut(mi, (1110, 750, 1860, 1080), ov_origin(mi), SK), 90),
-           lambda n: not (n[:3] in ('jas', 'jbs', 'jcs', 'jds', 'jcd', 'jdd', 'jad', 'jaw', 'jcw', 'cni', 'cnx', 'cor', 'fen', 'blo', 'bar')))
+MBAR = rebuild(mi, main_part(cut(mi, (1110, 750, 1860, 1080), ov_origin(mi), SK), 90), skip=SK + ('corn',),
+               clip=(90, 90, 116, 108))                                 # только зал бара Модока, без крыла с комнатами  # бар Модока со стенами
 ARTENT = comp_piece('arvillag', 13306)                                  # шатер из шкур Арройо
 ARTENT2 = comp_piece('arvillag', 22082)
 RTENT = comp_piece('redment', 22086)                                    # палатка Реддинга
 KPEN = comp_piece('klamall', 30276)                                     # загон из жердей (Кламат)
-mv = load('vctyctyd'); VCCLINIC = main_part(cut(mv, (840, 230, 1500, 650), ov_origin(mv), SK), 90)
+mv = load('vctyctyd'); VCCLINIC = rebuild(mv, main_part(cut(mv, (840, 230, 1500, 650), ov_origin(mv), SK), 90),
+                                    excl=('adw', 'fen', 'block', 'ybk', 'ylf'), skip=SK + ('ypole', 'yrope'))   # без палатки рядом
 def org_render(c, rad): X, Y = hexxy(c); return X - rad[0], Y - rad[1]
-mn = load('navarro', rpu=True); NAVHOUSE = main_part(cut(mn, (150, 50, 480, 300), org_render(24696, (560, 300)), SK), 90)
-m1 = load('ncr1'); NCRSMALL = main_part(cut(m1, (1350, 1330, 1680, 1560), ov_origin(m1), SK), 90)
+mn = load('navarro', rpu=True); NAVHOUSE = rebuild(mn, main_part(cut(mn, (150, 50, 480, 300), org_render(24696, (560, 300)), SK), 90), skip=SK)
+m1 = load('ncr1'); NCRSMALL = rebuild(m1, main_part(cut(m1, (1350, 1330, 1680, 1560), ov_origin(m1), SK), 90), skip=SK)
 TENT = tent_piece(); TENTBEDS = tent_piece(True)
+LOW = dict(SHACK=('modmain', SHACK), MHOUSE_BIG=('modmain', MHOUSE_BIG), MWARE=('modmain', MWARE), MBAR=('modinn', MBAR),
+           VCCLINIC=('vctyctyd', VCCLINIC), NAVHOUSE=('navarro', NAVHOUSE), NCRSMALL=('ncr1', NCRSMALL))   # для проверки (pathcheck)
 
 def garden_lv(key, lv):
     g = L4[key]
@@ -171,7 +175,7 @@ BUILD = []
 def bld(name, fn): BUILD.append((name, fn))
 
 W1 = untagged('WELL001.frm'); TANK5 = untagged('gektank5.frm'); W2 = untagged('well1.frm')
-bld('Старый колодец', lambda lv: W1 + ([at('pumpnec.frm', 50, 47)] if lv >= 2 and lv < 4 else []) + (TANK5 if lv >= 3 else [])
+bld('Старый колодец', lambda lv: W1 + ([at('pumpnec.frm', 49, 52)] if lv >= 2 and lv < 4 else []) + (TANK5 if lv >= 3 else [])   # насос рядом с колодцем, а не на нем (Егор)
     + (L4['1 Водокачка'] if lv == 4 else []))
 bld('Новый колодец', lambda lv: W2 + ([at('watrtank.frm', 58, 46)] if lv == 2 else []) + (L4['Цистерна'] if lv >= 3 else [])
     + ([at('pipes1.frm', 51, 44), at('pipe003.frm', 50, 41)] if lv == 4 else []))
@@ -199,18 +203,19 @@ bld('Мастерская', lambda lv: fit(spr_piece([('sttable.frm', 0, 0, 'ite
     else L4['9 Автомастерская'] + CRAFTER)
 GATEPOST = untagged('CONBAR01.frm') + untagged('vclight1.frm')
 bld('Охрана', lambda lv: [at('CONBAR01.frm', 92, 164), at('BRAZR001.frm', 95, 164)] if lv == 1
-    else GATEPOST + ([at('EPASHED1.frm', 144, 126)] if lv == 3 else []) + (L4['16 Казарма'] + OTHER['range'] if lv == 4 else []))
+    else GATEPOST + ([at('shack.frm', 89, 165)] if lv == 3 else [])   # будка охраны у ворот, как у военной базы (mbclose)
+    + (L4['16 Казарма'] + OTHER['range'] if lv == 4 else []))
 bld('Ферма браминов', lambda lv: fit(spr_piece([('HAYBED01.frm', 0, 0), ('barrel2.frm', 3, 2), ('HAYBED04.frm', 5, -1)]), B['4 Ранчо']) if lv == 1
     else fit(KPEN, B['4 Ранчо']) if lv == 2 else fit(P['stall'], B['4 Ранчо']) if lv == 3 else L4['4 Ранчо'])
 STILLS = OTHER['still']
 bld('Бар', lambda lv: fit(spr_piece([('barrel2.frm', 0, 0), ('table1.frm', 3, 1), ('barrel3.frm', 6, 0)]), B['11 Бар']) if lv == 1
     else fit(with_extra(RTENT, [('barrel2.frm', 7, 2), ('barrel3.frm', 8, 4), ('crate1.frm', -7, 3)]), B['11 Бар']) if lv == 2
-    else fit(MBAR, B['11 Бар']) + STILLS if lv == 3 else L4['11 Бар'] + STILLS)
+    else fit(MBAR, B['11 Бар'], dy=-2) + STILLS if lv == 3 else L4['11 Бар'] + STILLS)
 bld('Медпункт', lambda lv: fit(spr_piece([('medtbl01.frm', 0, 0), ('aybed2.frm', 4, 1)]), B['14 Госпиталь']) if lv == 1
     else fit(TENTBEDS, B['14 Госпиталь']) if lv == 2 else fit(VCCLINIC, B['14 Госпиталь']) if lv == 3
     else L4['14 Госпиталь'] + OTHER['autodoc'])
 bld('Дом героя', lambda lv: fit(with_extra(ARTENT, [('footlkr1.frm', 0, 1, 'items')]), B['8 Дом героя']) if lv == 1
-    else fit(NAVHOUSE, B['8 Дом героя']) if lv == 2 else fit(NCRSMALL, B['8 Дом героя']) if lv == 3 else L4['8 Дом героя'])
+    else fit(with_extra(MHOUSE, [('footlkr1.frm', 0, 1, 'items')]), B['8 Дом героя']) if lv == 2 else fit(NCRSMALL, B['8 Дом героя']) if lv == 3 else L4['8 Дом героя'])
 YARD = untagged('CCART01.FRM') + untagged('CCART02.FRM')
 bld('Рынок', lambda lv: fit(spr_piece([('CCART01.FRM', 0, 0, 'items')]), B['18 Рынок']) if lv == 1
     else fit(spr_piece([('bigshlf1.frm', 0, 0), ('bigshlf2.frm', 4, 0), ('barrel.frm', 8, 2)]), B['18 Рынок']) if lv == 2
@@ -224,28 +229,44 @@ TRASH = OTHER['trash']
 LAMPS = [o for o in OTHER['deco'] if 'strlit' in nm(o)]
 BARRELS = [dict(o, path='art\\scenery\\barrel.frm') for o in LAMPS]
 F0, F1 = D['F']; M0, M1 = D['M']; GX0 = D['GX0']
-WALL3 = [o for o in OTHER['wall'] if o['tile'] // 200 != M1 or not (GX0 - 2 <= o['tile'] % 200 <= GX0 + 11)] + OTHER['block']
-OUTER = OTHER['mesh'] + OTHER['gate'] + [o for o in OTHER['wall'] if o['tile'] // 200 == M1 and GX0 - 2 <= o['tile'] % 200 <= GX0 + 11]
-WALL3 = [o for o in WALL3 if not (o['tile'] // 200 == M1)]          # ворота сетки — во внешнем ряду
+GW = range(GX0 - 2, GX0 + 12)          # ворота (арка Города-Убежища) в линии забора: town_max.py
+GATEF = OTHER['gateF']                  # арка с воротами в линии забора (север и юг), одна на все виды забора
+WALL3 = OTHER['wall'] + GATEF
+OUTER = OTHER['mesh'] + OTHER['gateM']
 def mk(name, x, y, kind='walls'): return dict(tile=y * 200 + x, path=f'art\\{kind}\\{name}.frm', pid=0, fid=0, flags=0)
-GATE = range(GX0, GX0 + 8)
-PALISADE = []
+GAP = range(GX0, GX0 + 8)               # частокол и сетка: просто проем у ворот (Егор), арка только в стене Убежища
+# Концы и углы — те же куски, что на картах F2 (статистика по всем картам): дерево — угол fen8000 (верх-лево) и fen1000
+# (низ-право), концы рядов fen6000/fen9008 (ряд fen7), fen9001/fen9000 (ряд fen3); сетка — углы fence22/fence00,
+# столбы fence12/fence13/fence23. Так заборы не висят в воздухе, а кончаются столбом.
+PALISADE = {}
+def pal(name, x, y): PALISADE[y * 200 + x] = mk(name, x, y)
 for x in range(F0, F1 + 1):
-    if x % 2 == 0: PALISADE.append(mk('fen7001', x, F0))
-    else: PALISADE.append(mk('fen7000', x, F0 + 1))
-    if x in GATE: continue
-    if x % 2 == 0: PALISADE.append(mk('fen3001', x, F1 - 1))
-    else: PALISADE.append(mk('fen3000', x, F1))
-for y in range(F0 + 2, F1):
-    PALISADE.append(mk('fen2000' if y % 3 == 0 else 'fen2001', F1, y))
-    PALISADE.append(mk('fen5000' if y % 3 == 0 else 'fen5001', F0, y))
+    if x % 2 == 0: pal('fen7001', x, F0)
+    else: pal('fen7000', x, F0 + 1)
+    if x in GAP: continue
+    if x % 2 == 0: pal('fen3001', x, F1 - 1)
+    else: pal('fen3000', x, F1)
+for y in range(F0 + 1, F1):                 # с F0 + 1: иначе в углу у (F0, F0 + 1) дыра (Егор нашел в игре)
+    pal('fen2000' if y % 3 == 0 else 'fen2001', F1, y)
+    pal('fen5000' if y % 3 == 0 else 'fen5001', F0, y)
+for x in GAP:                               # северный проем
+    PALISADE.pop((F0 if x % 2 == 0 else F0 + 1) * 200 + x, None)
+def pal_end(x, ry, name): pal(name, x, ry(x))
+r7 = lambda x: F0 if x % 2 == 0 else F0 + 1; r3 = lambda x: F1 - 1 if x % 2 == 0 else F1
+pal('fen8000', F0, F0); pal('fen1000', F1, F1); pal('fen6000', F1, r7(F1)); pal('fen4000', F0, r3(F0))   # углы
+pal_end(GAP[0] - 1, r7, 'fen6000'); pal_end(GAP[-1] + 1, r7, 'fen9008')      # столбы у проема на севере
+pal_end(GAP[0] - 1, r3, 'fen9001'); pal_end(GAP[-1] + 1, r3, 'fen9000')      # и на юге
+PALISADE = list(PALISADE.values())
 MX = ['fence03', 'fence01', 'fence05', 'fence04']; MY = ['fence15', 'fence16', 'fence17', 'fence18']
-MESH = []
+MESH = {}
+def ms(name, x, y): MESH[y * 200 + x] = mk(name, x, y)
 for x in range(F0, F1 + 1):
-    MESH.append(mk(MX[x % 4], x, F0))
-    if x not in GATE: MESH.append(mk(MX[x % 4], x, F1))
+    if x not in GAP: ms(MX[x % 4], x, F0); ms(MX[x % 4], x, F1)
 for y in range(F0 + 1, F1):
-    MESH.append(mk(MY[y % 4], F0, y)); MESH.append(mk(MY[y % 4], F1, y))
+    ms(MY[y % 4], F0, y); ms(MY[y % 4], F1, y)
+ms('fence23', F0, F0); ms('fence23', F1, F0); ms('fence22', F0, F1); ms('fence00', F1, F1)   # углы
+for y in (F0, F1): ms('fence12', GAP[0] - 1, y); ms('fence13', GAP[-1] + 1, y)             # столбы у проема
+MESH = list(MESH.values())
 TUR = D['TUR']
 
 # ---- проверка: все PID есть, считаем объекты
@@ -253,10 +274,43 @@ def normall(objs): return [norm(o) for o in objs if keep(o)]
 LEVELS = [[normall(fn(lv)) for lv in (1, 2, 3, 4)] for name, fn in BUILD]
 SYS = dict(trees=normall(TREES), trash=normall(TRASH), lamps=normall(LAMPS), barrels=normall(BARRELS),
            palisade=normall(PALISADE), mesh=normall(MESH), wall=normall(WALL3), outer=normall(OUTER))
+# ---- фонари, мусор, деревья и кусты не должны стоять на зданиях (любого уровня), друг на друге и на дорогах:
+# мешающий объект переносим на ближайшую свободную клетку (Егор: кусты на мусоре — мусор оставить, кусты перенести)
+from hexlib import tdir
+def ring1(t): return {t} | {tdir(t, r, 1) for r in range(6)}
+BUSY = set()
+for L in LEVELS:
+    for objs in L:
+        for e in objs: BUSY |= ring1(e['tile'])
+for k in ('palisade', 'mesh', 'wall', 'outer'):
+    for e in SYS[k]: BUSY |= ring1(e['tile'])
+for x, y in TUR: BUSY |= ring1(y * 200 + x)
+BUSY |= ring1(T(*D['CAR']))
+ROAD = set(D['PATH'])
+def free(t):
+    x, y = t % 200, t // 200
+    return F0 + 3 <= x <= F1 - 3 and F0 + 3 <= y <= F1 - 3 and t not in BUSY and (x // 2, y // 2) not in ROAD
+def settle(objs, also=()):
+    moved = 0
+    for e in objs:
+        if not free(e['tile']) or e['tile'] in also:
+            seen = {e['tile']}; q = [e['tile']]
+            while q:
+                t = q.pop(0)
+                if free(t) and t not in also: break
+                for r in range(6):
+                    n = tdir(t, r, 1)
+                    if n not in seen: seen.add(n); q.append(n)
+            e['tile'] = t; moved += 1
+        BUSY.update(ring1(e['tile']))
+    return moved
+for e in SYS['lamps']: e['light'] = (5, 100)     # у фонарей strlit в прототипе и на картах F2 света нет: даем свет, как у пилонов vclight1 (радиус 5 вместо 3)
+MOVED = dict(lamps=settle(SYS['lamps']), trash=settle(SYS['trash']), trees=settle(SYS['trees']))
+for a, b in zip(SYS['barrels'], SYS['lamps']): a['tile'] = b['tile']      # бочки-костры стоят там же, где фонари
 rep = []
 for (name, _), lv in zip(BUILD, LEVELS): rep.append(f'{name}: ' + ', '.join(str(len(x)) for x in lv))
 for k, v in SYS.items(): rep.append(f'{k}: {len(v)}')
-rep.append(f'турели: {len(TUR)}')
+rep.append(f'турели: {len(TUR)}'); rep.append(f'перенесено: {MOVED}')
 print('\n'.join(rep))
 
 # ---- картинки: весь город на уровне N (для проверки глазами)
@@ -286,6 +340,7 @@ if os.environ.get('IMG'):
         im, *_ = draw(objs, OUT + f'town_lv{lv}_full.png')
         sm = im.copy(); sm.thumbnail((2600, 2600)); sm.save(OUT + f'town_lv{lv}.jpg', quality=88)
         print('img', lv, im.size)
+pickle.dump(LOW, open(OUT + 'low_pieces.pkl', 'wb'))
 pickle.dump(dict(LEVELS=LEVELS, SYS=SYS, TUR=TUR, NAMES=[n for n, _ in BUILD], TILES=TILES, CAR=D['CAR'], F=D['F'], M=D['M'], GX0=GX0,
                  PROTO=PROTO), open(OUT + 'town_build.pkl', 'wb'))
 open(OUT + 'town_build_report.txt', 'w', encoding='utf-8').write('\n'.join(rep))
