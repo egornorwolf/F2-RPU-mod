@@ -18,11 +18,11 @@
 | Барахольщик | NMLOSR | без оружия |
 | Радист | NMLABB | H |
 | Инструктор | HMMETL | все D-M |
-| Говорящий цветок | NAGPLT | без оружия |
+| Говорящий цветок | MAPLNR (красноватое споровое растение) | без оружия |
 | Отто Келлер | NAROBE (утв.) | D G |
 | Пациент с гипсом | NMOLDD | H J |
-| Парень в свитере | NMMAX8 | D H I |
-| Жители | NMBPEA, NFPEAS, NFBRLP, NMVALT, NMPEAS, NFVALT | по модели |
+| Парень в свитере | NMBPEA (Житель 1, оранжевый свитер) | D F J |
+| Жители | NMBPEA, NFPEAS, NFBRLP, NMASIA, NMPEAS, NFVALT | по модели |
 | Главарь налетчиков | NMMETB | все D-M |
 | Налетчики | NMLTBB, NMMAXZ, NMRGNG | все / D H I J K |
 | Караванщики | NMMEXI | D H I J |
