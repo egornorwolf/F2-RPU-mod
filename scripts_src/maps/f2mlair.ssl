@@ -39,11 +39,30 @@ procedure map_enter_p_proc begin
    if (is_loading_game) then return;
    if (not get_sfall_global_int(GV_LAIR)) then call lair_reveal(0);   // попал сюда иначе (тест): кружок остается
    if (not get_sfall_global_int(GV_LAIR_PUT)) then call lair_put;
-   // Динамит для погреба лежит в логове (Егор 2026-10-08): ящик у западной палатки, 2 шашки
-   if (not get_sfall_global_int(GV_LAIR_DYN)) then begin
-      set_sfall_global(GV_LAIR_DYN, 1);
-      obj := create_object(PID_CONTAINER_WOOD_CRATE, LAIR_DYNBOX, 0);
-      add_mult_objs_to_inven(obj, create_object(PID_DYNAMITE, 0, 0), LAIR_DYN_COUNT);
+   // Герой поднялся из погреба: ставим его у лаза
+   if (get_sfall_global_int(GV_CELL_BACK)) then begin
+      set_sfall_global(GV_CELL_BACK, 0);
+      override_map_start_hex(cv_free_tile(LAIR_CELLAR), 0, 2);
+   end
+   // Динамит переехал в погреб (Егор 2026-10-08): ящик наверху из сборки 0.8.1 убираем
+   if (get_sfall_global_int(GV_LAIR_DYN) == 1) then begin
+      set_sfall_global(GV_LAIR_DYN, 0);
+      obj := tile_contains_pid_obj(LAIR_DYNBOX, 0, PID_CONTAINER_WOOD_CRATE);
+      if (obj) then destroy_object(obj);
+   end
+   call lair_cellar_face;
+   // Заряд заложен внизу: рвет, как только герой выбрался наверх
+   if (get_sfall_global_int(GV_CELL_CHARGE) == 1 and not lair_done) then begin
+      set_sfall_global(GV_CELL_CHARGE, 2);
+      set_sfall_global(GV_LAIR_CELLAR, 2);
+      gfade_out(1);
+      game_time_advance(ONE_GAME_HOUR);
+      call lair_gang_leave(0);
+      call lair_cellar_face;
+      call lair_finish(LAIR_HOW_BLAST);
+      gfade_in(1);
+      display_msg(lair_msg(225));
+      return;
    end
    if (not lair_done) then begin
       if (lair_kane_dead) then display_msg(lair_msg(220));
@@ -59,6 +78,7 @@ end
 // Гарнизон ест из запасов поселения: считаем, сколько живых осталось на базе
 procedure map_exit_p_proc begin
    if (lair_done) then set_sfall_global(GV_BASE_GARR, garrison_alive);
+   else set_sfall_global(GV_LAIR_GANG, lair_gang_alive(0));
 end
 
 // Первый приход: банда, тайник Кейна, склад, бочка и погреб (карта сохраняется, ставим один раз)
@@ -69,10 +89,10 @@ procedure lair_put begin
    if (obj) then destroy_object(obj);
    call lair_loot;
    create_object_sid(PID_LAIR_WATER, LAIR_WATER, 0, SCRIPT_F2MLOBJ);
-   create_object_sid(PID_LAIR_CELLAR, LAIR_CELLAR, 0, SCRIPT_F2MLOBJ);
    if (lair_done) then return;
-   n := LAIR_GANG;
-   if (lair_kane_dead) then n := LAIR_GANG_HEADLESS;
+   // двое из банды сидят в погребе (f2mcell), остальные наверху
+   n := LAIR_GANG - CELL_GUARDS;
+   if (lair_kane_dead) then n := LAIR_GANG_HEADLESS - CELL_GUARDS;
    else call lair_kane;
    // двое на посту у входа, остальные по лагерю
    call lair_raider(LAIR_POST0, 0);
@@ -81,6 +101,7 @@ procedure lair_put begin
       call lair_raider(lair_spawn(i), i + 2);
       i += 1;
    end
+   set_sfall_global(GV_LAIR_GANG, lair_gang_alive(0));
 end
 
 // Рядовой налетчик (npc-cards.md): как у ворот (gang_raider в f2mraid.h), только со скриптом логова

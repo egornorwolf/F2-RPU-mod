@@ -88,8 +88,7 @@ end
 
 // Последний из банды пал в бою: логово взято
 procedure destroy_p_proc begin
-   if (lair_done or not get_sfall_global_int(GV_LAIR_ALARM)) then return;
-   if (lair_gang_alive(self_obj) == 0) then call lair_finish(LAIR_HOW_FIGHT);
+   call lair_gang_fall(self_obj);
 end
 
 procedure talk_p_proc begin

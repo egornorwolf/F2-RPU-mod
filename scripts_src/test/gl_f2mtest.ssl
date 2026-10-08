@@ -123,7 +123,9 @@ procedure keypress_handler begin
       // TEST: карьер (логово, 1.4) на карте мира без поиска главаря
       if (not get_sfall_global_int("f2mlairs")) then set_sfall_global("f2mlairs", 1);
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_LAIR, MARK_STATE_KNOWN);
-      display_msg("F2mod: карьер (логово налетчиков) открыт на карте мира.");
+      // TEST: лаз в погреб сразу найден, чтобы проверять путь с динамитом при любом Восприятии
+      if (not get_sfall_global_int("f2mlairc")) then set_sfall_global("f2mlairc", 1);
+      display_msg("F2mod: карьер (логово налетчиков) открыт на карте мира, лаз в погреб найден.");
    end else if (key == DIK_T) then begin
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_TOWN, MARK_STATE_KNOWN);
       display_msg("F2mod: на карте мира открыта Песочница стройки (рядом со Скалистым приютом).");

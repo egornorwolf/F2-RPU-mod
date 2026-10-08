@@ -45,6 +45,16 @@ struct.pack_into(">i", _d, 28, 5)
 open(_lair, "wb").write(_d)
 
 
+# Погреб под логовом (1.4): карту f2mcell пишет tools/layout/cellar_emit.py (копия пещеры CAVE7 без выходов
+# на карту мира), здесь только номер скрипта и точка, куда спускается герой
+_celll = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts_src", "f2mcelll.h"), encoding="utf-8").read()
+cell = f"{out}/maps/f2mcell.map"
+_d = bytearray(open(cell, "rb").read())
+struct.pack_into(">i", _d, 36, script_index("f2mcell.int"))
+struct.pack_into(">i", _d, 20, int(re.search(r"#define CELL_HERO\s+\((\d+)\)", _celll).group(1)))
+struct.pack_into(">i", _d, 28, 2)
+open(cell, "wb").write(_d)
+
 # Лагерь у скал на карте города (0.5.0): пол и выходы пишет tools/layout/settle_emit.py, здесь только номер скрипта
 settle = f"{out}/maps/f2mset.map"
 data = bytearray(open(settle, "rb").read())

@@ -1,7 +1,9 @@
-// Предметы логова (квест 1.4): бочка с водой банды и камни над погребом с припасами.
+// Предметы логова (квест 1.4): бочка с водой банды, камни над лазом в погреб, сам лаз с лестницей,
+// лестница наверх и штабель с запасами внизу.
 // Бочка: яд (Poison) с Наукой или Первой помощью 50 — половина банды падает, остальные слабеют.
-// Погреб: виден с Восприятием 7 или если Кейн проговорился у ворот; 2 динамита с Ремонтом или Наукой 40 —
-// запасы взлетают, банда уходит из карьера без еды. Если кто-то из банды видит героя — тревога.
+// Лаз: виден с Восприятием 7 или если Кейн проговорился у ворот; вниз по лестнице — погреб (карта f2mcell).
+// Штабель внизу: 2 динамита с Ремонтом или Наукой 40 — заряд рванет, как только герой выберется наверх,
+// банда уходит из карьера без еды. Если кто-то из банды видит героя — тревога.
 #define SCRIPT_REALNAME "f2mlobj"
 #include "define.h"
 #include "f2mod.h"
@@ -24,9 +26,14 @@ procedure use_p_proc;
 procedure use_obj_on_p_proc;
 procedure noticed;
 procedure poison_water;
-procedure blow_cellar;
+procedure set_charge;
+procedure cell_down;
+procedure cell_up;
 
 #define is_water        (obj_pid(self_obj) == PID_LAIR_WATER)
+#define is_hole         (obj_pid(self_obj) == PID_CELL_HOLE)
+#define is_ladder       (obj_pid(self_obj) == PID_CELL_LADDER)
+#define is_stack        (obj_pid(self_obj) == PID_CELL_STACK)
 
 procedure start begin
 end
@@ -34,8 +41,13 @@ end
 procedure look_at_p_proc begin
    script_overrides;
    if (is_water) then display_msg(mstr(230));
+   else if (is_ladder) then display_msg(mstr(248));
+   else if (is_stack) then begin
+      if (get_sfall_global_int(GV_CELL_CHARGE)) then display_msg(mstr(252));
+      else display_msg(mstr(249));
+   end
+   else if (is_hole) then display_msg(mstr(241));
    else if (get_sfall_global_int(GV_LAIR_CELLAR) == 2) then display_msg(mstr(243));
-   else if (get_sfall_global_int(GV_LAIR_CELLAR)) then display_msg(mstr(241));
    else display_msg(mstr(240));
 end
 
@@ -46,8 +58,26 @@ end
 procedure use_p_proc begin
    script_overrides;
    if (is_water) then display_msg(mstr(231));
-   else if (get_sfall_global_int(GV_LAIR_CELLAR) == 1) then display_msg(mstr(242));
+   else if (is_hole) then call cell_down;
+   else if (is_ladder) then call cell_up;
+   else if (is_stack) then begin
+      if (get_sfall_global_int(GV_CELL_CHARGE)) then display_msg(mstr(252));
+      else display_msg(mstr(242));
+   end
    else call look_at_p_proc;
+end
+
+// Вниз по лестнице: погреб — отдельная карта (f2mcell)
+procedure cell_down begin
+   gfade_out(1);
+   load_map(MAP_F2MOD_CELL, 0);
+end
+
+// Наверх, в карьер: карта логова поставит героя у лаза (GV_CELL_BACK)
+procedure cell_up begin
+   set_sfall_global(GV_CELL_BACK, 1);
+   gfade_out(1);
+   load_map(MAP_F2MOD_LAIR, 0);
 end
 
 // Кто-то из банды смотрит на героя прямо сейчас (со Скрытностью 60 — только вплотную)
@@ -77,10 +107,12 @@ procedure use_obj_on_p_proc begin
          destroy_object(obj_being_used_with);
          call poison_water;
       end
-   end else if (not is_water and it == PID_DYNAMITE) then begin
+   end else if (is_hole and it == PID_DYNAMITE) then begin
       script_overrides;
-      if (not get_sfall_global_int(GV_LAIR_CELLAR)) then display_msg(mstr(240));
-      else if (get_sfall_global_int(GV_LAIR_CELLAR) == 2) then display_msg(mstr(243));
+      display_msg(mstr(251));
+   end else if (is_stack and it == PID_DYNAMITE) then begin
+      script_overrides;
+      if (get_sfall_global_int(GV_CELL_CHARGE)) then display_msg(mstr(252));
       else if (has_skill(dude_obj, SKILL_REPAIR) < LAIR_DYN_SKILL and has_skill(dude_obj, SKILL_SCIENCE) < LAIR_DYN_SKILL) then
          display_msg(mstr(244));
       else if (obj_is_carrying_obj_pid(dude_obj, PID_DYNAMITE) < LAIR_DYN_COUNT) then
@@ -95,7 +127,7 @@ procedure use_obj_on_p_proc begin
          it := obj_carrying_pid_obj(dude_obj, PID_DYNAMITE);
          rm_obj_from_inven(dude_obj, it);
          destroy_object(it);
-         call blow_cellar;
+         call set_charge;
       end
    end
 end
@@ -113,19 +145,15 @@ procedure poison_water begin
          i += 1;
       end
    end
+   set_sfall_global(GV_LAIR_GANG, lair_gang_alive(0));
    gfade_in(1);
    display_msg(mstr(233));
    give_exp_points(250);
 end
 
-// Динамит в погреб: взрыв, припасы банды под камнями, банда уходит без еды, тайник Кейна остается
-procedure blow_cellar begin
-   set_sfall_global(GV_LAIR_CELLAR, 2);
+// Заряд под запасами банды: фитиль шипит, рванет, когда герой выберется наверх (карта логова, f2mlair.ssl)
+procedure set_charge begin
+   set_sfall_global(GV_CELL_CHARGE, 1);
    display_msg(mstr(246));
-   gfade_out(1);
-   game_time_advance(2 * ONE_GAME_HOUR);
-   call lair_gang_leave(0);
-   call lair_finish(LAIR_HOW_BLAST);
-   gfade_in(1);
-   display_msg(mstr(247));
+   float_msg(dude_obj, mstr(253), FLOAT_MSG_YELLOW);
 end

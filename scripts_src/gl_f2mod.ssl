@@ -28,7 +28,7 @@
 #include "f2mlair.h"
 #include "f2mlairl.h"
 
-#define F2MOD_VERSION "0.8.2"
+#define F2MOD_VERSION "0.8.3"
 
 procedure start;
 procedure encounter_handler;

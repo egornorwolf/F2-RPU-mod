@@ -20,3 +20,4 @@ f2mlrdr.int    ; F2mod quarry raider                              # local_vars=2
 f2mkane.int    ; F2mod Kane in the quarry                         # local_vars=0
 f2mlobj.int    ; F2mod quarry water barrel and cellar             # local_vars=0
 f2mgarr.int    ; F2mod military base garrison soldier             # local_vars=1
+f2mcell.int    ; F2mod raiders cellar map                        # local_vars=0

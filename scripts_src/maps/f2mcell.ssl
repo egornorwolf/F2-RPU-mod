@@ -1,0 +1,100 @@
+// Погреб под логовом налетчиков (квест 1.4, Егор 2026-10-08: лаз с лестницей вниз, как в доме героя).
+// Внизу двое охранников банды, запасы (еда, вода, мелочь) и ящик с динамитом. Заряд закладывают здесь,
+// у штабеля с запасами (скрипт предметов f2mlobj). Наверх — по лестнице у места, куда спускается герой.
+#define SCRIPT_REALNAME "f2mcell"
+#include "define.h"
+#include "updatmap.h"
+#include "command.h"
+#include "scenepid.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "f2mod.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mtlay.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+#include "f2mlair.h"
+#include "f2mlairl.h"
+#include "f2mcelll.h"
+
+procedure start;
+procedure map_enter_p_proc;
+procedure map_exit_p_proc;
+procedure cell_put;
+procedure cell_guard(variable tile, variable i);
+procedure cell_clear;
+
+procedure start begin
+end
+
+procedure map_enter_p_proc begin
+   Cavern_Lighting;
+   if (is_loading_game) then return;
+   override_map_start_hex(cv_free_tile(CELL_HERO), 0, 2);
+   if (not get_sfall_global_int(GV_CELL_PUT)) then call cell_put;
+   if (lair_done) then call cell_clear;
+end
+
+procedure map_exit_p_proc begin
+   if (not lair_done) then set_sfall_global(GV_CELL_GANG, lair_gang_alive(0));
+end
+
+// Первый спуск: лестница наверх, запасы банды, динамит и двое охранников (карта сохраняется, ставим один раз)
+procedure cell_put begin
+   variable box;
+   set_sfall_global(GV_CELL_PUT, 1);
+   create_object_sid(PID_CELL_LADDER, CELL_LADDER, 0, SCRIPT_F2MLOBJ);
+   create_object_sid(PID_CELL_STACK, CELL_STACK, 0, SCRIPT_F2MLOBJ);
+   box := create_object(PID_CONTAINER_WOOD_CRATE, CELL_BOX0, 0);
+   add_mult_objs_to_inven(box, create_object(PID_IGUANA_ON_A_STICK, 0, 0), 4);
+   add_mult_objs_to_inven(box, create_object(PID_MEAT_JERKY, 0, 0), 4);
+   box := create_object(PID_CONTAINER_WOOD_CRATE, CELL_BOX1, 0);
+   add_mult_objs_to_inven(box, create_object(PID_WATER_FLASK, 0, 0), 4);
+   add_mult_objs_to_inven(box, create_object(PID_BEER, 0, 0), 2);
+   box := create_object(PID_CONTAINER_WOOD_CRATE, CELL_BOX2, 0);
+   item_caps_adjust(box, 300);
+   add_mult_objs_to_inven(box, create_object(PID_STIMPAK, 0, 0), 3);
+   add_mult_objs_to_inven(box, create_object(PID_SHOTGUN_SHELLS, 0, 0), 2);
+   // Динамит для заряда лежит тут же, в погребе (Егор 2026-10-08)
+   box := create_object(PID_CONTAINER_WOOD_CRATE, CELL_DYN, 0);
+   add_mult_objs_to_inven(box, create_object(PID_DYNAMITE, 0, 0), LAIR_DYN_COUNT);
+   set_sfall_global(GV_LAIR_DYN, 2);
+   if (lair_done) then return;
+   call cell_guard(CELL_GUARD0, 0);
+   call cell_guard(CELL_GUARD1, 1);
+   set_sfall_global(GV_CELL_GANG, CELL_GUARDS);
+end
+
+// Охранник погреба: тот же рядовой налетчик, что и наверху (npc-cards.md)
+procedure cell_guard(variable tile, variable i) begin
+   variable obj, armor, it;
+   obj := create_object_sid(PID_RAIDER_MALE, cv_free_tile(tile), 0, SCRIPT_F2MLRDR);
+   if (i % 2) then begin
+      call gang_setup(obj, GANG_ART_JACKET);
+      armor := PID_LEATHER_JACKET;
+   end else begin
+      call gang_setup(obj, GANG_ART_ARMOR);
+      armor := PID_LEATHER_ARMOR;
+   end
+   it := create_object(armor, 0, 0);
+   add_obj_to_inven(obj, it);
+   wield_obj_critter(obj, it);
+   if (i % 2) then call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
+   else call cv_arm(obj, PID_SAWED_OFF_SHOTGUN, PID_SHOTGUN_SHELLS);
+   anim(obj, ANIMATE_ROTATION, random(0, 5));
+end
+
+// Логово взято: люди Кейна в союзе — свои, в остальных случаях банда ушла из погреба
+procedure cell_clear begin
+   variable c;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not is_critter_dead(c)) then begin
+         if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_ALLY) then
+            critter_add_trait(c, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
+         else destroy_object(c);
+      end
+   end
+   set_sfall_global(GV_CELL_GANG, 0);
+end

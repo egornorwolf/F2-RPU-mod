@@ -4,6 +4,7 @@
 // f2mcamp.h, f2mset.h (в нем f2mbld.h), f2mpay.h и f2mraid.h.
 #ifndef F2MLAIR_H
 #define F2MLAIR_H
+#include "f2mlairl.h"   // точки на карте логова: LAIR_CELLAR и прочие
 
 #define GV_LAIR         "f2mlairs"  // 0 неизвестно, 1 герой знает, где логово (кружок на карте), 2 логово взято
 #define GV_LAIR_HOW     "f2mlairh"  // как взято: LAIR_HOW_* ниже
@@ -13,8 +14,13 @@
 #define GV_LAIR_CELLAR  "f2mlairc"  // 1 погреб найден, 2 взорван
 #define GV_LAIR_PUT     "f2mlairg"  // 1 = банда и предметы уже на карте
 #define GV_LAIR_TRACK   "f2mlairt"  // час, когда Рик расскажет, где логово (банда ушла от ворот)
-#define GV_LAIR_DYN     "f2mlaird"  // 1 = ящик с динамитом у погреба уже стоит (0.8.1, и в старых сохранениях)
+#define GV_LAIR_DYN     "f2mlaird"  // 1 = ящик с динамитом уже поставлен (0.8.1 наверху, с 0.8.3 внизу, в погребе)
 #define GV_BASE_GARR    "f2mbgarr"  // сколько бойцов гарнизона живет на базе (едят из запасов поселения)
+#define GV_CELL_PUT     "f2mcellg"  // 1 = погреб обставлен (охрана, запасы, динамит)
+#define GV_CELL_GANG    "f2mcelln"  // живых охранников банды в погребе
+#define GV_LAIR_GANG    "f2mlairn"  // живых бандитов наверху, в карьере
+#define GV_CELL_BACK    "f2mcellb"  // 1 = герой поднимается из погреба: поставить его у лаза
+#define GV_CELL_CHARGE  "f2mcellc"  // 1 = заряд заложен в запасы, рванет, когда герой выберется наверх
 
 #define LAIR_KNOWN      (1)
 #define LAIR_DONE       (2)
@@ -41,7 +47,11 @@
 #define LAIR_TRACK_HOURS (72)   // банда ушла от ворот: через трое суток Рик знает, где логово
 
 #define PID_LAIR_WATER  (33554983)  // Barrel (бочка, одна клетка)
-#define PID_LAIR_CELLAR (33555705)  // Pile of Rocks (камни над лазом в погреб)
+#define PID_LAIR_CELLAR (33555705)  // Pile of Rocks (камни над лазом в погреб, пока лаз не найден)
+#define PID_CELL_HOLE   (33555015)  // hole1: дыра с лестницей вниз (как люк в доме героя, Егор 2026-10-08)
+#define PID_CELL_LADDER (33554571)  // Ladder: лестница из погреба наверх
+#define PID_CELL_STACK  (33554652)  // Boxes: штабель запасов банды в погребе (сюда закладывают заряд)
+#define CELL_GUARDS     (2)         // охрана погреба (из тех же LAIR_GANG бойцов)
 #define LAIR_OLD_CRATE  (18702)     // 102, 93: ящик со скриптом случайной встречи из mountn5, убираем
 #define U_BASE          (U_BASE_UNIT)   // военная база в f2mbld.h (вне U_COUNT: на карту лагеря не ставится)
 #define BASE_TOP_LEVEL  (3)         // 4-й уровень (штаб) — по квесту, позже
@@ -59,6 +69,8 @@ procedure lair_seen(variable who);
 procedure lair_alarm;
 procedure lair_finish(variable how);
 procedure lair_gang_leave(variable keep);
+procedure lair_cellar_face;
+procedure lair_gang_fall(variable except);
 
 procedure lair_reveal(variable msg) begin
    set_sfall_global(GV_LAIR, LAIR_KNOWN);
@@ -119,6 +131,8 @@ procedure lair_finish(variable how) begin
    set_sfall_global(GV_LAIR, LAIR_DONE);
    set_sfall_global(GV_LAIR_HOW, how);
    set_sfall_global(GV_LAIR_ALARM, 0);
+   set_sfall_global(GV_LAIR_GANG, 0);
+   set_sfall_global(GV_CELL_GANG, 0);
    give_exp_points(LAIR_XP);
    display_msg(lair_msg(210) + LAIR_XP + lair_msg(211));
    float_msg(dude_obj, lair_msg(212), FLOAT_MSG_YELLOW);
@@ -129,6 +143,33 @@ procedure lair_finish(variable how) begin
       set_sfall_global(GV_RAID_FOOD, 0);
       set_sfall_global(GV_RAID_WATER, 0);
    end
+end
+
+// Что лежит на месте лаза в погреб: пока лаз не нашли (и после взрыва) — куча камней,
+// найденный лаз — дыра с лестницей вниз (как люк в доме героя). Зовут карта логова и глобальный скрипт
+procedure lair_cellar_face begin
+   variable rocks, hole;
+   rocks := tile_contains_pid_obj(LAIR_CELLAR, 0, PID_LAIR_CELLAR);
+   hole := tile_contains_pid_obj(LAIR_CELLAR, 0, PID_CELL_HOLE);
+   if (get_sfall_global_int(GV_LAIR_CELLAR) == 1) then begin
+      if (rocks) then destroy_object(rocks);
+      if (not hole) then create_object_sid(PID_CELL_HOLE, LAIR_CELLAR, 0, SCRIPT_F2MLOBJ);
+   end else begin
+      if (hole) then destroy_object(hole);
+      if (not rocks) then create_object_sid(PID_LAIR_CELLAR, LAIR_CELLAR, 0, SCRIPT_F2MLOBJ);
+   end
+end
+
+// Пал боец банды: считаем живых на этой карте и помним, сколько осталось на другой (карьер и погреб).
+// Логово взято боем, только когда не осталось никого ни наверху, ни внизу
+procedure lair_gang_fall(variable except) begin
+   variable n;
+   if (lair_done or not get_sfall_global_int(GV_LAIR_ALARM)) then return;
+   n := lair_gang_alive(except);
+   if (cur_map_index == MAP_F2MOD_CELL) then set_sfall_global(GV_CELL_GANG, n);
+   else set_sfall_global(GV_LAIR_GANG, n);
+   if (get_sfall_global_int(GV_CELL_GANG) == 0 and get_sfall_global_int(GV_LAIR_GANG) == 0) then
+      call lair_finish(LAIR_HOW_FIGHT);
 end
 
 // Банда уходит из карьера (мир или взрыв): живые исчезают, трупы остаются. keep — тот, чей скрипт сейчас работает
