@@ -50,7 +50,7 @@
 #define GV_ESCORT_WMY       "f2mescwy"  // то же, y
 #define GV_CAMP_CARAVAN     "f2mcmpcv"  // 1 = караван уже поставлен в лагере (на прежней карте 173)
 #define GV_TOWN_LAYOUT      "f2mtlayt"  // 1 = лагерь расставлен на карте города (0.5.0)
-#define GV_TOWN_RUINS       "f2mtruin"  // 3 = руины city1/city2 на участках будущих зданий (0.5.3); 1-2 = развалины 0.5.1-0.5.2, их убираем
+#define GV_TOWN_RUINS       "f2mtruin"  // 4 = руины city1/city2 на участках будущих зданий (0.5.5); 1-3 = развалины 0.5.1-0.5.4, их убираем
 #define GV_TOWN_PEOPLE      "f2mtppl"   // 1 = люди лагеря поставлены на карте города
 #define GV_CARAVAN_HOSTILE  "f2mcrvhs"  // 1 = караван воюет с героем (прицельный выстрел или убитый охранник)
 
