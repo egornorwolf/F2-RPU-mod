@@ -1,6 +1,7 @@
 // Карта поселения «Лагерь у скал». М1: пустая карта, свет по времени суток и машина героя.
 // М2 (тестовый режим): после координат караван Теда Бернса уже стоит в лагере.
-// Позже: караван приходит через пару недель, а в М3 здесь появится палаточный лагерь.
+// М3: палаточный лагерь (f2mlay.h): костер, стол старосты, 3 палатки переселенцев и палатка героя
+// с сундуком, старый заколоченный колодец, прораб Хэнк. Позже караван будет приходить через пару недель.
 #define SCRIPT_REALNAME "f2mcamp"
 #include "define.h"
 #include "updatmap.h"
@@ -9,6 +10,8 @@
 #include "sfall.h"
 #include "f2mod.h"
 #include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mlay.h"
 
 // Где ставить машину (та же точка, что в desert1, с которой взят пол карты)
 #define CAR_HEX   (19096)
@@ -17,6 +20,7 @@ procedure start;
 procedure map_enter_p_proc;
 procedure map_update_p_proc;
 procedure map_exit_p_proc;
+procedure camp_layout;
 
 #define START_HEX   (20100)
 variable spawned;
@@ -24,35 +28,47 @@ variable spawned;
 procedure start begin
 end
 
-
-
 procedure map_enter_p_proc begin
-   variable obj, base;
+   variable wag, old;
    set_map_exit_tiles(0, 0);
    Lighting;
    Check_Create_Car(CAR_HEX, 0)
-   // Карта сохраняется, поэтому караван ставим один раз, при первом входе после координат
-   if (spawned or is_loading_game or get_sfall_global_int(GV_CARAVAN) != CARAVAN_DONE
-       or get_sfall_global_int(GV_CAMP_CARAVAN)) then return;
-   spawned := 1;
-   set_sfall_global(GV_CAMP_CARAVAN, 1);
-   base := tile_num_in_direction(START_HEX, 1, 10);
-   obj := cv_put(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, base);
-   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
-   obj := cv_put(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, tile_num_in_direction(base, 0, 3));
-   call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
-   if (not get_sfall_global_int(GV_ESCORT_LOSSES)) then begin
-      obj := cv_put(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, tile_num_in_direction(base, 2, 3));
-      call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
-      call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, tile_num_in_direction(base, 2, 6));
+   // Старый колодец починен: убираем спрятанный заколоченный (на его месте открытый)
+   if (not is_loading_game and get_sfall_global_int(GV_WELL_OLD) == WELL_OLD_FIXED) then begin
+      old := tile_contains_pid_obj(LAY_OLDWELL, 0, PID_WELL_OLD);
+      if (old) then destroy_object(old);
    end
-   call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, tile_num_in_direction(base, 1, 6));
-   call cv_wagons(tile_num_in_direction(base, 1, 12));
-   // После сопровождения из десяти мирных дошли восемь
-   if (get_sfall_global_int(GV_ESCORT_LOSSES)) then
-      call cv_civilians(tile_num_in_direction(base, 1, 12), 2, 8, 0);
-   else
-      call cv_civilians(tile_num_in_direction(base, 1, 12), 0, 10, 0);
+   // Карта сохраняется, поэтому все ставим один раз, при первом входе после координат
+   if (spawned or is_loading_game or get_sfall_global_int(GV_CARAVAN) != CARAVAN_DONE) then return;
+   spawned := 1;
+   // Сначала палатки и костер, чтобы люди встали не в стену. В старых сохранениях (0.2.x)
+   // караван уже стоит: тогда добавляется только сам лагерь и прораб.
+   if (not get_sfall_global_int(GV_CAMP_LAYOUT)) then call camp_layout;
+   if (get_sfall_global_int(GV_CAMP_CARAVAN)) then return;
+   set_sfall_global(GV_CAMP_CARAVAN, 1);
+   wag := tile_num_in_direction(tile_num_in_direction(START_HEX, 1, 10), 1, 12);
+   // Дошли все, кто уцелел в пути (после координат без дороги — все)
+   call cv_ted(LAY_TED);
+   call cv_guard(CV_SLOT_GUARD, LAY_CHIEF);
+   call cv_guard(CV_SLOT_SARA, tile_num_in_direction(LAY_CHIEF, 2, 3));
+   call cv_brahmin(CV_SLOT_BRAHMIN, tile_num_in_direction(wag, 4, 4));
+   call cv_brahmin(CV_SLOT_BRAHMIN + 1, tile_num_in_direction(wag, 3, 4));
+   call cv_wagons(wag);
+   call cv_civilians(LAY_FIRE, 0);
+end
+
+// Палаточный лагерь и прораб Хэнк (с монтировкой: у его модели nmpeas есть анимации дубины)
+procedure camp_layout begin
+   variable who, i := 0;
+   set_sfall_global(GV_CAMP_LAYOUT, 1);
+   set_sfall_global(GV_CAMP_DAY, game_time / ONE_GAME_HOUR);
+   call lay_camp;
+   while (i < BUILD_COUNT) do begin
+      if (camp_built(i)) then call lay_slot(i);
+      i += 1;
+   end
+   who := cv_put(PID_DOCK_WORKER, SCRIPT_F2MCFRM, LAY_FOREMAN);
+   call cv_arm(who, PID_CROWBAR, 0);
 end
 
 procedure map_update_p_proc begin

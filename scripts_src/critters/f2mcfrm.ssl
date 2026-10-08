@@ -1,0 +1,293 @@
+// Прораб Хэнк, лагерь у скал. Первые постройки собирает «на коленке» сразу, прямо из диалога:
+// герой помогает сам (проверка Силы и Выносливости) или платит немного крышек на материалы.
+// Экран гаснет, проходит несколько часов, постройка уже стоит на своем месте (f2mlay.h).
+// Колодец — в любой момент, огороды — только когда в лагере есть вода, палатки — 4 места.
+// Еще продает детали, чтобы герой сам починил старый колодец.
+#define SCRIPT_REALNAME "f2mcfrm"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MCFRM
+#include "command.h"
+#include "sfall.h"
+#include "f2mcdead.h"
+#include "f2mcamp.h"
+#include "f2mlay.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure damage_p_proc;
+procedure accidental_hit;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+
+procedure Node001;
+procedure Node010;
+procedure Node011;
+procedure Node015;
+procedure Node016;
+procedure Node017;
+procedure Node012;
+procedure Node013;
+procedure Node014;
+procedure Node020;
+procedure Node021;
+procedure Node030;
+procedure Node999;
+procedure free_slot(variable first, variable last);
+procedure kind_of(variable slot);
+procedure do_build;
+
+// LVAR 0: 1 = уже знакомы
+#define LVAR_MET        (0)
+
+// Что строим: вид постройки (KIND_*), цена, нужные Сила и Выносливость, часы работы, опыт за помощь
+#define KIND_WELL       (0)
+#define KIND_GARDEN     (1)
+#define KIND_TENT       (2)
+#define kind_price(k)   (40 * ((k) == KIND_WELL) + 15 * ((k) == KIND_GARDEN) + 10 * ((k) == KIND_TENT))
+#define kind_stat(k)    (6 * ((k) == KIND_WELL) + 5 * ((k) != KIND_WELL))
+#define kind_hours(k)   (12 * ((k) == KIND_WELL) + 4 * ((k) == KIND_GARDEN) + 3 * ((k) == KIND_TENT))
+#define kind_xp(k)      (50 * ((k) == KIND_WELL) + 25 * ((k) != KIND_WELL))
+#define can_help(k)     (get_critter_stat(dude_obj, STAT_st) >= kind_stat(k) and get_critter_stat(dude_obj, STAT_en) >= kind_stat(k))
+
+variable greeted;
+variable sel := -1;        // выбранное место в диалоге
+variable go_build := -1;   // что строить после диалога
+variable helped;           // герой помогал сам
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   if (not greeted and not combat_is_initialized and self_can_see_dude
+       and tile_distance_objs(self_obj, dude_obj) < 6) then begin
+      greeted := 1;
+      floater(random(102, 104));
+   end
+end
+
+// Свой попал случайно (очередью или взрывом) — прощаем; прицельно — весь лагерь воюет
+procedure accidental_hit begin
+   variable hits, r := 0;
+   hits := load_array(ARR_CARAVAN_HITS);
+   if (hits) then begin
+      r := hits[self_obj];
+      hits[self_obj] := 0;
+   end
+   return r;
+end
+
+procedure damage_p_proc begin
+   if (is_dude_side(source_obj)) then begin
+      if (accidental_hit) then
+         floater(random(105, 106));
+      else begin
+         set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+         floater(107);
+      end
+   end
+end
+
+procedure destroy_p_proc begin
+   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+end
+
+procedure talk_p_proc begin
+   if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then begin
+      floater(107);
+      return;
+   end
+   go_build := -1;
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+   if (go_build >= 0) then call do_build;
+end
+
+// Первое свободное место из диапазона, -1 если все занято
+procedure free_slot(variable first, variable last) begin
+   while (first <= last) do begin
+      if (not camp_built(first)) then return first;
+      first += 1;
+   end
+   return -1;
+end
+
+procedure kind_of(variable slot) begin
+   if (slot == BUILD_WELL) then return KIND_WELL;
+   if (slot < BUILD_TENT) then return KIND_GARDEN;
+   return KIND_TENT;
+end
+
+// Стройка после диалога: экран гаснет, проходят часы, постройка на месте
+procedure do_build begin
+   variable k;
+   k := kind_of(go_build);
+   gfade_out(1);
+   game_time_advance(kind_hours(k) * ONE_GAME_HOUR);
+   call camp_set_built(go_build);
+   call lay_slot(go_build);
+   gfade_in(1);
+   display_msg(mstr(190 + k));
+   if (helped) then begin
+      give_exp_points(kind_xp(k));
+      display_msg(mstr(195) + kind_xp(k) + mstr(196));
+   end
+   if (k == KIND_WELL) then call camp_water_done(mstr(197));
+   go_build := -1;
+end
+
+procedure Node001 begin
+   if (local_var(LVAR_MET)) then
+      Reply(111);
+   else begin
+      set_local_var(LVAR_MET, 1);
+      Reply(110);
+   end
+   NOption(112, Node010, 4);
+   if (get_sfall_global_int(GV_WELL_OLD) == WELL_OLD_BROKEN) then
+      NOption(113, Node020, 4);
+   NOption(114, Node030, 4);
+   NOption(115, Node999, 4);
+   NLowOption(116, Node010);
+   NLowOption(117, Node999);
+end
+
+// Что можно построить
+procedure Node010 begin
+   variable g, t, w;
+   w := not camp_built(BUILD_WELL);
+   g := free_slot(BUILD_GARDEN, BUILD_TENT - 1);
+   t := free_slot(BUILD_TENT, BUILD_COUNT - 1);
+   if (not w and g < 0 and t < 0) then begin
+      Reply(126);
+      NOption(125, Node001, 4);
+      NLowOption(117, Node999);
+      return;
+   end
+   Reply(120);
+   if (w) then NOption(121, Node015, 4);
+   if (g >= 0) then begin
+      if (camp_has_water) then
+         NOption(122, Node016, 4);
+      else
+         NOption(123, Node013, 4);
+   end
+   if (t >= 0) then NOption(124, Node017, 4);
+   NOption(125, Node001, 4);
+   if (w) then NLowOption(127, Node015);
+   NLowOption(117, Node999);
+end
+
+// Выбрали постройку: колодец, огород или палатка
+procedure Node015 begin
+   sel := BUILD_WELL;
+   call Node011;
+end
+
+procedure Node016 begin
+   sel := free_slot(BUILD_GARDEN, BUILD_TENT - 1);
+   call Node011;
+end
+
+procedure Node017 begin
+   sel := free_slot(BUILD_TENT, BUILD_COUNT - 1);
+   call Node011;
+end
+
+// Цена и условия выбранной постройки
+procedure Node011 begin
+   variable k;
+   if (sel < 0) then begin
+      call Node010;
+      return;
+   end
+   k := kind_of(sel);
+   Reply(130 + k);
+   NOption(133 + k, Node012, 4);
+   if (dude_caps >= kind_price(k)) then
+      NOption(136 + k, Node014, 4);
+   NOption(139, Node010, 4);
+   NLowOption(140, Node012);
+   NLowOption(117, Node999);
+end
+
+// Герой помогает сам: Сила и Выносливость
+procedure Node012 begin
+   variable k;
+   k := kind_of(sel);
+   if (can_help(k)) then begin
+      helped := 1;
+      go_build := sel;
+      Reply(150 + k);
+      NOption(153, Node999, 4);
+      NLowOption(154, Node999);
+   end else begin
+      Reply(155);
+      if (dude_caps >= kind_price(k)) then
+         NOption(136 + k, Node014, 4);
+      NOption(139, Node010, 4);
+      NLowOption(117, Node999);
+   end
+end
+
+// Огород без воды не нужен
+procedure Node013 begin
+   Reply(160);
+   NOption(125, Node010, 4);
+   NLowOption(117, Node999);
+end
+
+// Платит крышками
+procedure Node014 begin
+   variable k;
+   k := kind_of(sel);
+   item_caps_adjust(dude_obj, -kind_price(k));
+   item_caps_adjust(self_obj, kind_price(k));
+   helped := 0;
+   go_build := sel;
+   Reply(165);
+   NOption(166, Node999, 4);
+   NLowOption(154, Node999);
+end
+
+// Детали для старого колодца
+procedure Node020 begin
+   Reply(170);
+   if (dude_caps >= WELL_PARTS_PRICE) then
+      NOption(171, Node021, 4);
+   NOption(172, Node001, 4);
+   NLowOption(117, Node999);
+end
+
+procedure Node021 begin
+   item_caps_adjust(dude_obj, -WELL_PARTS_PRICE);
+   item_caps_adjust(self_obj, WELL_PARTS_PRICE);
+   set_sfall_global(GV_WELL_OLD, WELL_OLD_PARTS);
+   Reply(173);
+   NOption(174, Node001, 4);
+   NLowOption(117, Node999);
+end
+
+procedure Node030 begin
+   Reply(180);
+   NOption(181, Node001, 4);
+   NLowOption(117, Node999);
+end
+
+procedure Node999 begin
+end

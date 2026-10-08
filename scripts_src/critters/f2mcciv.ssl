@@ -6,6 +6,8 @@
 #define NAME                    SCRIPT_F2MCCIV
 #include "command.h"
 #include "sfall.h"
+#include "f2mcdead.h"
+#include "f2mcamp.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -16,8 +18,12 @@ procedure look_at_p_proc;
 procedure description_p_proc;
 procedure destroy_p_proc;
 procedure is_child;
+procedure use_stim;
 
 variable greeted;
+
+// LVAR 0: 1 = свой стим уже вколот (хранится в сохранении)
+#define LVAR_STIM_USED   (0)
 
 procedure start begin
 end
@@ -48,7 +54,9 @@ procedure critter_p_proc begin
    if (not greeted and not combat_is_initialized and self_can_see_dude
        and tile_distance_objs(self_obj, dude_obj) < 5 and random(0, 3) == 0) then begin
       greeted := 1;
-      if (is_child) then
+      if (cur_map_index == MAP_F2MOD_CAMP and not is_child) then
+         floater(random(170, 172));
+      else if (is_child) then
          floater(random(140, 142));
       else
          floater(random(143, 145));
@@ -60,8 +68,12 @@ procedure talk_p_proc begin
       floater(random(150, 152));
    else if (is_child) then
       floater(random(120, 123));
-   else
+   else if (cur_map_index != MAP_F2MOD_CAMP) then
       floater(random(110, 114));
+   else if (not camp_has_water) then
+      floater(random(180, 182));
+   else
+      floater(random(183, 188));
 end
 
 // Свой попал случайно (очередью или взрывом) — прощаем; прицельно — бой
@@ -75,7 +87,20 @@ procedure accidental_hit begin
    return r;
 end
 
+// У каждого мирного один стим. Самим предметом в инвентаре его не даем: ИИ трусливых
+// жителей колет стимы сразу в начале боя, даже без ран (проверено в игре, 0.2.4).
+// Поэтому стим «в кармане» считаем по LVAR: колем по скрипту, когда здоровья меньше половины,
+// а если мирный погиб, так и не вколов его, стим остается на трупе.
+procedure use_stim begin
+   if (is_critter_dead(self_obj) or local_var(LVAR_STIM_USED)) then return;
+   if (get_critter_stat(self_obj, STAT_current_hp) * 2 >= get_critter_stat(self_obj, STAT_max_hp)) then return;
+   set_local_var(LVAR_STIM_USED, 1);
+   critter_heal(self_obj, random(10, 20));
+   floater(random(160, 161));
+end
+
 procedure damage_p_proc begin
+   call use_stim;
    if (is_dude_side(source_obj)) then begin
       if (accidental_hit) then
          floater(random(130, 132));
@@ -86,7 +111,13 @@ procedure damage_p_proc begin
    end
 end
 
-// Погиб от руки героя или спутника, пусть даже случайно: караван воюет
+// Погиб от руки героя или спутника, пусть даже случайно: караван воюет.
+// На следующем участке дороги погибшего уже нет.
 procedure destroy_p_proc begin
    if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   call cv_mark_dead(obj_pid(self_obj));
+   if (not local_var(LVAR_STIM_USED)) then begin
+      set_local_var(LVAR_STIM_USED, 1);
+      add_obj_to_inven(self_obj, create_object(PID_STIMPAK, 0, 0));
+   end
 end

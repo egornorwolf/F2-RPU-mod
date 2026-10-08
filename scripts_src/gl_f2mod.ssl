@@ -14,7 +14,7 @@
 #include "command.h"
 #include "f2mod.h"
 
-#define F2MOD_VERSION "0.2.3"
+#define F2MOD_VERSION "0.3.32"
 
 procedure start;
 procedure encounter_handler;
@@ -23,7 +23,10 @@ procedure keep_escort_wm_pos;
 procedure step_toward(variable a, variable b, variable s);
 
 procedure start begin
+   variable st;
    if (game_loaded) then begin
+      // Потолок статов героя F2MOD_STAT_MAX вместо 10 (sfall, не сохраняется — ставим при каждой загрузке)
+      for (st := STAT_st; st <= STAT_lu; st++) set_pc_stat_max(st, F2MOD_STAT_MAX);
       register_hook_proc(HOOK_ENCOUNTER, encounter_handler);
       register_hook_proc(HOOK_COMBATDAMAGE, combatdamage_handler);
       set_global_script_repeat(60);
@@ -83,5 +86,8 @@ procedure combatdamage_handler begin
       hits := create_array_map;
       save_array(ARR_CARAVAN_HITS, hits);
    end
-   hits[target] := (target != get_object_data(args[12], C_ATTACK_TARGET));
+   // Прицельное = это и есть цель, которую выбрал герой. Ее движок хранит в C_ATTACK_MAIN_TARGET;
+   // C_ATTACK_TARGET при промахе меняется на того, в кого пуля попала по пути (так брамин
+   // получал «прицельный» выстрел, когда герой промахивался по врагу рядом с ним).
+   hits[target] := (target != get_object_data(args[12], C_ATTACK_MAIN_TARGET));
 end

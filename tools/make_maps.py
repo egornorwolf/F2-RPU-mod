@@ -32,3 +32,10 @@ make("desert2", "f2mcrvn", "f2mcrvn.int")
 make("desert3", "f2mesct", "f2mesct.int")
 make("desert2", "f2mesc2", "f2mesct.int")  # 2-й участок дороги
 make("desert1", "f2mesc3", "f2mesct.int")  # 3-й участок дороги
+
+
+# Песочница стройки (тест): карту пишет tools/layout/town_emit.py, здесь только номер скрипта карты
+test_map = f"{out}/../test/maps/f2mtown.map"
+data = bytearray(open(test_map, "rb").read())
+struct.pack_into(">i", data, 36, script_index("f2mtown.int"))
+open(test_map, "wb").write(data)

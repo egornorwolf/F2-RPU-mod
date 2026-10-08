@@ -1,8 +1,9 @@
 // Тестовые клавиши F2mod. Только для проверки мода, в релиз не входит.
 // Ctrl+1..7 — СПЕЦИАЛ +1, Ctrl+Shift+1..7 — СПЕЦИАЛ -1,
 // Ctrl+K — +10 очков навыков, Ctrl+N — все навыки 300%, Ctrl+B — переносимый вес +100,
-// Ctrl+E — открыть «Лагерь у скал» на карте мира, Ctrl+R — сбросить встречу с караваном, Ctrl+O — +1 перк, Ctrl+U — +1 уровень,
+// Ctrl+E — открыть «Лагерь у скал» на карте мира, Ctrl+T — открыть песочницу стройки, Ctrl+R — сбросить встречу с караваном, Ctrl+O — +1 перк, Ctrl+U — +1 уровень,
 // Ctrl+H — лечение, Ctrl+I — сундук с броней, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
+// Alt+1 — +1 час, Alt+2 — +1 день, Alt+3 — +1 неделя, Alt+4 — +1 месяц игрового времени, Alt+0 — показать время и состояние (Егор, 2026-10-06: хоткеи для проверки поселения, docs/test-mode.md).
 #include "sfall.h"
 #include "dik.h"
 #define SCRIPT_REALNAME "gl_f2mtest"
@@ -13,6 +14,8 @@
 procedure start;
 procedure keypress_handler;
 procedure show_help;
+procedure skip_time(variable ticks, variable what);
+procedure show_state;
 procedure change_special(variable stat, variable delta);
 procedure spawn_chest;
 procedure skills_max;
@@ -38,10 +41,27 @@ procedure keypress_handler begin
    variable pressed, key, mode, xp, lvl;
    pressed := get_sfall_arg;
    key := get_sfall_arg;
+   // Alt+цифра: сдвиг игрового времени и состояние (без Ctrl)
+   if ((key_pressed(DIK_LMENU) or key_pressed(DIK_RMENU)) and not(key_pressed(DIK_LCONTROL) or key_pressed(DIK_RCONTROL))
+       and (key == DIK_1 or key == DIK_2 or key == DIK_3 or key == DIK_4 or key == DIK_0)) then begin
+      set_sfall_return(DIK_UNLABELED);
+      if (not pressed) then return;
+      mode := get_game_mode bwand 4192189; // все режимы, кроме карты и боя
+      if (mode != 0) then begin
+         display_msg("F2mod: закройте окна и нажмите еще раз.");
+         return;
+      end
+      if (key == DIK_1) then call skip_time(ONE_GAME_HOUR, "+1 час");
+      else if (key == DIK_2) then call skip_time(ONE_GAME_DAY, "+1 день");
+      else if (key == DIK_3) then call skip_time(7 * ONE_GAME_DAY, "+1 неделя");
+      else if (key == DIK_4) then call skip_time(30 * ONE_GAME_DAY, "+1 месяц");
+      else call show_state;
+      return;
+   end
    if (not(key_pressed(DIK_LCONTROL) or key_pressed(DIK_RCONTROL))) then return;
    if (key != DIK_1 and key != DIK_2 and key != DIK_3 and key != DIK_4 and key != DIK_5
        and key != DIK_6 and key != DIK_7 and key != DIK_K and key != DIK_N and key != DIK_B and key != DIK_E and key != DIK_R and key != DIK_O and key != DIK_U
-       and key != DIK_H and key != DIK_I and key != DIK_M and key != DIK_G) then return;
+       and key != DIK_H and key != DIK_I and key != DIK_M and key != DIK_G and key != DIK_T) then return;
    // Глушим букву, чтобы игра не открыла инвентарь или настройки
    set_sfall_return(DIK_UNLABELED);
    if (not pressed) then return;
@@ -67,7 +87,10 @@ procedure keypress_handler begin
       set_sfall_global(GV_CARAVAN, CARAVAN_NONE);
       set_sfall_global(GV_CARAVAN_REFUSED, 0);
       set_sfall_global(GV_ESCORT_STAGE, 0);
-      set_sfall_global(GV_ESCORT_LOSSES, 0);
+      set_sfall_global(GV_CARAVAN_DEAD, 0);
+      set_sfall_global(GV_CARAVAN_LAST, 0);
+      set_sfall_global(GV_ESCORT_S3, 0);
+      set_sfall_global(GV_ESCORT_RESUME, 0);
       set_sfall_global(GV_CAMP_CARAVAN, 0);
       set_sfall_global(GV_CARAVAN_HOSTILE, 0);
       // Сначала сбрасываем «посещено», потом прячем кружок совсем
@@ -93,6 +116,9 @@ procedure keypress_handler begin
    end else if (key == DIK_M) then begin
       item_caps_adjust(dude_obj, 5000);
       display_msg("F2mod: +5000 крышек.");
+   end else if (key == DIK_T) then begin
+      mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_TOWN, MARK_STATE_KNOWN);
+      display_msg("F2mod: на карте мира открыта Песочница стройки (рядом с Лагерем у скал).");
    end else if (key == DIK_G) then begin
       call show_help;
    end
@@ -101,8 +127,8 @@ end
 procedure change_special(variable stat, variable delta) begin
    variable val, names;
    val := get_pc_base_stat(stat) + delta;
-   if (val < 1 or val > 10) then begin
-      display_msg("F2mod: значение должно быть от 1 до 10.");
+   if (val < 1 or val > F2MOD_STAT_MAX) then begin
+      display_msg("F2mod: значение должно быть от 1 до " + F2MOD_STAT_MAX + ".");
       return;
    end
    set_pc_base_stat(stat, val);
@@ -140,8 +166,20 @@ procedure skills_max begin
    display_msg("F2mod: все навыки 300%.");
 end
 
+// Сдвиг игрового времени. game_time_advance сам прокручивает очередь событий движка по дням (проверено по opGameTimeAdvance в fallout2-ce).
+procedure skip_time(variable ticks, variable what) begin
+   game_time_advance(ticks);
+   display_msg("F2mod: " + what + ". " + "Теперь день " + (game_time / ONE_GAME_DAY + 1) + ", " + (game_time_hour / 100) + ":" + ((game_time_hour % 100) / 10) + (game_time_hour % 10) + ".");
+end
+
+procedure show_state begin
+   display_msg("F2mod: день " + (game_time / ONE_GAME_DAY + 1) + ", время " + (game_time_hour / 100) + ":" + ((game_time_hour % 100) / 10) + (game_time_hour % 10)
+      + ", крышек " + item_caps_total(dude_obj) + ", караван " + get_sfall_global_int(GV_CARAVAN) + ".");
+end
+
 procedure show_help begin
    display_msg("Ctrl+1..7: СПЕЦИАЛ +1 (С,В,Вн,П,И,Л,У). Ctrl+Shift+1..7: -1.");
    display_msg("Ctrl+K: +10 навыков. Ctrl+N: все навыки 300%. Ctrl+B: вес +100. Ctrl+O: +1 перк. Ctrl+U: +1 уровень.");
-   display_msg("Ctrl+E: открыть Лагерь у скал. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек.");
+   display_msg("Ctrl+E: открыть Лагерь у скал. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек.");
+   display_msg("Alt+1: +1 час. Alt+2: +1 день. Alt+3: +1 неделя. Alt+4: +1 месяц. Alt+0: время и состояние.");
 end

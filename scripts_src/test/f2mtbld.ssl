@@ -1,0 +1,427 @@
+// Строитель песочницы (только с f2mod_test.dat). Ставит любое здание на любой уровень 1-4 без квестов и без
+// ожидания: экран гаснет, и все уже стоит. Отдельно: деревья, мусор, свет (бочки, столбы или пилоны), забор
+// (частокол, сетка, стена Убежища), внешняя сетка, турели и враги по 2 с каждой стороны города.
+// Расстановка: f2mtblay.h (tools/layout/town_emit.py).
+#define SCRIPT_REALNAME "f2mtbld"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MTBLD
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "f2mtblay.h"
+
+procedure start;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure do_action;
+procedure tb_set(variable b, variable lv);
+procedure sys_swap(variable old_s, variable new_s);
+procedure light_sys(variable lv);
+procedure put_enemy(variable pid, variable tile, variable weapon, variable ammo);
+
+procedure Node001;
+procedure Node010;
+procedure Node011;
+procedure Node012;
+procedure Node030;
+procedure Node040;
+procedure Node041;
+procedure Node050;
+procedure Node013;
+procedure Node999;
+procedure Nb0;
+procedure Nb1;
+procedure Nb2;
+procedure Nb3;
+procedure Nb4;
+procedure Nb5;
+procedure Nb6;
+procedure Nb7;
+procedure Nb8;
+procedure Nb9;
+procedure Nb10;
+procedure Nb11;
+procedure Nb12;
+procedure Nb13;
+procedure Nb14;
+procedure Nb15;
+procedure Nall;
+procedure Nl0;
+procedure Nl1;
+procedure Nl2;
+procedure Nl3;
+procedure Nl4;
+procedure Ntree;
+procedure Ntrash;
+procedure Nlight0;
+procedure Nlight1;
+procedure Nlight2;
+procedure Nlight3;
+procedure Nfence0;
+procedure Nfence1;
+procedure Nfence2;
+procedure Nfence3;
+procedure Nouter;
+procedure Nmines;
+procedure Ntur0;
+procedure Ntur1;
+procedure Ntur2;
+procedure Ntur3;
+procedure Ntur4;
+procedure Nenemy;
+procedure Nworld;
+procedure Nhatch;
+
+// Что делать после диалога (экран гаснет, все ставится, экран загорается)
+#define ACT_NONE    (0)
+#define ACT_BLD     (1)     // здание sel на уровень arg (0 = снести)
+#define ACT_ALL     (2)     // все здания на уровень arg
+#define ACT_TREES   (3)
+#define ACT_TRASH   (4)
+#define ACT_LIGHT   (5)     // 0 нет, 1 бочки, 2 фонари
+#define ACT_FENCE   (6)     // 0 нет, 1 частокол, 2 сетка, 3 стена Убежища
+#define ACT_OUTER   (7)
+#define ACT_TUR     (8)     // 0 нет, 1 пулеметные, 2 плазменные, 3 лазерные, 4 вперемешку
+#define ACT_ENEMY   (9)
+#define ACT_WORLD   (10)
+#define ACT_MINES   (12)    // мины CAVTRAP1 в наружной зоне: поставить или убрать
+#define ACT_HATCH   (11)    // люк в подвал дома героя (одна клетка на всех уровнях дома)
+
+// Состояние песочницы в глобальных переменных sfall (сохраняется в игре)
+#define gv_bld(b)       ("f2mtb_" + ((b) / 10) + ((b) % 10))
+#define GV_TB_TREES     "f2mttree"
+#define GV_TB_TRASH     "f2mttrsh"
+#define GV_TB_LIGHT     "f2mtlite"
+#define GV_TB_FENCE     "f2mtfenc"
+#define GV_TB_OUTER     "f2mtoutr"
+#define GV_TB_MINES     "f2mtmine"
+#define GV_TB_TUR       "f2mtturr"
+#define GV_TB_HATCH     "f2mthtch"
+
+// Турели: пулеметная (модель magunn, у нее анимации пулемета L — «Спаренный миниган» 518)
+// и плазменная (модель magun2, анимации пистолета H — «Спаренная плазменная пушка» 498, как в Наварро).
+// Лазерная: та же модель magun2 с лазерным пистолетом (16, тоже анимации H) и запасом малых энергоячеек.
+#define TUR_PID(k)      (16777696 * ((k) == 1) + PID_AUTO_GAT_GUN * ((k) == 2 or (k) == 3))
+#define TUR_WPN(k)      (518 * ((k) == 1) + PID_GUN_TURRET_WEAPON * ((k) == 2) + PID_LASER_PISTOL * ((k) == 3))
+
+variable sel;
+variable tur_i;     // счетчик турелей при обходе кольца: вперемешку тип = 1 + номер % 3
+variable act;
+variable arg;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure talk_p_proc begin
+   act := ACT_NONE;
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+   if (act != ACT_NONE) then call do_action;
+end
+
+// Здание b на уровень lv: старый уровень убираем, новый ставим на те же клетки
+procedure tb_set(variable b, variable lv) begin
+   variable cur;
+   cur := get_sfall_global_int(gv_bld(b));
+   if (cur == lv) then return;
+   if (cur) then begin
+      tb_mode := 0;
+      call tb_bld(b, cur);
+   end
+   if (lv) then begin
+      tb_mode := 1;
+      call tb_bld(b, lv);
+   end
+   set_sfall_global(gv_bld(b), lv);
+end
+
+// Набор объектов: убрать old_s, поставить new_s (-1 = ничего)
+// свет: 1 бочки, 2 столбы, 3 пилоны
+procedure light_sys(variable lv) begin
+   if (lv == 0) then return -1;
+   if (lv == 3) then return TB_SYS_PYLONS;
+   return TB_SYS_BARRELS + lv - 1;
+end
+
+procedure sys_swap(variable old_s, variable new_s) begin
+   if (old_s >= 0) then begin
+      tb_mode := 0;
+      call tb_sys(old_s);
+   end
+   if (new_s >= 0) then begin
+      tb_mode := 1;
+      call tb_sys(new_s);
+   end
+end
+
+procedure tb_t(variable tile, variable kind) begin
+   variable obj, w;
+   if (kind == 4) then begin
+      // вперемешку: пулемет, плазма, лазер по кругу; при уборке тот же порядок дает те же типы
+      kind := 1 + tur_i % 3;
+      tur_i += 1;
+   end
+   if (tb_mode) then begin
+      obj := create_object_sid(TUR_PID(kind), tile, 0, SCRIPT_F2MTUR);
+      critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
+      anim(obj, 1000, 3);
+      w := create_object(TUR_WPN(kind), 0, 0);
+      add_obj_to_inven(obj, w);
+      wield_obj_critter(obj, w);
+      if (kind == 3) then add_mult_objs_to_inven(obj, create_object(PID_SMALL_ENERGY_CELL, 0, 0), 5);
+   end else begin
+      obj := tile_contains_pid_obj(tile, 0, TUR_PID(kind));
+      if (obj) then destroy_object(obj);
+   end
+end
+
+procedure put_enemy(variable pid, variable tile, variable weapon, variable ammo) begin
+   variable obj, item;
+   obj := create_object_sid(pid, tile, 0, SCRIPT_ECRAIDER);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_RND_RAIDERS);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_TOUGH_GUARD);
+   item := create_object(weapon, 0, 0);
+   add_obj_to_inven(obj, item);
+   wield_obj_critter(obj, item);
+   add_mult_objs_to_inven(obj, create_object(ammo, 0, 0), 2);
+end
+
+procedure do_action begin
+   variable b, cur;
+   if (act == ACT_WORLD) then begin
+      world_map;
+      return;
+   end
+   gfade_out(1);
+   if (act == ACT_BLD) then
+      call tb_set(sel, arg);
+   else if (act == ACT_ALL) then begin
+      for (b := 0; b < TB_COUNT; b++) call tb_set(b, arg);
+   end else if (act == ACT_TREES) then begin
+      cur := get_sfall_global_int(GV_TB_TREES);
+      if (cur) then call sys_swap(TB_SYS_TREES, -1); else call sys_swap(-1, TB_SYS_TREES);
+      set_sfall_global(GV_TB_TREES, not cur);
+   end else if (act == ACT_TRASH) then begin
+      cur := get_sfall_global_int(GV_TB_TRASH);
+      if (cur) then call sys_swap(TB_SYS_TRASH, -1); else call sys_swap(-1, TB_SYS_TRASH);
+      set_sfall_global(GV_TB_TRASH, not cur);
+   end else if (act == ACT_LIGHT) then begin
+      cur := get_sfall_global_int(GV_TB_LIGHT);
+      if (cur != arg) then begin
+         call sys_swap(light_sys(cur), light_sys(arg));
+         set_sfall_global(GV_TB_LIGHT, arg);
+      end
+   end else if (act == ACT_FENCE) then begin
+      cur := get_sfall_global_int(GV_TB_FENCE);
+      if (cur != arg) then begin
+         call sys_swap((TB_SYS_PALISADE + cur - 1) if cur else -1, (TB_SYS_PALISADE + arg - 1) if arg else -1);
+         set_sfall_global(GV_TB_FENCE, arg);
+      end
+   end else if (act == ACT_HATCH) then begin
+      cur := get_sfall_global_int(GV_TB_HATCH);
+      if (cur) then call sys_swap(TB_SYS_HATCH, -1); else call sys_swap(-1, TB_SYS_HATCH);
+      set_sfall_global(GV_TB_HATCH, not cur);
+   end else if (act == ACT_MINES) then begin
+      cur := get_sfall_global_int(GV_TB_MINES);
+      if (cur) then call sys_swap(TB_SYS_MINES, -1); else call sys_swap(-1, TB_SYS_MINES);
+      set_sfall_global(GV_TB_MINES, not cur);
+   end else if (act == ACT_OUTER) then begin
+      cur := get_sfall_global_int(GV_TB_OUTER);
+      if (cur) then call sys_swap(TB_SYS_OUTER, -1); else call sys_swap(-1, TB_SYS_OUTER);
+      set_sfall_global(GV_TB_OUTER, not cur);
+   end else if (act == ACT_TUR) then begin
+      cur := get_sfall_global_int(GV_TB_TUR);
+      if (cur != arg) then begin
+         if (cur) then begin
+            tb_mode := 0;
+            tur_i := 0;
+            call tb_turrets(cur);
+         end
+         if (arg) then begin
+            tb_mode := 1;
+            tur_i := 0;
+            call tb_turrets(arg);
+         end
+         set_sfall_global(GV_TB_TUR, arg);
+      end
+   end else if (act == ACT_ENEMY) then begin
+      // по 2 налетчика с каждой стороны, в 8 клетках за линией внешней сетки.
+      // Оружие по модели: налетчик (nmlthr) — винтовки и дробовик, налетчица (nfmaxx) — пистолет-пулемет
+      call put_enemy(PID_RAIDER_MALE, 18 * 200 + 80, PID_HUNTING_RIFLE, PID_223_FMJ);
+      call put_enemy(PID_RAIDER_FEMALE, 18 * 200 + 120, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      call put_enemy(PID_RAIDER_MALE, 181 * 200 + 70, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
+      call put_enemy(PID_RAIDER_FEMALE, 181 * 200 + 130, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      call put_enemy(PID_RAIDER_MALE, 80 * 200 + 18, PID_HUNTING_RIFLE, PID_223_FMJ);
+      call put_enemy(PID_RAIDER_FEMALE, 120 * 200 + 18, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      call put_enemy(PID_RAIDER_MALE, 80 * 200 + 181, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
+      call put_enemy(PID_RAIDER_FEMALE, 120 * 200 + 181, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+   end
+   gfade_in(1);
+   display_msg(mstr(190));
+   act := ACT_NONE;
+end
+
+// ---- диалог
+procedure Node001 begin
+   Reply(110);
+   NOption(111, Node010, 1);
+   NOption(112, Nall, 1);
+   NOption(113, Node030, 1);
+   NOption(114, Node040, 1);
+   NOption(115, Nenemy, 1);
+   NOption(116, Nworld, 1);
+   NOption(117, Node999, 1);
+end
+
+// Здания по 5 на страницу
+procedure Node010 begin
+   Reply(120);
+   NOption(130, Nb0, 1);
+   NOption(131, Nb1, 1);
+   NOption(132, Nb2, 1);
+   NOption(133, Nb3, 1);
+   NOption(134, Nb4, 1);
+   NOption(121, Node011, 1);
+   NOption(122, Node001, 1);
+end
+
+procedure Node011 begin
+   Reply(120);
+   NOption(135, Nb5, 1);
+   NOption(136, Nb6, 1);
+   NOption(137, Nb7, 1);
+   NOption(138, Nb8, 1);
+   NOption(139, Nb9, 1);
+   NOption(121, Node013, 1);
+   NOption(122, Node001, 1);
+end
+
+procedure Node013 begin
+   Reply(120);
+   NOption(140, Nb10, 1);
+   NOption(141, Nb11, 1);
+   NOption(142, Nb12, 1);
+   NOption(143, Nb13, 1);
+   NOption(144, Nb14, 1);
+   NOption(145, Nb15, 1);
+   NOption(123, Node010, 1);
+   NOption(122, Node001, 1);
+end
+
+// Уровень выбранного здания (sel) или всех сразу (sel = -1)
+procedure Node012 begin
+   if (sel >= 0) then
+      Reply(mstr(130 + sel) + mstr(150) + get_sfall_global_int(gv_bld(sel)) + mstr(151));
+   else
+      Reply(152);
+   NOption(153, Nl1, 1);
+   NOption(154, Nl2, 1);
+   NOption(155, Nl3, 1);
+   NOption(156, Nl4, 1);
+   NOption(157, Nl0, 1);
+   NOption(122, Node001, 1);
+end
+
+// Деревья, мусор, свет
+procedure Node030 begin
+   Reply(160);
+   NOption(161, Ntree, 1);
+   NOption(162, Ntrash, 1);
+   NOption(163, Nlight1, 1);
+   NOption(164, Nlight2, 1);
+   NOption(167, Nlight3, 1);
+   NOption(165, Nlight0, 1);
+   NOption(166, Nhatch, 1);
+   NOption(122, Node001, 1);
+end
+
+// Оборона: забор или турели
+procedure Node040 begin
+   Reply(170);
+   NOption(171, Node041, 1);
+   NOption(172, Node050, 1);
+   NOption(186, Nmines, 1);
+   NOption(122, Node001, 1);
+end
+
+procedure Node041 begin
+   Reply(173);
+   NOption(174, Nfence1, 1);
+   NOption(175, Nfence2, 1);
+   NOption(176, Nfence3, 1);
+   NOption(177, Nfence0, 1);
+   NOption(178, Nouter, 1);
+   NOption(122, Node001, 1);
+end
+
+procedure Node050 begin
+   Reply(180);
+   NOption(181, Ntur1, 1);
+   NOption(182, Ntur2, 1);
+   NOption(184, Ntur3, 1);
+   NOption(185, Ntur4, 1);
+   NOption(183, Ntur0, 1);
+   NOption(122, Node001, 1);
+end
+
+procedure Nb0 begin sel := 0; call Node012; end
+procedure Nb1 begin sel := 1; call Node012; end
+procedure Nb2 begin sel := 2; call Node012; end
+procedure Nb3 begin sel := 3; call Node012; end
+procedure Nb4 begin sel := 4; call Node012; end
+procedure Nb5 begin sel := 5; call Node012; end
+procedure Nb6 begin sel := 6; call Node012; end
+procedure Nb7 begin sel := 7; call Node012; end
+procedure Nb8 begin sel := 8; call Node012; end
+procedure Nb9 begin sel := 9; call Node012; end
+procedure Nb10 begin sel := 10; call Node012; end
+procedure Nb11 begin sel := 11; call Node012; end
+procedure Nb12 begin sel := 12; call Node012; end
+procedure Nb13 begin sel := 13; call Node012; end
+procedure Nb14 begin sel := 14; call Node012; end
+procedure Nb15 begin sel := 15; call Node012; end
+procedure Nall begin sel := -1; call Node012; end
+
+procedure Nl0 begin arg := 0; act := ACT_ALL if sel < 0 else ACT_BLD; end
+procedure Nl1 begin arg := 1; act := ACT_ALL if sel < 0 else ACT_BLD; end
+procedure Nl2 begin arg := 2; act := ACT_ALL if sel < 0 else ACT_BLD; end
+procedure Nl3 begin arg := 3; act := ACT_ALL if sel < 0 else ACT_BLD; end
+procedure Nl4 begin arg := 4; act := ACT_ALL if sel < 0 else ACT_BLD; end
+procedure Ntree begin act := ACT_TREES; end
+procedure Ntrash begin act := ACT_TRASH; end
+procedure Nlight0 begin act := ACT_LIGHT; arg := 0; end
+procedure Nlight1 begin act := ACT_LIGHT; arg := 1; end
+procedure Nlight2 begin act := ACT_LIGHT; arg := 2; end
+procedure Nlight3 begin act := ACT_LIGHT; arg := 3; end
+procedure Nfence0 begin act := ACT_FENCE; arg := 0; end
+procedure Nfence1 begin act := ACT_FENCE; arg := 1; end
+procedure Nfence2 begin act := ACT_FENCE; arg := 2; end
+procedure Nfence3 begin act := ACT_FENCE; arg := 3; end
+procedure Nouter begin act := ACT_OUTER; end
+procedure Nmines begin act := ACT_MINES; end
+procedure Ntur0 begin act := ACT_TUR; arg := 0; end
+procedure Ntur1 begin act := ACT_TUR; arg := 1; end
+procedure Ntur2 begin act := ACT_TUR; arg := 2; end
+procedure Ntur3 begin act := ACT_TUR; arg := 3; end
+procedure Ntur4 begin act := ACT_TUR; arg := 4; end
+procedure Nenemy begin act := ACT_ENEMY; end
+procedure Nworld begin act := ACT_WORLD; end
+procedure Nhatch begin act := ACT_HATCH; end
+
+procedure Node999 begin
+end

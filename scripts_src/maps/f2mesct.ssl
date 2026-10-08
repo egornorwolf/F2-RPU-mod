@@ -1,5 +1,6 @@
 // Дорога с караваном «Хорошее место»: три участка (карты 175–177 с этим скриптом), на каждом свое нападение.
 // 1 — налетчики, 2 — большие радскорпионы, 3 — огненные гекконы (охранница, брамин и двое мирных гибнут сразу).
+// Кто погиб на прошлом участке, на следующем не появляется (f2mcdead.h).
 // Число врагов рассчитано на 10-й уровень: +1 за каждые 8 уровней сверх, не больше +2.
 // Враги стоят близко, а охрана нападает сама (f2mcfgt.h), поэтому бой начинается сразу.
 #define SCRIPT_REALNAME "f2mesct"
@@ -21,6 +22,7 @@ procedure map_update_p_proc;
 procedure map_exit_p_proc;
 procedure at(variable dir, variable dist);
 procedure put_enemy(variable pid, variable sid, variable dir, variable dist, variable weapon, variable ammo);
+procedure enemies_left;
 
 variable spawned;
 
@@ -40,8 +42,17 @@ procedure put_enemy(variable pid, variable sid, variable dir, variable dist, var
 end
 
 
+// Живые враги на карте (список в f2mod.h: is_escort_enemy)
+procedure enemies_left begin
+   variable c, n := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (not is_critter_dead(c) and is_escort_enemy(obj_pid(c))) then n += 1;
+   end
+   return n;
+end
+
 procedure map_enter_p_proc begin
-   variable obj, stage, extra;
+   variable stage, extra, killed, killed_before;
    set_map_exit_tiles(0, 0);
    Lighting;
    Check_Create_Car(CAR_HEX, 0)
@@ -49,36 +60,58 @@ procedure map_enter_p_proc begin
    if (spawned or is_loading_game or get_sfall_global_int(GV_CARAVAN) != CARAVAN_ESCORT) then return;
    spawned := 1;
    stage := get_sfall_global_int(GV_ESCORT_STAGE);
+   killed_before := get_sfall_global_int(GV_ESCORT_S3) bwand 8;   // гекконы здесь уже были (повтор после брошенной дороги)
 
-   // Караван
-   obj := cv_put(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, at(1, 4));
-   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
-   call cv_arm(obj, PID_10MM_PISTOL, PID_10MM_JHP);   // в дороге Тед отстреливается сам
-   obj := cv_put(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, at(0, 5));
-   call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
-   if (stage < 3) then begin
-      obj := cv_put(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, at(2, 5));
-      call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
-      call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, at(2, 7));
-   end
-   call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, at(1, 7));
+   // Караван: только те, кто уцелел на прошлых участках
+   call cv_ted(at(1, 4));
+   call cv_guard(CV_SLOT_GUARD, at(0, 5));
    call cv_wagons(at(2, 12));
-   if (stage < 3) then
-      call cv_civilians(at(2, 12), 0, 10, 0);
-   else
-      call cv_civilians(at(2, 12), 0, 10, 2);   // двое мирных погибли первыми
+   if (stage < 3) then begin
+      call cv_guard(CV_SLOT_SARA, at(2, 5));
+      call cv_brahmin(CV_SLOT_BRAHMIN, at(1, 7));
+      call cv_brahmin(CV_SLOT_BRAHMIN + 1, at(2, 7));
+      call cv_civilians(at(2, 12), 0);
+   end else if (get_sfall_global_int(GV_ESCORT_S3) bwand 8) then begin
+      // Повтор гекконов после брошенной дороги: кого они убили в первый раз, тех уже нет,
+      // заново никого не убиваем
+      call cv_guard(CV_SLOT_SARA, at(2, 5));
+      call cv_brahmin(CV_SLOT_BRAHMIN, at(1, 7));
+      call cv_brahmin(CV_SLOT_BRAHMIN + 1, at(2, 7));
+      call cv_civilians(at(2, 12), 0);
+   end else begin
+      // Гекконы напали раньше, чем герой подоспел: Сара, один брамин и двое мирных уже мертвы
+      // (если они дожили до этого участка). Тед потом говорит, кого потеряли.
+      killed := 8;
+      if (not cv_is_dead(CV_SLOT_SARA)) then begin
+         call cv_corpse(CV_SLOT_SARA, at(2, 5));
+         killed := killed bwor 1;
+      end
+      if (not cv_is_dead(CV_SLOT_BRAHMIN)) then begin
+         call cv_corpse(CV_SLOT_BRAHMIN, at(1, 7));
+         killed := killed bwor 2;
+      end else if (not cv_is_dead(CV_SLOT_BRAHMIN + 1)) then begin
+         call cv_corpse(CV_SLOT_BRAHMIN + 1, at(2, 7));
+         killed := killed bwor 2;
+      end
+      call cv_brahmin(CV_SLOT_BRAHMIN + 1, at(2, 7));
+      if (cv_civs_alive > 0) then killed := killed bwor 4;
+      call cv_civilians(at(2, 12), 2);
+      set_sfall_global(GV_ESCORT_S3, killed);
+   end
 
    // Нападение
    extra := (get_pc_stat(PCSTAT_level) - CARAVAN_MIN_LEVEL) / ESCORT_LEVEL_STEP;
    if (extra < 0) then extra := 0;
    if (extra > ESCORT_EXTRA_MAX) then extra := ESCORT_EXTRA_MAX;
    if (stage == 1) then begin
-      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 5, 9, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
+      // Оружие по модели: у налетчика (nmlthr) есть анимации пистолета и винтовки, но нет пистолета-пулемета;
+      // у налетчицы (nfmaxx) есть пистолет-пулемет, но нет винтовки и дробовика
+      call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 5, 9, PID_HUNTING_RIFLE, PID_223_FMJ);
       call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 0, 10, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
       call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 5, 11, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
       call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 0, 9, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
-      if (extra > 0) then call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 4, 10, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
-      if (extra > 1) then call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 1, 10, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
+      if (extra > 0) then call put_enemy(PID_RAIDER_MALE, SCRIPT_ECRAIDER, 4, 10, PID_10MM_PISTOL, PID_10MM_JHP);
+      if (extra > 1) then call put_enemy(PID_RAIDER_FEMALE, SCRIPT_ECRAIDER, 1, 10, PID_GREASE_GUN, PID_45_CALIBER_AMMO);
       display_msg(mstr(100));
    end else if (stage == 2) then begin
       call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 5, 9, 0, 0);
@@ -90,21 +123,16 @@ procedure map_enter_p_proc begin
       if (extra > 1) then call put_enemy(PID_LARGE_RADSCORPION, SCRIPT_ECSCORP, 4, 12, 0, 0);
       display_msg(mstr(101));
    end else begin
-      // Гекконы уже успели убить охранницу и брамина. Ее вещи остаются при ней.
-      obj := cv_put(PID_GUN_GUARD_FEMALE, -1, at(2, 5));
-      add_obj_to_inven(obj, create_object(PID_HUNTING_RIFLE, 0, 0));
-      add_mult_objs_to_inven(obj, create_object(PID_223_FMJ, 0, 0), 2);
-      add_mult_objs_to_inven(obj, create_object(PID_STIMPAK, 0, 0), 2);
-      item_caps_adjust(obj, random(20, 50));
-      kill_critter(obj, ANIM_fall_back_blood_sf);
-      obj := cv_put(PID_BRAHMIN, -1, at(2, 7));
-      kill_critter(obj, ANIM_fall_back_blood_sf);
       call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 5, 8, PID_FLAME_BREATH, 0);
       call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 0, 9, PID_FLAME_BREATH, 0);
       call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 4, 9, PID_FLAME_BREATH, 0);
       if (extra > 0) then call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 1, 9, PID_FLAME_BREATH, 0);
       if (extra > 1) then call put_enemy(PID_FIRE_GECKO, SCRIPT_ECGECKO, 5, 10, PID_FLAME_BREATH, 0);
-      display_msg(mstr(102));
+      // Погибшие до прихода героя есть только при первом заходе на этот участок
+      if (((get_sfall_global_int(GV_ESCORT_S3) bwand 7) != 0) and not killed_before) then
+         display_msg(mstr(102));
+      else
+         display_msg(mstr(104));
    end
 end
 
@@ -113,16 +141,23 @@ procedure map_update_p_proc begin
 end
 
 procedure map_exit_p_proc begin
+   variable stage;
    if (not car_out_of_fuel) then begin
       if (tile_contains_pid_obj(global_var(GVAR_CAR_PLACED_TILE), 0, PID_DRIVABLE_CAR) != 0) then begin
          set_global_var(GVAR_CAR_PLACED_TILE, 0);
          car_give_to_party;
       end
    end
-   // Герой ушел с карты сам, не дойдя до конца: караван брошен
+   // Герой ушел с карты сам, не дойдя до конца: караван брошен.
+   // В следующий раз дорога продолжится с несделанного нападения: враги здесь перебиты —
+   // со следующего, иначе с этого же. После гекконов (последнее) — снова гекконы.
    if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT and not get_sfall_global_int(GV_ESCORT_MOVING)) then begin
+      stage := get_sfall_global_int(GV_ESCORT_STAGE);
+      if (stage < ESCORT_STAGES and enemies_left == 0) then stage += 1;
+      set_sfall_global(GV_ESCORT_RESUME, stage);
       set_sfall_global(GV_CARAVAN, CARAVAN_NONE);
       set_sfall_global(GV_CARAVAN_REFUSED, get_sfall_global_int(GV_CARAVAN_REFUSED) + 1);
+      set_sfall_global(GV_CARAVAN_LAST, CARAVAN_LAST_ABANDONED);
       display_msg(mstr(103));
    end
 end

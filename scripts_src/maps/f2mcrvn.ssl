@@ -36,17 +36,17 @@ procedure map_enter_p_proc begin
    if (not is_loading_game and get_sfall_global_int(GV_CARAVAN) == CARAVAN_NONE
        and not tile_contains_pid_obj(tile_num_in_direction(START_HEX, 1, 7), 0, PID_AVERAGE_MERCHANT_MALE)) then begin
       set_sfall_global(GV_CARAVAN_HOSTILE, 0);
-      obj := cv_put(PID_AVERAGE_MERCHANT_MALE, SCRIPT_F2MCMST, at(1, 7));
-      critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_STORE_OWNER);
+      // Караван приходит целым, кроме случая, когда герой бросил его на дороге:
+      // тогда погибшие в пути так и остаются погибшими, а дорога продолжится с того же места
+      if (not get_sfall_global_int(GV_ESCORT_RESUME)) then set_sfall_global(GV_CARAVAN_DEAD, 0);
+      obj := cv_ted(at(1, 7));
       item_caps_adjust(obj, random(50, 150));
-      obj := cv_put(PID_GUN_GUARD_MALE, SCRIPT_F2MCGRD, at(0, 8));
-      call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
-      obj := cv_put(PID_GUN_GUARD_FEMALE, SCRIPT_F2MCGRD, at(2, 8));
-      call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
-      call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, at(1, 10));
-      call cv_put(PID_BRAHMIN, SCRIPT_ECBRAHMN, at(2, 11));
+      call cv_guard(CV_SLOT_GUARD, at(0, 8));
+      call cv_guard(CV_SLOT_SARA, at(2, 8));
+      call cv_brahmin(CV_SLOT_BRAHMIN, at(1, 10));
+      call cv_brahmin(CV_SLOT_BRAHMIN + 1, at(2, 11));
       call cv_wagons(at(1, 14));
-      call cv_civilians(at(1, 14), 0, 10, 0);
+      call cv_civilians(at(1, 14), 0);
       #ifdef F2MOD_DEBUG
       display_msg("F2mod (отладка): караван поставлен, герой на клетке " + dude_tile + ", уровень " + dude_elevation + ".");
       #endif
