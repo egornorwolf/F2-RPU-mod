@@ -2,7 +2,7 @@
 // Ctrl+1..7 — СПЕЦИАЛ +1, Ctrl+Shift+1..7 — СПЕЦИАЛ -1,
 // Ctrl+K — +10 очков навыков, Ctrl+N — все навыки 300%, Ctrl+B — переносимый вес +100,
 // Ctrl+E — открыть «Лагерь у скал» на карте мира, Ctrl+T — открыть песочницу стройки, Ctrl+R — сбросить встречу с караваном, Ctrl+O — +1 перк, Ctrl+U — +1 уровень,
-// Ctrl+J — открыть карьер (логово, 1.4), Ctrl+F — фермер и крысы на огородах (2.2), Ctrl+P — пропавший брамин (2.3), Ctrl+H — лечение, Ctrl+I — сундук с броней, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
+// Ctrl+J — открыть карьер (логово, 1.4), Ctrl+F — фермер и крысы на огородах (2.2), Ctrl+P — пропавший брамин (2.3), Ctrl+V — стая тварей у забора (2.17), Ctrl+C — ночной вор (2.6), Ctrl+H — лечение, Ctrl+I — сундук с броней, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
 // Alt+1 — +1 час, Alt+2 — +1 день, Alt+3 — +1 неделя, Alt+4 — +1 месяц игрового времени, Alt+0 — показать время и состояние (Егор, 2026-10-06: хоткеи для проверки поселения, docs/test-mode.md).
 #include "sfall.h"
 #include "dik.h"
@@ -20,6 +20,10 @@
 #include "f2mset.h"
 #include "f2msam.h"
 #include "f2mfarm.h"
+#include "f2mwild.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+#include "f2mthief.h"
 
 procedure start;
 procedure keypress_handler;
@@ -72,7 +76,7 @@ procedure keypress_handler begin
    if (key != DIK_1 and key != DIK_2 and key != DIK_3 and key != DIK_4 and key != DIK_5
        and key != DIK_6 and key != DIK_7 and key != DIK_K and key != DIK_N and key != DIK_B and key != DIK_E and key != DIK_R and key != DIK_O and key != DIK_U
        and key != DIK_H and key != DIK_I and key != DIK_M and key != DIK_G and key != DIK_T and key != DIK_J
-       and key != DIK_F and key != DIK_P) then return;
+       and key != DIK_F and key != DIK_P and key != DIK_V and key != DIK_C) then return;
    // Глушим букву, чтобы игра не открыла инвентарь или настройки
    set_sfall_return(DIK_UNLABELED);
    if (not pressed) then return;
@@ -156,6 +160,21 @@ procedure keypress_handler begin
       set_sfall_global(GV_BRAH_WEEK, set_weeks_now + 1);
       set_sfall_global(GV_BRAH, 1);
       display_msg("F2mod: у загона пропал брамин, поговори со старшим фермером.");
+   end else if (key == DIK_V) then begin
+      // TEST: стая тварей у южных ворот прямо сейчас (квест 2.17)
+      if (get_sfall_global_int(GV_WILD) == 1) then display_msg("F2mod: стая уже у забора.");
+      else begin
+         set_sfall_global(GV_WILD_WEEK, set_weeks_now + 1);
+         call wild_spawn;
+      end
+   end else if (key == DIK_C) then begin
+      // TEST: ночной вор у хижин прямо сейчас (квест 2.6)
+      if (thief_done) then display_msg("F2mod: с вором уже разобрались.");
+      else begin
+         set_sfall_global(GV_THIEF, THIEF_STEALS);
+         call thief_put;
+         display_msg("F2mod: ночной вор ходит у хижин.");
+      end
    end else if (key == DIK_T) then begin
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_TOWN, MARK_STATE_KNOWN);
       display_msg("F2mod: на карте мира открыта Песочница стройки (рядом со Скалистым приютом).");
@@ -230,6 +249,6 @@ end
 procedure show_help begin
    display_msg("Ctrl+1..7: СПЕЦИАЛ +1 (С,В,Вн,П,И,Л,У). Ctrl+Shift+1..7: -1.");
    display_msg("Ctrl+K: +10 навыков. Ctrl+N: все навыки 300%. Ctrl+B: вес +100. Ctrl+O: +1 перк. Ctrl+U: +1 уровень.");
-   display_msg("Ctrl+E: открыть Скалистый приют. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек. Ctrl+J: открыть карьер. Ctrl+F: фермер и крысы на огородах. Ctrl+P: пропавший брамин.");
+   display_msg("Ctrl+E: открыть Скалистый приют. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек. Ctrl+J: открыть карьер. Ctrl+F: фермер и крысы на огородах. Ctrl+P: пропавший брамин. Ctrl+V: стая у забора. Ctrl+C: ночной вор.");
    display_msg("Alt+1: +1 час. Alt+2: +1 день. Alt+3: +1 неделя. Alt+4: +1 месяц. Alt+0: время и состояние.");
 end

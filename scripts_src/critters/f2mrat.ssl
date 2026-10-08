@@ -1,4 +1,4 @@
-// Крысы на огородах (квест 2.2) и нора под забором, через которую они лезут.
+// Крысы на огородах (квест 2.2), нора под забором и стая тварей у ворот (квест 2.17).
 // Крыса: ночью идет на героя и на жителей. Нора: взрывчатка (динамит, граната, коктейль Молотова)
 // закрывает вопрос без боя — крысы уходят, урожай почти цел.
 #define SCRIPT_REALNAME "f2mrat"
@@ -17,6 +17,7 @@
 #include "f2mset.h"
 #include "f2msam.h"
 #include "f2mfarm.h"
+#include "f2mwild.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -34,6 +35,7 @@ end
 procedure look_at_p_proc begin
    script_overrides;
    if (is_hole) then display_msg(mstr(100));
+   else if (wild_is(self_obj)) then display_msg(mstr(104));
    else display_msg(mstr(101));
 end
 
@@ -73,8 +75,10 @@ procedure critter_p_proc begin
    if (self_can_see_dude and tile_distance_objs(self_obj, dude_obj) <= 10) then attack(dude_obj);
 end
 
-// Последняя крыса пала: огород отбит
+// Последняя тварь пала: огород отбит (2.2) или стая у забора перебита (2.17)
 procedure destroy_p_proc begin
    if (is_hole) then return;
-   if (rats_alive <= 1) then call rats_win(RATS_XP);
+   if (wild_is(self_obj)) then begin
+      if (wild_alive <= 1) then call wild_win;
+   end else if (rats_alive <= 1) then call rats_win(RATS_XP);
 end

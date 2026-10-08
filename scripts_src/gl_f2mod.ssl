@@ -30,8 +30,11 @@
 #include "f2mlair.h"
 #include "f2mlairl.h"
 #include "f2mfarm.h"
+#include "f2mwild.h"
+#include "f2mspots.h"
+#include "f2mthief.h"
 
-#define F2MOD_VERSION "0.9.0"
+#define F2MOD_VERSION "0.9.2"
 
 procedure start;
 procedure encounter_handler;
@@ -66,6 +69,8 @@ procedure start begin
       call lair_tick;
       call lair_cellar_look;
       call farm_tick;
+      call wild_tick;
+      call thief_tick;
    end
 end
 

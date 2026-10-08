@@ -45,7 +45,8 @@
 #define SCRIPT_F2MGARR      (1579)  // боец гарнизона базы
 #define SCRIPT_F2MCELL      (1580)  // карта погреба под логовом (1.4)
 #define SCRIPT_F2MFARM      (1581)  // старший фермер Дэйв Хольц (2.2, 2.3)
-#define SCRIPT_F2MRAT       (1582)  // крысы на огородах и нора под забором (2.2)
+#define SCRIPT_F2MRAT       (1582)  // крысы на огородах, нора и стая тварей у забора (2.2, 2.17)
+#define SCRIPT_F2MTHIEF     (1583)  // ночной вор Томми Ларк (2.6)
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU

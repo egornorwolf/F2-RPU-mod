@@ -1,0 +1,149 @@
+// Ночной вор Томми Ларк (квест 2.6, docs/npc-cards.md): ходит ночью между хижинами, когда жилье доросло
+// до 2-го уровня. Замечает героя сам, если тот не крадется, и уходит в темноту. Пойманный говорит.
+// Решение героя: убить, прогнать или оставить работать (Красноречие 50) — тогда он возвращает украденное.
+#define SCRIPT_REALNAME "f2mthief"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MTHIEF
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mtlay.h"
+#include "f2mbld.h"
+#include "f2mspots.h"
+#include "f2mlvl.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+#include "f2mhome.h"
+#include "f2mthief.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure damage_p_proc;
+procedure destroy_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure thief_give;
+procedure Node001;
+procedure Node010;
+procedure Node020;
+procedure Node030;
+procedure Node999;
+
+// LVAR 0: 1 = герой уже подошел вплотную (вор пойман и говорит)
+#define LVAR_CAUGHT     (0)
+
+variable fight;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+// Герой крадется с навыком 50 — вор не замечает его до последнего. Иначе замечает за несколько клеток
+// и уходит в темноту (с Восприятием 7 герой успевает его разглядеть и узнать, кто это).
+procedure critter_p_proc begin
+   variable d;
+   if (combat_is_initialized or local_var(LVAR_CAUGHT)) then return;
+   d := tile_distance_objs(self_obj, dude_obj);
+   if (d > 8) then return;
+   if (get_critter_stat(dude_obj, STAT_pe) >= THIEF_PE and not get_sfall_global_int(GV_THIEF_SEEN)) then begin
+      set_sfall_global(GV_THIEF_SEEN, 1);
+      display_msg(mstr(201));
+   end
+   if (dude_is_sneaking and has_skill(dude_obj, SKILL_SNEAK) >= THIEF_SNEAK) then return;
+   if (d <= 2) then return;
+   if (d <= 5 and obj_can_see_obj(self_obj, dude_obj)) then begin
+      floater(102);
+      call thief_clear;
+   end
+end
+
+procedure damage_p_proc begin
+   if (is_dude_side(source_obj)) then floater(103);
+end
+
+procedure destroy_p_proc begin
+   set_sfall_global(GV_THIEF, THIEF_DEAD);
+   display_msg(mstr(202));
+end
+
+procedure talk_p_proc begin
+   set_local_var(LVAR_CAUGHT, 1);
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+   if (fight) then begin
+      fight := 0;
+      attack(dude_obj);
+   end
+end
+
+// Украденное возвращается герою
+procedure thief_give begin
+   variable it;
+   it := obj_carrying_pid_obj(self_obj, PID_GOLD_LOCKET);
+   if (it) then begin
+      rm_obj_from_inven(self_obj, it);
+      add_obj_to_inven(dude_obj, it);
+   end
+   item_caps_adjust(dude_obj, THIEF_CAPS);
+   give_exp_points(THIEF_XP);
+end
+
+procedure Node001 begin
+   Reply(110);
+   NOption(111, Node010, 4);                                                    // прогнать
+   if (has_skill(dude_obj, SKILL_SPEECH) >= THIEF_SPEECH) then NOption(112, Node020, 4);   // оставить работать
+   NOption(113, Node030, 4);                                                    // убить
+   NLowOption(114, Node010);
+end
+
+// Прогнать из поселения
+procedure Node010 begin
+   call thief_give;
+   set_sfall_global(GV_THIEF, THIEF_GONE);
+   Reply(120);
+   NOption(123, Node999, 4);
+end
+
+// Оставить работать: отрабатывает и возвращает все
+procedure Node020 begin
+   call thief_give;
+   set_sfall_global(GV_THIEF, THIEF_WORKS);
+   set_sfall_global(GV_SET_CASH, get_sfall_global_int(GV_SET_CASH) + THIEF_CAPS);
+   Reply(121);
+   NOption(123, Node999, 4);
+end
+
+// Убить
+procedure Node030 begin
+   Reply(122);
+   NOption(123, Node999, 4);
+   set_sfall_global(GV_THIEF, THIEF_HERE);
+   set_object_data(self_obj, OBJ_DATA_WHO_HIT_ME, dude_obj);
+   fight := 1;
+end
+
+procedure Node999 begin
+   if (get_sfall_global_int(GV_THIEF) == THIEF_GONE or get_sfall_global_int(GV_THIEF) == THIEF_WORKS) then begin
+      if (get_sfall_global_int(GV_THIEF) == THIEF_GONE) then display_msg(mstr(203));
+      else display_msg(mstr(204));
+      destroy_object(self_obj);
+   end
+end
