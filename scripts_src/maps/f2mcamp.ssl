@@ -12,6 +12,7 @@
 #include "f2mcv.h"
 #include "f2mcamp.h"
 #include "f2mlay.h"
+#include "f2mset.h"
 
 // Где ставить машину (та же точка, что в desert1, с которой взят пол карты)
 #define CAR_HEX   (19096)
@@ -21,6 +22,8 @@ procedure map_enter_p_proc;
 procedure map_update_p_proc;
 procedure map_exit_p_proc;
 procedure camp_layout;
+procedure camp_sync_people;
+procedure camp_sync_pid(variable pid);
 
 #define START_HEX   (20100)
 variable spawned;
@@ -38,6 +41,8 @@ procedure map_enter_p_proc begin
       old := tile_contains_pid_obj(LAY_OLDWELL, 0, PID_WELL_OLD);
       if (old) then destroy_object(old);
    end
+   // Ушедшие из лагеря исчезают, вернувшиеся снова у костра (f2mset.h, недельный тик)
+   if (not is_loading_game and get_sfall_global_int(GV_CAMP_CARAVAN)) then call camp_sync_people;
    // Карта сохраняется, поэтому все ставим один раз, при первом входе после координат
    if (spawned or is_loading_game or get_sfall_global_int(GV_CARAVAN) != CARAVAN_DONE) then return;
    spawned := 1;
@@ -69,6 +74,43 @@ procedure camp_layout begin
    end
    who := cv_put(PID_DOCK_WORKER, SCRIPT_F2MCFRM, LAY_FOREMAN);
    call cv_arm(who, PID_CROWBAR, 0);
+end
+
+// Сколько людей такого вида должно быть в лагере (живы и не ушли) и сколько стоит на карте.
+// Лишних убираем, недостающих ставим у костра. Переселенцы одного вида взаимозаменяемы.
+procedure camp_sync_pid(variable pid) begin
+   variable i := CV_SLOT_SARA, want := 0, c, n := 0, obj;
+   while (i < CV_SLOTS) do begin
+      if (i != CV_SLOT_BRAHMIN and i != CV_SLOT_BRAHMIN + 1 and cv_slot_pid(i) == pid and set_here(i)) then want += 1;
+      i += 1;
+   end
+   set_sfall_global(GV_SET_LEAVING, 1);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (obj_pid(c) == pid and not is_critter_dead(c)) then begin
+         n += 1;
+         if (n > want) then destroy_object(c);
+      end
+   end
+   set_sfall_global(GV_SET_LEAVING, 0);
+   while (n < want) do begin
+      if (pid == PID_GUN_GUARD_FEMALE) then
+         call cv_guard(CV_SLOT_SARA, tile_num_in_direction(LAY_CHIEF, 2, 3));
+      else begin
+         obj := cv_put(pid, SCRIPT_F2MCCIV, tile_num_in_direction(LAY_FIRE, random(0, 5), random(2, 4)));
+         critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_ADDICT_WIMPY);
+      end
+      n += 1;
+   end
+end
+
+procedure camp_sync_people begin
+   call camp_sync_pid(PID_GUN_GUARD_FEMALE);
+   call camp_sync_pid(PID_WEAK_PEASANT_MALE);
+   call camp_sync_pid(PID_AVERAGE_PEASANT_MALE);
+   call camp_sync_pid(PID_WEAK_PEASANT_FEMALE);
+   call camp_sync_pid(PID_AVERAGE_PEASANT_FEMALE);
+   call camp_sync_pid(PID_CHILD_MALE);
+   call camp_sync_pid(PID_CHILD_FEMALE);
 end
 
 procedure map_update_p_proc begin

@@ -3,6 +3,7 @@
 // где место: за 500 крышек или бесплатно (Красноречие 75% или Привлекательность 7).
 // После третьего нападения караван с героем сразу приходит в лагерь у скал (карта лагеря).
 // В лагере у скал Тед — староста: рассказывает про воду (квест «Вода»), дела лагеря и кто за что отвечает.
+// М4: отчет по лагерю (еда, вода, касса, дух), вклад в кассу, брошенный лагерь и возврат людей (1.7).
 #define SCRIPT_REALNAME "f2mcmst"
 #include "define.h"
 #include "f2mod.h"
@@ -13,6 +14,7 @@
 #include "f2mcfgt.h"
 #include "f2mcdead.h"
 #include "f2mcamp.h"
+#include "f2mset.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -44,6 +46,19 @@ procedure Node020;
 procedure Node021;
 procedure Node022;
 procedure Node023;
+procedure Node024;
+procedure Node025;
+procedure Node026;
+procedure Node027;
+procedure Node028;
+procedure Node030;
+procedure Node031;
+procedure Node032;
+procedure Node033;
+procedure Node034;
+procedure Node035;
+procedure pay_return(variable price, variable caravan);
+procedure morale_text;
 procedure Node999;
 procedure camp_people;
 procedure give_coords;
@@ -349,44 +364,187 @@ end
 
 // Лагерь у скал: Тед — староста
 procedure Node020 begin
+   variable news;
+   if (get_sfall_global_int(GV_SET_ABANDON) == ABANDON_YES) then begin
+      call Node030;
+      return;
+   end
+   news := get_sfall_global_int(GV_SET_NEWS);
+   set_sfall_global(GV_SET_NEWS, 0);
    if (get_sfall_global_int(GV_QUEST_WATER) == 0 and not camp_has_water) then begin
       set_sfall_global(GV_QUEST_WATER, 1);
       Reply(220);
-   end else
+   end else if (get_sfall_global_int(GV_SET_ABANDON) == ABANDON_RETURN) then
+      Reply(330);
+   else if (news == 1) then
+      Reply(262);
+   else if (news == 2) then
+      Reply(263);
+   else
       Reply(221);
    NOption(222, Node021, 4);
    NOption(223, Node022, 4);
    NOption(224, Node023, 4);
+   NOption(264, Node024, 4);
    NOption(225, Node999, 4);
    NLowOption(226, Node022);
    NLowOption(132, Node999);
 end
 
-// Сколько народу в лагере: Тед, Хэнк, живые охранники и переселенцы
+// Сколько народу в лагере: Тед, Хэнк, охрана и переселенцы, кто жив и не ушел
 procedure camp_people begin
-   return 2 + (not cv_is_dead(CV_SLOT_GUARD)) + (not cv_is_dead(CV_SLOT_SARA)) + cv_civs_alive;
+   return set_people;
 end
 
+// Пара слов о духе людей (growth.md 13)
+procedure morale_text begin
+   variable m;
+   m := get_sfall_global_int(GV_SET_MORALE);
+   if (get_sfall_global_int(GV_SET_WSHORT) > 0) then return mstr(276);
+   if (get_sfall_global_int(GV_SET_FSHORT) > 0) then return mstr(277);
+   if (m <= -20) then return mstr(278);
+   if (m < 0) then return mstr(279);
+   return mstr(280);
+end
+
+// Отчет старосты: числа прямо в реплике (окно сообщений во время диалога не видно)
 procedure Node021 begin
-   // Числа вставляем прямо в реплику: окно сообщений во время диалога не видно
+   variable t;
    if (camp_has_water) then
-      Reply(mstr(230) + " " + mstr(232) + camp_people + mstr(233));
+      t := mstr(230);
    else
-      Reply(mstr(231) + " " + mstr(232) + camp_people + mstr(233));
+      t := mstr(231);
+   t := t + " " + mstr(232) + camp_people + mstr(233)
+      + " " + mstr(270) + (get_sfall_global_int(GV_SET_WEEK) + 1) + "."
+      + " " + mstr(271) + get_sfall_global_int(GV_SET_FOOD) + mstr(272) + set_food_prod + "."
+      + " " + mstr(273) + get_sfall_global_int(GV_SET_WATER) + mstr(274) + (set_wells * SET_WELL_WATER) + "."
+      + " " + mstr(275) + get_sfall_global_int(GV_SET_CASH) + "."
+      + " " + mstr(281) + get_sfall_global_int(GV_SET_MORALE) + "%. " + morale_text;
+   Reply(t);
    NOption(227, Node020, 4);
    NLowOption(132, Node999);
 end
 
 procedure Node022 begin
-   variable left;
-   left := CAMP_WATER_DAYS - camp_days;
+   variable left, n;
+   n := camp_people;
+   left := 0;
+   if (n > 0) then left := get_sfall_global_int(GV_SET_WATER) * 7 / n;
    if (camp_has_water) then
       Reply(240);
-   else if (left > 0) then begin
-      Reply(mstr(243) + left + mstr(244) + " " + mstr(241));
-   end else
-      Reply(242);
+   else if (left > 0) then
+      Reply(mstr(243) + left + mstr(244) + " " + mstr(241) + " " + mstr(245));
+   else
+      Reply(mstr(242) + " " + mstr(245));
    NOption(227, Node020, 4);
+   NLowOption(132, Node999);
+end
+
+// Вклад в кассу (economy.md 1): берет только сам герой, Тед кассу не отдает
+procedure Node024 begin
+   Reply(mstr(265) + get_sfall_global_int(GV_SET_CASH) + mstr(266));
+   if (dude_caps >= 100) then NOption(267, Node025, 4);
+   if (dude_caps >= 500) then NOption(268, Node026, 4);
+   if (dude_caps >= 1000) then NOption(269, Node027, 4);
+   NOption(227, Node020, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node028 begin
+   Reply(mstr(282) + get_sfall_global_int(GV_SET_CASH) + mstr(283));
+   NOption(227, Node020, 4);
+   NOption(225, Node999, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node025 begin
+   item_caps_adjust(dude_obj, -100);
+   set_sfall_global(GV_SET_CASH, get_sfall_global_int(GV_SET_CASH) + 100);
+   call Node028;
+end
+
+procedure Node026 begin
+   item_caps_adjust(dude_obj, -500);
+   set_sfall_global(GV_SET_CASH, get_sfall_global_int(GV_SET_CASH) + 500);
+   call Node028;
+end
+
+procedure Node027 begin
+   item_caps_adjust(dude_obj, -1000);
+   set_sfall_global(GV_SET_CASH, get_sfall_global_int(GV_SET_CASH) + 1000);
+   call Node028;
+end
+
+// 1.7: лагерь брошен, остались Тед, Хэнк и один охранник
+procedure Node030 begin
+   if (get_sfall_global_int(GV_SET_NEWS)) then begin
+      set_sfall_global(GV_SET_NEWS, 0);
+      Reply(300);
+   end else
+      Reply(301);
+   NOption(302, Node031, 4);
+   if (not get_sfall_global_int(GV_SET_HALF)) then NOption(303, Node032, 4);
+   NOption(304, Node033, 4);
+   NOption(225, Node999, 4);
+   NLowOption(305, Node031);
+   NLowOption(132, Node999);
+end
+
+// Колодец и тысяча (или полцены после уговора)
+procedure Node031 begin
+   variable price;
+   price := RETURN_PRICE;
+   if (get_sfall_global_int(GV_SET_HALF)) then price := RETURN_PRICE_CH;
+   if (not camp_has_water) then begin
+      Reply(310);
+   end else begin
+      Reply(mstr(311) + price + mstr(312));
+      if (dude_caps >= price) then NOption(mstr(313) + price + mstr(314), Node034, 4);
+   end
+   NOption(227, Node030, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node032 begin
+   if (has_skill(dude_obj, SKILL_SPEECH) >= RETURN_SPEECH) then begin
+      set_sfall_global(GV_SET_HALF, 1);
+      Reply(320);
+   end else
+      Reply(321);
+   NOption(227, Node030, 4);
+   NLowOption(132, Node999);
+end
+
+// Караван привозит людей без колодца: придут, но пить нечего
+procedure Node033 begin
+   Reply(mstr(322) + RETURN_CARAVAN + mstr(323));
+   if (dude_caps >= RETURN_CARAVAN) then NOption(mstr(313) + RETURN_CARAVAN + mstr(314), Node035, 4);
+   NOption(227, Node030, 4);
+   NLowOption(132, Node999);
+end
+
+procedure pay_return(variable price, variable caravan) begin
+   item_caps_adjust(dude_obj, -price);
+   set_sfall_global(GV_SET_ABANDON, ABANDON_RETURN);
+   set_sfall_global(GV_SET_RETURN, set_weeks_now + RETURN_WEEKS);
+   set_sfall_global(GV_SET_HALF, 0);
+   if (caravan and not camp_has_water) then set_sfall_global(GV_SET_NOLEAVE, 1);
+end
+
+procedure Node034 begin
+   variable price;
+   price := RETURN_PRICE;
+   if (get_sfall_global_int(GV_SET_HALF)) then price := RETURN_PRICE_CH;
+   call pay_return(price, 0);
+   Reply(324);
+   NOption(225, Node999, 4);
+   NLowOption(132, Node999);
+end
+
+procedure Node035 begin
+   call pay_return(RETURN_CARAVAN, 1);
+   Reply(325);
+   NOption(225, Node999, 4);
    NLowOption(132, Node999);
 end
 

@@ -5,6 +5,7 @@
        отмечает случайные (не прицельные) попадания героя и спутников по каравану;
        на дороге с караваном держит героя на карте мира у места встречи (движок после
        load_map на карту без города переносит героя в Арройо).
+   М4: недельный тик поселения (f2mset.h): еда, вода, касса, дух, уход и возврат жителей.
 */
 
 #include "sfall.h"
@@ -13,8 +14,11 @@
 #include "define.h"
 #include "command.h"
 #include "f2mod.h"
+#include "f2mcdead.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
 
-#define F2MOD_VERSION "0.3.32"
+#define F2MOD_VERSION "0.4.0"
 
 procedure start;
 procedure encounter_handler;
@@ -31,8 +35,10 @@ procedure start begin
       register_hook_proc(HOOK_COMBATDAMAGE, combatdamage_handler);
       set_global_script_repeat(60);
       display_msg("Мод поселения F2mod " + F2MOD_VERSION + " загружен.");
-   end else
+   end else begin
       call keep_escort_wm_pos;
+      call set_tick_all;
+   end
 end
 
 procedure step_toward(variable a, variable b, variable s) begin

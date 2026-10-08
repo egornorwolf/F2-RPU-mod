@@ -10,6 +10,9 @@
 #include "define.h"
 #include "command.h"
 #include "f2mod.h"
+#include "f2mcdead.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
 
 procedure start;
 procedure keypress_handler;
@@ -175,6 +178,12 @@ end
 procedure show_state begin
    display_msg("F2mod: день " + (game_time / ONE_GAME_DAY + 1) + ", время " + (game_time_hour / 100) + ":" + ((game_time_hour % 100) / 10) + (game_time_hour % 10)
       + ", крышек " + item_caps_total(dude_obj) + ", караван " + get_sfall_global_int(GV_CARAVAN) + ".");
+   if (not set_founded) then return;
+   display_msg("Лагерь: неделя " + get_sfall_global_int(GV_SET_WEEK) + " (идет " + (set_weeks_now + 1) + "-я), людей " + set_people
+      + ", еда " + get_sfall_global_int(GV_SET_FOOD) + " (+" + set_food_prod + "), вода " + get_sfall_global_int(GV_SET_WATER)
+      + " (+" + (set_wells * SET_WELL_WATER) + "), касса " + get_sfall_global_int(GV_SET_CASH) + ", дух " + get_sfall_global_int(GV_SET_MORALE)
+      + "%, без еды " + get_sfall_global_int(GV_SET_FSHORT) + " нед., без воды " + get_sfall_global_int(GV_SET_WSHORT)
+      + " нед., брошен " + get_sfall_global_int(GV_SET_ABANDON) + ".");
 end
 
 procedure show_help begin

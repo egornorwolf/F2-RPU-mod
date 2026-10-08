@@ -11,6 +11,11 @@
 #define CV_SLOT_CIV         (4)     // 4..13
 #define CV_SLOTS            (14)
 
+// Лагерь у скал (f2mset.h): кто ушел из лагеря (биты тех же мест) и флаг «карта убирает ушедших»:
+// пока он стоит, destroy_p_proc не считает исчезновение смертью
+#define GV_SET_GONE         "f2msgone"
+#define GV_SET_LEAVING      "f2msldst"
+
 procedure cv_bit(variable i);
 procedure cv_slot_pid(variable i);
 procedure cv_is_dead(variable i);
@@ -50,13 +55,17 @@ procedure cv_set_dead(variable i) begin
    set_sfall_global(GV_CARAVAN_DEAD, get_sfall_global_int(GV_CARAVAN_DEAD) bwor cv_bit(i));
 end
 
-// Погиб кто-то из каравана на дороге: отмечаем первое живое место с таким же видом
-// (одинаковые переселенцы взаимозаменяемы, важно только сколько их осталось)
+// Погиб кто-то из каравана на дороге или в лагере: отмечаем первое живое место с таким же видом
+// (одинаковые переселенцы взаимозаменяемы, важно только сколько их осталось).
+// В лагере — только среди тех, кто не ушел.
 procedure cv_mark_dead(variable pid) begin
-   variable i := 0;
-   if (not is_escort_map(cur_map_index)) then return;
+   variable i := 0, gone := 0;
+   if (cur_map_index == MAP_F2MOD_CAMP) then begin
+      if (get_sfall_global_int(GV_SET_LEAVING)) then return;
+      gone := get_sfall_global_int(GV_SET_GONE);
+   end else if (not is_escort_map(cur_map_index)) then return;
    while (i < CV_SLOTS) do begin
-      if (cv_slot_pid(i) == pid and not cv_is_dead(i)) then begin
+      if (cv_slot_pid(i) == pid and not cv_is_dead(i) and (gone bwand cv_bit(i)) == 0) then begin
          call cv_set_dead(i);
          return;
       end
