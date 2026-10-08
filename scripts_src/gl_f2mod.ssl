@@ -17,11 +17,11 @@
 #include "scenepid.h"
 #include "f2mcv.h"
 #include "f2mcamp.h"
-#include "f2mlay.h"
+#include "f2mtlay.h"
 #include "f2mset.h"
 #include "f2msync.h"
 
-#define F2MOD_VERSION "0.4.2"
+#define F2MOD_VERSION "0.5.0"
 
 procedure start;
 procedure encounter_handler;

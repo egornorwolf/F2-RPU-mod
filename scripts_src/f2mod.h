@@ -7,7 +7,8 @@
 #define F2MOD_STAT_MAX 15
 
 #define AREA_F2MOD_CAMP     (61)    // [Area 61] в city.txt
-#define MAP_F2MOD_CAMP      (173)   // [Map 173] в maps.txt
+#define MAP_F2MOD_CAMP_OLD  (173)   // [Map 173]: прежняя временная карта лагеря (desert1), больше не используется
+#define MAP_F2MOD_CAMP      (179)   // [Map 179] в maps.txt: лагерь у скал на карте города (0.5.0)
 #define MAP_F2MOD_CARAVAN   (174)   // [Map 174] в maps.txt: встреча с караваном
 #define MAP_F2MOD_ESCORT    (175)   // [Map 175] в maps.txt: дорога с караваном, 1-е нападение
 #define MAP_F2MOD_ESCORT2   (176)   // [Map 176]: 2-е нападение (своя карта: движок не перегружает текущую)
@@ -47,7 +48,9 @@
 #define GV_CARAVAN_LAST     "f2mcrvls"  // чем кончилась прошлая встреча: CARAVAN_LAST_* ниже
 #define GV_ESCORT_WMX       "f2mescwx"  // точка встречи на карте мира (x), от нее идет караван
 #define GV_ESCORT_WMY       "f2mescwy"  // то же, y
-#define GV_CAMP_CARAVAN     "f2mcmpcv"  // 1 = караван уже поставлен в лагере
+#define GV_CAMP_CARAVAN     "f2mcmpcv"  // 1 = караван уже поставлен в лагере (на прежней карте 173)
+#define GV_TOWN_LAYOUT      "f2mtlayt"  // 1 = лагерь расставлен на карте города (0.5.0)
+#define GV_TOWN_PEOPLE      "f2mtppl"   // 1 = люди лагеря поставлены на карте города
 #define GV_CARAVAN_HOSTILE  "f2mcrvhs"  // 1 = караван воюет с героем (прицельный выстрел или убитый охранник)
 
 // Лагерь у скал (М3)

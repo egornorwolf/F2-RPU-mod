@@ -1,6 +1,6 @@
 // Кто из людей лагеря стоит на карте: ушедших убираем, вернувшихся ставим у костра.
 // Зовут карта лагеря (при входе) и глобальный скрипт (герой в лагере: через затемнение, Егор 2026-10-08).
-// Подключать после define.h, command.h, scenepid.h, sfall.h, f2mod.h, f2mcv.h, f2mcamp.h, f2mlay.h и f2mset.h.
+// Подключать после define.h, command.h, scenepid.h, sfall.h, f2mod.h, f2mcv.h, f2mcamp.h, f2mtlay.h и f2mset.h.
 #ifndef F2MSYNC_H
 #define F2MSYNC_H
 

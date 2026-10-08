@@ -34,6 +34,12 @@ make("desert2", "f2mesc2", "f2mesct.int")  # 2-й участок дороги
 make("desert1", "f2mesc3", "f2mesct.int")  # 3-й участок дороги
 
 
+# Лагерь у скал на карте города (0.5.0): пол и выходы пишет tools/layout/settle_emit.py, здесь только номер скрипта
+settle = f"{out}/maps/f2mset.map"
+data = bytearray(open(settle, "rb").read())
+struct.pack_into(">i", data, 36, script_index("f2mcamp.int"))
+open(settle, "wb").write(data)
+
 # Песочница стройки (тест): карту пишет tools/layout/town_emit.py, здесь только номер скрипта карты
 test_map = f"{out}/../test/maps/f2mtown.map"
 data = bytearray(open(test_map, "rb").read())
