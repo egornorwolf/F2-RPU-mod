@@ -17,6 +17,7 @@
 #include "f2mcamp.h"
 #include "f2mset.h"
 #include "f2mpay.h"
+#include "f2mbury.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -75,7 +76,7 @@ procedure raid_options;
 procedure raid_open;
 procedure raid_price;
 procedure raid_restore(variable who);
-procedure do_bury;
+procedure timed_event_p_proc;
 procedure Node999;
 procedure camp_people;
 procedure give_coords;
@@ -206,7 +207,10 @@ procedure talk_p_proc begin
       game_time_advance(ONE_GAME_DAY);
       load_map(escort_map(get_sfall_global_int(GV_ESCORT_STAGE)), 0);
    end
-   if (go_bury) then call do_bury;
+   if (go_bury) then begin
+      go_bury := 0;
+      call bury_start(1);
+   end
    // Последний участок пройден: еще сутки пути, и караван с героем уже в лагере у скал
    if (go_camp) then begin
       go_camp := 0;
@@ -220,6 +224,10 @@ procedure give_coords begin
    set_sfall_global(GV_CARAVAN_LAST, 0);
    set_sfall_global(GV_ESCORT_RESUME, 0);
    mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_KNOWN);
+end
+
+procedure timed_event_p_proc begin
+   call bury_step(fixed_param);
 end
 
 procedure Node001 begin
@@ -651,34 +659,17 @@ procedure Node042 begin
    call raid_options;
 end
 
-// Похоронить сейчас
+// Похоронить: копает Хэнк; если Хэнка нет, Тед собирает людей сам
 procedure Node043 begin
+   if (bury_speaker(PID_HANK, 0)) then begin
+      Reply(418);
+      call raid_options;
+      return;
+   end
    go_bury := 1;
    Reply(412);
    NOption(413, Node999, 4);
    NLowOption(413, Node999);
-end
-
-// Похороны: экран гаснет, пара часов, тела у ворот нет, дух +5%
-procedure do_bury begin
-   variable c, dead;
-   go_bury := 0;
-   dead := get_sfall_global_int(GV_RAID_DEAD);
-   gfade_out(1);
-   game_time_advance(2 * ONE_GAME_HOUR);
-   set_sfall_global(GV_SET_LEAVING, 1);
-   foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (is_critter_dead(c) and obj_pid(c) == dead and tile_distance(tile_num(c), RAID_GATE_IN) < 8) then begin
-         destroy_object(c);
-         break;
-      end
-   end
-   set_sfall_global(GV_SET_LEAVING, 0);
-   set_sfall_global(GV_RAID_BURY, 1);
-   set_sfall_global(GV_SET_MBONUS, get_sfall_global_int(GV_SET_MBONUS) + BURY_MORALE);
-   call set_short_morale(get_sfall_global_int(GV_SET_FSHORT), get_sfall_global_int(GV_SET_WSHORT));
-   gfade_in(1);
-   display_msg(mstr(414));
 end
 
 // Пойти по следам: Скиталец 50% — намек на логово (сам квест 1.4 открывается позже)

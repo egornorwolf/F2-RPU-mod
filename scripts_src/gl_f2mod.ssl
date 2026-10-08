@@ -25,7 +25,7 @@
 #include "f2mpay.h"
 #include "f2mraid.h"
 
-#define F2MOD_VERSION "0.6.0"
+#define F2MOD_VERSION "0.6.1"
 
 procedure start;
 procedure encounter_handler;

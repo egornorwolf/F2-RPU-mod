@@ -16,6 +16,7 @@
 #include "f2mset.h"
 #include "f2mpay.h"
 #include "f2mfence.h"
+#include "f2mbury.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -43,6 +44,14 @@ procedure Node040;
 procedure Node041;
 procedure Node042;
 procedure Node043;
+procedure Node050;
+procedure Node051;
+procedure Node052;
+procedure Node053;
+procedure Node054;
+procedure Node055;
+procedure Node056;
+procedure timed_event_p_proc;
 procedure fence_pay(variable who);
 procedure do_fence;
 procedure Node999;
@@ -69,6 +78,7 @@ variable sel := -1;        // выбранное место в диалоге
 variable go_build := -1;   // что строить после диалога
 variable helped;           // герой помогал сам
 variable go_fence;         // строить частокол после диалога
+variable go_bury;          // похороны после диалога: какая речь (f2mbury.h)
 
 procedure start begin
 end
@@ -124,6 +134,7 @@ procedure talk_p_proc begin
       return;
    end
    go_build := -1;
+   go_bury := 0;
    start_gdialog(NAME, self_obj, 4, -1, -1);
    gSay_Start;
       call Node001;
@@ -131,6 +142,11 @@ procedure talk_p_proc begin
    end_dialogue;
    if (go_build >= 0) then call do_build;
    if (go_fence) then call do_fence;
+   if (go_bury) then call bury_start(go_bury);
+end
+
+procedure timed_event_p_proc begin
+   call bury_step(fixed_param);
 end
 
 // Частокол: экран гаснет, 4 дня, колья стоят (f2mfence.h)
@@ -195,6 +211,7 @@ procedure Node001 begin
    if (get_sfall_global_int(GV_WELL_OLD) == WELL_OLD_BROKEN) then
       NOption(113, Node020, 4);
    NOption(114, Node030, 4);
+   if (get_sfall_global_int(GV_RAID_DEAD) and not get_sfall_global_int(GV_RAID_BURY)) then NOption(300, Node050, 4);
    NOption(115, Node999, 4);
    NLowOption(116, Node010);
    NLowOption(117, Node999);
@@ -360,6 +377,49 @@ end
 
 procedure Node043 begin
    call fence_pay(PAY_SPLIT);
+end
+
+// ---- Похороны после набега (1.3): герой дает 50 крышек, Хэнк не берет и копает сам ----
+procedure Node050 begin
+   Reply(301);
+   if (dude_caps >= 50) then NOption(302, Node051, 4);
+   NOption(303, Node052, 4);
+   NOption(304, Node001, 4);
+   NLowOption(305, Node052);
+end
+
+procedure Node051 begin
+   Reply(306);
+   NOption(308, Node053, 4);
+end
+
+procedure Node052 begin
+   Reply(307);
+   NOption(308, Node053, 4);
+   NLowOption(308, Node053);
+end
+
+// Что сказать у могилы
+procedure Node053 begin
+   Reply(309);
+   NOption(310, Node054, 4);
+   NOption(311, Node055, 4);
+   NOption(312, Node056, 4);
+   NLowOption(313, Node999);
+   if (dude_iq < 4) then go_bury := 4;
+end
+
+procedure Node054 begin
+   go_bury := 1;
+end
+
+procedure Node055 begin
+   if (has_skill(dude_obj, SKILL_SPEECH) >= BURY_SPEECH_SKILL) then go_bury := 2;
+   else go_bury := 5;
+end
+
+procedure Node056 begin
+   go_bury := 3;
 end
 
 procedure Node999 begin
