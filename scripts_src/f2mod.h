@@ -34,6 +34,7 @@
 #define SCRIPT_F2MCMIL      (1571)  // ополченец у ворот лагеря (нанимает Рик)
 #define SCRIPT_F2MBOSS      (1572)  // главарь налетчиков Кейн у ворот (1.3а)
 #define SCRIPT_F2MRDR       (1573)  // налетчик Кейна у ворот (1.3а)
+#define SCRIPT_F2MRADIO     (1574)  // радист Сэм Мортон (0.7.1)
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU

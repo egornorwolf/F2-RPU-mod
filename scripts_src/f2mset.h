@@ -89,9 +89,12 @@ procedure set_civs_here begin
    return n;
 end
 
-// Едят все: Тед, Хэнк, охрана, ополченцы и переселенцы
+// Едят все: Тед, Хэнк, охрана, ополченцы, переселенцы и радист (f2msam.h: "f2msamst" 1-3 — живет в лагере)
 procedure set_people begin
-   return 2 + set_here(CV_SLOT_GUARD) + set_here(CV_SLOT_SARA) + set_civs_here + get_sfall_global_int(GV_SET_MILIT);
+   variable sam;
+   sam := get_sfall_global_int("f2msamst");
+   return 2 + set_here(CV_SLOT_GUARD) + set_here(CV_SLOT_SARA) + set_civs_here + get_sfall_global_int(GV_SET_MILIT)
+      + (sam >= 1 and sam <= 3);
 end
 
 procedure set_wells begin

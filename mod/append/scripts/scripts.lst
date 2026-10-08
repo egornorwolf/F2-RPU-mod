@@ -14,3 +14,4 @@ f2mtur.int      ; F2mod test: sandbox turret                        # local_vars
 f2mcmil.int     ; F2mod camp militia at the gate                   # local_vars=0
 f2mboss.int     ; F2mod raider boss Kane at the gate               # local_vars=0
 f2mrdr.int      ; F2mod Kane's raider at the gate                  # local_vars=0
+f2mradio.int    ; F2mod radio operator Sam Morton               # local_vars=1

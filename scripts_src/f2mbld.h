@@ -34,6 +34,11 @@
 // Костер: на 2-м уровне центра шатер старосты встает на место стола, костер — перед шатром.
 // Клетку проверяет tools/layout/levels_emit.py (там же LVL_FIRE2 в f2mlvl.h)
 #define BLD_FIRE2       (18480)     // x 80, y 92
+// Радио у старосты (радист, 0.7.1): стол ltable2 с пультом comp5 и место радиста; клетки проверяет levels_emit.py
+#define BLD_RADIO       (17681)     // x 81, y 88
+#define BLD_SAM         (17482)     // x 82, y 87
+#define PID_RTABLE      (33554926)  // ltable2
+#define PID_RCOMP       (33554487)  // comp5
 #define camp_fire       ((bld_shown(U_CENTRE) >= 2) * BLD_FIRE2 + (bld_shown(U_CENTRE) < 2) * LAY_FIRE)
 #define bld_gv(pre, u)          ((pre) + ((u) / 10) + ((u) % 10))
 #define bld_house_unit(slot)    (U_HOUSE + (slot))   // дом по месту палатки 0-7 (0-2 основание, 3-7 прораб)

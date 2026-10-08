@@ -24,8 +24,9 @@
 #include "f2msync.h"
 #include "f2mpay.h"
 #include "f2mraid.h"
+#include "f2msam.h"
 
-#define F2MOD_VERSION "0.7.0"
+#define F2MOD_VERSION "0.7.1"
 
 procedure start;
 procedure encounter_handler;
@@ -35,6 +36,7 @@ procedure camp_fade_sync;
 procedure raid_tick;
 procedure boss_search;
 procedure step_toward(variable a, variable b, variable s);
+procedure sam_arrive;
 
 procedure start begin
    variable st;
@@ -51,6 +53,8 @@ procedure start begin
       call bld_commit;   // стройки Хэнка (0.7.0): срок вышел — у здания новый уровень, на карту его ставят Хэнк или карта лагеря
       call camp_fade_sync;
       call raid_tick;
+      call sam_tick;
+      call sam_arrive;
    end
 end
 
@@ -84,6 +88,17 @@ procedure boss_search begin
          return;
       end
    end
+end
+
+// Радист пришел, пока герой в лагере: ждем, пока закрыты окна и нет боя, экран гаснет, Сэм у старосты
+procedure sam_arrive begin
+   if (cur_map_index != MAP_F2MOD_CAMP or get_sfall_global_int(GV_SAM_NEWS) != 1) then return;
+   if (combat_is_initialized or (get_game_mode bwand 0x3FFFFD) != 0) then return;
+   set_sfall_global(GV_SAM_NEWS, 0);
+   gfade_out(1);
+   call sam_put;
+   gfade_in(1);
+   display_msg(message_str(SCRIPT_F2MRADIO, 304));
 end
 
 procedure step_toward(variable a, variable b, variable s) begin

@@ -131,6 +131,10 @@ assert not errs, errs
 
 # ---- проходимость и места людей
 ENTRANCE = 35301
+def tdist(a, b):
+    for r in range(0, 12):
+        if a in ring(b, r): return r
+    return 99
 BED = None
 def is_bed(pid):
     global BED
@@ -178,6 +182,29 @@ TED2 = near_free(tdir(FIRE2, 0, 1), 1, 4, {FIRE2})
 SAFE2 = near_free(tdir(FIRE2, 2, 3), 0, 4, {FIRE2, TED2})
 print('костер 2', xy(FIRE2), 'староста', xy(TED2), 'Хэнк в бою', xy(SAFE2))
 
+# Радио у старосты (радист Сэм, 0.7.1): стол ltable2 с пультом comp5 (картинка pictures-radio/radio_stol.png),
+# рядом место радиста. Одно место на любом уровне центра: свободно при уровнях 1 и 2 всех зданий, не на местах людей
+PID_RTABLE, PID_RCOMP = 33554926, 33554487
+reach1 = flood(ENTRANCE, blocked(world(CFG1)) | {GRAVE})
+pp = set(people(CFG1).values()) | {T(x, y) for x, y in []} | set(people(CFG2).values())
+RADIO = SAM = None
+for r in range(3, 9):
+    for t in sorted(ring(FIRE1, r) - ring(FIRE1, r - 1), key=lambda t: (tdist(t, FIRE2), xy(t))):
+        if t in blk_all or ring(t, 1) & pp or t not in reach1 or t not in reach2: continue
+        sam = [n for n in sorted(ring(t, 1) - {t}) if n not in blk_all and n in reach1 and n in reach2 and not ring(n, 1) & pp]
+        if not sam: continue
+        b1 = blocked(world(CFG1)) | {GRAVE, t}; b2 = blocked(world(CFG2)) | {GRAVE, t}
+        r1 = flood(ENTRANCE, b1); r2 = flood(ENTRANCE, b2)
+        if all((ring(q, 1) - {q}) & r1 for q in people(CFG1).values()) and all((ring(q, 1) - {q}) & r2 for q in people(CFG2).values()) \
+           and sam[0] in r1 and sam[0] in r2:
+            RADIO, SAM = t, sam[0]; break
+    if RADIO: break
+assert RADIO
+blk_all |= {RADIO}
+_b = open(os.path.join(ROOT, 'scripts_src/f2mbld.h'), encoding='utf-8').read()
+assert f'#define BLD_RADIO       ({RADIO})' in _b and f'#define BLD_SAM         ({SAM})' in _b, (RADIO, SAM)
+print('радио', xy(RADIO), 'радист', xy(SAM))
+
 def check(cfg, tag):
     blk = blocked(world(cfg)) | {GRAVE}
     reach = flood(ENTRANCE, blk)
@@ -212,7 +239,7 @@ def pick(anchor, n, inside_ok):
     assert len(got) == n, (xy(anchor), got)
     used.update(got)
     return got
-def tdist(a, b):
+def _unused_tdist(a, b):
     for r in range(0, 12):
         if a in ring(b, r): return r
     return 99
@@ -259,7 +286,8 @@ o = ['// Уровни зданий поселения: переход здани
      f'#define LVL_TED2       ({TED2})   // место старосты у шатра',
      f'#define LVL_SAFE2      ({SAFE2})   // куда Хэнк убегает в бою, когда стоит шатер',
      f'#define LVL_BRAHMIN0   ({BRAH2[0]})   // брамины в загоне (ферма 2)',
-     f'#define LVL_BRAHMIN1   ({BRAH2[1]})', '',
+     f'#define LVL_BRAHMIN1   ({BRAH2[1]})',
+     '',
      'procedure lvl_step(variable u, variable lv);', 'procedure lvl_spot(variable slot, variable lv, variable k);',
      'procedure lvl_night(variable tent, variable lv, variable k);']
 body = []

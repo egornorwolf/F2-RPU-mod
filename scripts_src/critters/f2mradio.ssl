@@ -1,0 +1,189 @@
+// Радист Сэм Мортон (0.7.1): приходит в лагерь через сутки после первого набега (f2msam.h).
+// Ставит радио у старосты за день бесплатно, продает герою рацию за 50, рассказывает, что слышно в эфире.
+// Вне боя держится у радио (дальше 3 клеток — идет обратно); в бою прячется, как жители.
+#define SCRIPT_REALNAME "f2mradio"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MRADIO
+#include "command.h"
+#include "sfall.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mtlay.h"
+#include "f2mset.h"
+#include "f2msam.h"
+#include "f2mfine.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure damage_p_proc;
+procedure accidental_hit;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+procedure Node001;
+procedure Node010;
+procedure Node020;
+procedure Node021;
+procedure Node030;
+procedure Node031;
+procedure Node032;
+procedure Node040;
+procedure Node999;
+
+// LVAR 0: 1 = уже знакомы
+#define LVAR_MET        (0)
+
+variable greeted;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   if (combat_is_initialized or cur_map_index != MAP_F2MOD_CAMP or get_sfall_global_int(GV_BURY_ON)) then return;
+   if (tile_distance(tile_num(self_obj), BLD_SAM) > 3 and not anim_busy(self_obj)) then
+      animate_move_obj_to_tile(self_obj, BLD_SAM, 0);
+   if (not greeted and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
+      greeted := 1;
+      floater(random(102, 104));
+   end
+end
+
+procedure accidental_hit begin
+   variable hits, r := 0;
+   hits := load_array(ARR_CARAVAN_HITS);
+   if (hits) then begin
+      r := hits[self_obj];
+      hits[self_obj] := 0;
+   end
+   return r;
+end
+
+procedure damage_p_proc begin
+   if (is_dude_side(source_obj)) then begin
+      if (accidental_hit) then
+         floater(105);
+      else begin
+         camp_fine_wound;
+         set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+         floater(106);
+      end
+   end
+end
+
+procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_SET_LEAVING)) then return;
+   set_sfall_global(GV_SAM, SAM_DEAD);
+   if (is_dude_side(source_obj)) then begin
+      camp_fine_add(CAMP_FINE_KILL);
+      set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   end
+end
+
+procedure talk_p_proc begin
+   if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then begin
+      floater(106);
+      return;
+   end
+   if (fine_due) then begin
+      floater(107);
+      return;
+   end
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+   call sam_radio_decor;
+end
+
+procedure Node001 begin
+   variable st;
+   st := get_sfall_global_int(GV_SAM);
+   if (not local_var(LVAR_MET)) then begin
+      set_local_var(LVAR_MET, 1);
+      Reply(110);
+   end else if (st == SAM_BUILDING) then
+      Reply(112);
+   else
+      Reply(111);
+   NOption(113, Node010, 4);
+   if (st == SAM_HERE) then NOption(114, Node020, 4);
+   if (st == SAM_RADIO and not sam_has_radio) then NOption(115, Node030, 4);
+   if (st == SAM_RADIO) then NOption(116, Node040, 4);
+   NOption(117, Node999, 4);
+   NLowOption(118, Node999);
+end
+
+// Кто ты и откуда
+procedure Node010 begin
+   Reply(120);
+   NOption(121, Node001, 4);
+   NLowOption(118, Node999);
+end
+
+// Поставить радио у старосты
+procedure Node020 begin
+   Reply(130);
+   NOption(131, Node021, 4);
+   NOption(132, Node001, 4);
+   NLowOption(118, Node999);
+end
+
+procedure Node021 begin
+   set_sfall_global(GV_SAM, SAM_BUILDING);
+   set_sfall_global(GV_SAM_HOUR, bld_hour + SAM_BUILD_HOURS);
+   Reply(133);
+   NOption(134, Node999, 4);
+   NLowOption(118, Node999);
+end
+
+// Рация герою
+procedure Node030 begin
+   Reply(140);
+   if (dude_caps >= SAM_RADIO_PRICE) then NOption(141, Node031, 4);
+   // Второй путь: руки и голова. Ремонт или Наука 50 — герой сам собирает рацию из запасных деталей Сэма
+   if (has_skill(dude_obj, SKILL_REPAIR) >= SAM_HANDS_SKILL or has_skill(dude_obj, SKILL_SCIENCE) >= SAM_HANDS_SKILL) then
+      NOption(145, Node032, 4);
+   NOption(142, Node001, 4);
+   NLowOption(118, Node999);
+end
+
+procedure Node031 begin
+   item_caps_adjust(dude_obj, -SAM_RADIO_PRICE);
+   item_caps_adjust(self_obj, SAM_RADIO_PRICE);
+   add_obj_to_inven(dude_obj, create_object(PID_RADIO, 0, 0));
+   Reply(143);
+   NOption(144, Node001, 4);
+   NLowOption(118, Node999);
+end
+
+procedure Node032 begin
+   add_obj_to_inven(dude_obj, create_object(PID_RADIO, 0, 0));
+   give_exp_points(SAM_HANDS_XP);
+   Reply(146);
+   NOption(144, Node001, 4);
+   NLowOption(118, Node999);
+end
+
+// Что слышно в эфире
+procedure Node040 begin
+   Reply(random(150, 155));
+   NOption(156, Node001, 4);
+   NLowOption(118, Node999);
+end
+
+procedure Node999 begin
+end
