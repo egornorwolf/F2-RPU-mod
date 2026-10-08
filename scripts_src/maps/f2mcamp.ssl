@@ -22,6 +22,7 @@ procedure map_update_p_proc;
 procedure map_exit_p_proc;
 procedure camp_layout;
 procedure camp_people_put;
+procedure camp_ruins;
 
 
 procedure start begin
@@ -38,6 +39,8 @@ procedure map_enter_p_proc begin
       old := tile_contains_pid_obj(LAY_OLDWELL, 0, PID_WELL_OLD);
       if (old) then destroy_object(old);
    end
+   // Развалины на участках будущих зданий стоят с первого визита (и появляются в сохранениях 0.5.0)
+   if (not get_sfall_global_int(GV_TOWN_RUINS)) then call camp_ruins;
    if (get_sfall_global_int(GV_CARAVAN) != CARAVAN_DONE) then return;
    // Карта сохраняется: лагерь и люди ставятся один раз, при первом входе после координат.
    // Сохранения с прежней карты лагеря (173, до 0.5.0): все, что построено, и все, кто жив, — на новой карте.
@@ -46,6 +49,17 @@ procedure map_enter_p_proc begin
    // Ушедшие из лагеря исчезают, вернувшиеся снова у костра (f2mset.h, недельный тик)
    call camp_sync_people;
    set_sfall_global(GV_SET_SYNC, 0);
+end
+
+// Развалины (f2mtlay.h). Что уже построено на участке жилья (палатки 4-7), стоит без развалин
+procedure camp_ruins begin
+   variable i := 3;
+   set_sfall_global(GV_TOWN_RUINS, 1);
+   call lay_ruins;
+   while (i < BUILD_COUNT) do begin
+      if (camp_built(i)) then call lay_ruin_clear(i - 3);
+      i += 1;
+   end
 end
 
 // Палаточный лагерь (1-й уровень зданий города, f2mtlay.h) и прораб Хэнк
