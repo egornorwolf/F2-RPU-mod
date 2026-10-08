@@ -25,7 +25,7 @@
 #include "f2mpay.h"
 #include "f2mraid.h"
 
-#define F2MOD_VERSION "0.6.3"
+#define F2MOD_VERSION "0.6.4"
 
 procedure start;
 procedure encounter_handler;
@@ -33,6 +33,7 @@ procedure combatdamage_handler;
 procedure keep_escort_wm_pos;
 procedure camp_fade_sync;
 procedure raid_tick;
+procedure boss_search;
 procedure step_toward(variable a, variable b, variable s);
 
 procedure start begin
@@ -59,11 +60,29 @@ procedure raid_tick begin
       if (raid_due) then call raid_do;
       return;
    end
+   call boss_search;
    if (not boss_due or combat_is_initialized or (get_game_mode bwand 0x3FFFFD) != 0) then return;
    gfade_out(1);
    call boss_put;
    gfade_in(1);
    display_msg("У южных ворот встал главарь налетчиков. Его люди ждут на краю карты.");
+end
+
+// Обыск тела Кейна (предмета-записки нет, Егор 2026-10-08): герой подошел к телу вплотную вне боя —
+// строка в журнал и реплика героя над головой. Не обыскал и ушел — обыщет Рик (f2mcamp.ssl, map_exit)
+procedure boss_search begin
+   variable c;
+   if (get_sfall_global_int(GV_BOSS_NOTE) or combat_is_initialized) then return;
+   if (get_sfall_global_int(GV_BOSS) != BOSS_FIGHT and get_sfall_global_int(GV_BOSS) != BOSS_BEATEN) then return;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_critter_dead(c) and obj_pid(c) == PID_RAIDER_MALE and (obj_art_fid(c) bwand 0xFFF) == GANG_ART_BOSS
+          and tile_distance_objs(c, dude_obj) <= 1) then begin
+         set_sfall_global(GV_BOSS_NOTE, 1);
+         display_msg(message_str(SCRIPT_F2MBOSS, 250));
+         float_msg(dude_obj, message_str(SCRIPT_F2MBOSS, 252), FLOAT_MSG_YELLOW);
+         return;
+      end
+   end
 end
 
 procedure step_toward(variable a, variable b, variable s) begin

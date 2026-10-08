@@ -25,8 +25,9 @@ procedure bury_speaker(variable pid, variable avoid);
 variable bury_was;
 
 procedure bury_resident(variable c) begin
+   // все живые на карте лагеря, кроме героя, его отряда, браминов и банды (команду жителей движок может поменять)
    return c != dude_obj and not is_critter_dead(c) and not obj_in_party(c) and obj_pid(c) != PID_BRAHMIN
-      and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_CARAVAN;
+      and obj_pid(c) != PID_RAIDER_MALE;
 end
 
 // Кто ответит: житель с этим PID (0 — любой, кроме Теда, Хэнка и avoid)
@@ -72,10 +73,10 @@ procedure bury_start(variable speech) begin
    set_sfall_global(GV_SET_MBONUS, get_sfall_global_int(GV_SET_MBONUS) + k);
    call set_short_morale(get_sfall_global_int(GV_SET_FSHORT), get_sfall_global_int(GV_SET_WSHORT));
 
-   // места вокруг могилы по кольцам 2-4, кроме клеток у самого частокола
+   // места вокруг могилы по кольцам 2-5, кроме клеток у самого частокола
    places := temp_array(0, 0);
    r := 2;
-   while (r <= 4) do begin
+   while (r <= 5) do begin
       d := 0;
       while (d < 6) do begin
          k := 0;
@@ -106,6 +107,7 @@ procedure bury_start(variable speech) begin
    // герой у изголовья, со стороны лагеря
    critter_attempt_placement(dude_obj, tile_num_in_direction(BURY_GRAVE, 1, 1), 0);
    anim(dude_obj, ANIMATE_ROTATION, rotation_to_tile(tile_num(dude_obj), BURY_GRAVE));
+   tile_set_center(BURY_GRAVE);
    gfade_in(1);
    float_msg(dude_obj, BURY_MSG(319 + speech), FLOAT_MSG_YELLOW);
    add_timer_event(self_obj, game_ticks(4), BURY_TIMER + 1);
@@ -135,6 +137,7 @@ procedure bury_step(variable step) begin
       free_array(bury_was);
       bury_was := 0;
    end
+   tile_set_center(tile_num(dude_obj));
    gfade_in(1);
    if (get_sfall_global_int(GV_BURY_SPEECH) == 2) then
       display_msg(BURY_MSG(346));

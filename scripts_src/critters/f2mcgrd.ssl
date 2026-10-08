@@ -182,8 +182,16 @@ end
 
 // После набега (1.3)
 procedure Node003 begin
+   variable f, m;
    set_sfall_global(GV_RAID_TOLD, get_sfall_global_int(GV_RAID_TOLD) bwor 2);
-   Reply(150);
+   f := get_sfall_global_int(GV_FENCE);
+   m := get_sfall_global_int(GV_MIL_HIRED) or get_sfall_global_int(GV_RAID_OUT) == RAID_OUT_GUARD;
+   // что говорит Рик, зависит от того, что в лагере уже есть: ни забора, ни охраны — винит себя;
+   // есть и то и другое — про усиление: больше людей, учить их и вооружить
+   if (f and m) then Reply(157);
+   else if (m) then Reply(156);
+   else if (f) then Reply(158);
+   else Reply(150);
    if (not get_sfall_global_int(GV_MIL_HIRED)) then NOption(151, Node010, 4);
    if (not get_sfall_global_int(GV_FENCE)) then NOption(152, Node004, 4);
    NOption(154, Node005, 4);

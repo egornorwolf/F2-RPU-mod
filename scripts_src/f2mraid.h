@@ -29,6 +29,7 @@ procedure gang_raider(variable tile, variable i);
 procedure boss_put;
 procedure gang_alive(variable except);
 procedure gang_remove;
+procedure gang_remove_but(variable keep);
 
 procedure raid_hours_since_found begin
    return game_time / ONE_GAME_HOUR - get_sfall_global_int(GV_CAMP_DAY);
@@ -198,9 +199,15 @@ end
 
 // Банда ушла: убираем живых (трупы остаются)
 procedure gang_remove begin
+   call gang_remove_but(0);
+end
+
+// Все живые бойцы банды, кроме keep: скрипт, который убирает банду, не должен уничтожить сам себя
+// посреди затемнения (иначе он обрывается и экран остается черным)
+procedure gang_remove_but(variable keep) begin
    variable c;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (is_gang(c) and not is_critter_dead(c)) then destroy_object(c);
+      if (c != keep and is_gang(c) and not is_critter_dead(c)) then destroy_object(c);
    end
 end
 

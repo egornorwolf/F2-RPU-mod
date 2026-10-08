@@ -17,6 +17,8 @@
 #include "f2mpay.h"
 #include "f2mfence.h"
 #include "f2mbury.h"
+#include "f2mspots.h"
+#include "f2mhome.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -183,6 +185,7 @@ procedure do_build begin
    game_time_advance(kind_hours(k) * ONE_GAME_HOUR);
    call camp_set_built(go_build);
    call lay_slot(go_build);
+   call camp_spread;
    gfade_in(1);
    if (go_build == BUILD_HERO) then display_msg(mstr(201));
    else display_msg(mstr(190 + k));

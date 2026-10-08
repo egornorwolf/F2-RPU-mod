@@ -124,9 +124,11 @@ procedure timed_event_p_proc begin
    if (fixed_param != 1 or get_sfall_global_int(GV_BOSS) != BOSS_WAIT) then return;
    set_sfall_global(GV_BOSS, BOSS_LEFT);
    gfade_out(1);
-   call gang_remove;
+   call gang_remove_but(self_obj);
+   set_obj_visibility(self_obj, 1);
    gfade_in(1);
    display_msg(mstr(240));
+   destroy_object(self_obj);
 end
 
 procedure Node001 begin
@@ -170,11 +172,8 @@ end
 procedure Node999 begin
 end
 
-// Кейн убит: записка с координатами логова (1.4); если и бойцов не осталось — банда разбита
+// Кейн убит; если и бойцов не осталось — банда разбита. Где логово, герой узнает обыском тела (gl_f2mod, boss_search)
 procedure destroy_p_proc begin
-   set_sfall_global(GV_BOSS_NOTE, 1);
-   display_msg(mstr(250));
-   float_msg(dude_obj, mstr(252), FLOAT_MSG_YELLOW);
    if (gang_alive(self_obj) == 0) then begin
       set_sfall_global(GV_BOSS, BOSS_BEATEN);
       display_msg(mstr(251));
