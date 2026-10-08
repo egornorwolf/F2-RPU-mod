@@ -39,6 +39,7 @@ procedure Node999;
 #define LVAR_CAUGHT     (0)
 
 variable fight;
+variable leave;
 
 procedure start begin
 end
@@ -76,7 +77,9 @@ procedure damage_p_proc begin
    if (is_dude_side(source_obj)) then floater(103);
 end
 
+// Убит в бою. Если вора просто убирают с карты (утро, герой ушел, ушел сам), это не смерть
 procedure destroy_p_proc begin
+   if (thief_done or not is_critter_dead(self_obj)) then return;
    set_sfall_global(GV_THIEF, THIEF_DEAD);
    display_msg(mstr(202));
 end
@@ -91,6 +94,11 @@ procedure talk_p_proc begin
    if (fight) then begin
       fight := 0;
       attack(dude_obj);
+   end else if (leave) then begin
+      if (leave == 1) then display_msg(mstr(203));
+      else display_msg(mstr(204));
+      leave := 0;
+      destroy_object(self_obj);
    end
 end
 
@@ -118,6 +126,7 @@ end
 procedure Node010 begin
    call thief_give;
    set_sfall_global(GV_THIEF, THIEF_GONE);
+   leave := 1;
    Reply(120);
    NOption(123, Node999, 4);
 end
@@ -126,6 +135,7 @@ end
 procedure Node020 begin
    call thief_give;
    set_sfall_global(GV_THIEF, THIEF_WORKS);
+   leave := 2;
    set_sfall_global(GV_SET_CASH, get_sfall_global_int(GV_SET_CASH) + THIEF_CAPS);
    Reply(121);
    NOption(123, Node999, 4);
@@ -141,9 +151,4 @@ procedure Node030 begin
 end
 
 procedure Node999 begin
-   if (get_sfall_global_int(GV_THIEF) == THIEF_GONE or get_sfall_global_int(GV_THIEF) == THIEF_WORKS) then begin
-      if (get_sfall_global_int(GV_THIEF) == THIEF_GONE) then display_msg(mstr(203));
-      else display_msg(mstr(204));
-      destroy_object(self_obj);
-   end
 end

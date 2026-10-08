@@ -10,6 +10,7 @@
 #define GV_THIEF        "f2mthfst"  // 0 тихо, 1 кражи идут, 2 вор на карте этой ночью, 3 прогнан, 4 убит, 5 остался работать
 #define GV_THIEF_WEEK   "f2mthfwk"  // неделя, за которую воровство уже посчитали (+1)
 #define GV_THIEF_SEEN   "f2mthfsn"  // 1 = герой заметил его этой ночью (Восприятие или скрытность)
+#define GV_THIEF_HOUR   "f2mthfhr"  // раньше этого часа вор снова не выйдет (спугнули — ждет следующей ночи)
 
 #define THIEF_NONE      (0)
 #define THIEF_STEALS    (1)
@@ -76,7 +77,10 @@ procedure thief_clear begin
    variable c;
    c := thief_obj;
    if (c) then destroy_object(c);
-   if (get_sfall_global_int(GV_THIEF) == THIEF_HERE) then set_sfall_global(GV_THIEF, THIEF_STEALS);
+   if (get_sfall_global_int(GV_THIEF) == THIEF_HERE) then begin
+      set_sfall_global(GV_THIEF, THIEF_STEALS);
+      set_sfall_global(GV_THIEF_HOUR, bld_hour + 10);   // спугнули: придет не раньше следующей ночи
+   end
 end
 
 // Из глобального скрипта: жалобы, ночные выходы вора и недельная убыль кассы
@@ -103,7 +107,8 @@ procedure thief_tick begin
       return;
    end
    if (camp_night) then begin
-      if (get_sfall_global_int(GV_THIEF) == THIEF_STEALS and (get_game_mode bwand 0x3FFFFD) == 0 and random(1, 100) <= 35) then
+      if (get_sfall_global_int(GV_THIEF) == THIEF_STEALS and (get_game_mode bwand 0x3FFFFD) == 0
+          and bld_hour >= get_sfall_global_int(GV_THIEF_HOUR) and random(1, 100) <= 35) then
          call thief_put;
    end else if (get_sfall_global_int(GV_THIEF) == THIEF_HERE) then
       call thief_clear;
