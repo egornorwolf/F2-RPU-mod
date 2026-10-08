@@ -85,7 +85,7 @@ procedure keypress_handler begin
       call skills_max;
    end else if (key == DIK_E) then begin
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_KNOWN);
-      display_msg("F2mod: на карте мира открыт «Лагерь у скал».");
+      display_msg("F2mod: на карте мира открыт «Скалистый приют».");
    end else if (key == DIK_R) then begin
       set_sfall_global(GV_CARAVAN, CARAVAN_NONE);
       set_sfall_global(GV_CARAVAN_REFUSED, 0);
@@ -121,7 +121,7 @@ procedure keypress_handler begin
       display_msg("F2mod: +5000 крышек.");
    end else if (key == DIK_T) then begin
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_TOWN, MARK_STATE_KNOWN);
-      display_msg("F2mod: на карте мира открыта Песочница стройки (рядом с Лагерем у скал).");
+      display_msg("F2mod: на карте мира открыта Песочница стройки (рядом со Скалистым приютом).");
    end else if (key == DIK_G) then begin
       call show_help;
    end
@@ -193,6 +193,6 @@ end
 procedure show_help begin
    display_msg("Ctrl+1..7: СПЕЦИАЛ +1 (С,В,Вн,П,И,Л,У). Ctrl+Shift+1..7: -1.");
    display_msg("Ctrl+K: +10 навыков. Ctrl+N: все навыки 300%. Ctrl+B: вес +100. Ctrl+O: +1 перк. Ctrl+U: +1 уровень.");
-   display_msg("Ctrl+E: открыть Лагерь у скал. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек.");
+   display_msg("Ctrl+E: открыть Скалистый приют. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек.");
    display_msg("Alt+1: +1 час. Alt+2: +1 день. Alt+3: +1 неделя. Alt+4: +1 месяц. Alt+0: время и состояние.");
 end

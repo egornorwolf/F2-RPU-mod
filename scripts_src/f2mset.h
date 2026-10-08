@@ -212,7 +212,7 @@ procedure set_tick(variable week) begin
    wspent := set_resource(GV_SET_WATER, GV_SET_WSHORT, water, n, SET_WATER_PRICE);
    fs := get_sfall_global_int(GV_SET_FSHORT);
    ws := get_sfall_global_int(GV_SET_WSHORT);
-   msg := "Лагерь у скал, неделя " + week + ": людей " + n + ", еда +" + food + " (запас " + get_sfall_global_int(GV_SET_FOOD)
+   msg := "Скалистый приют, неделя " + week + ": людей " + n + ", еда +" + food + " (запас " + get_sfall_global_int(GV_SET_FOOD)
       + "), вода +" + water + " (запас " + get_sfall_global_int(GV_SET_WATER) + "), касса " + cash0 + " -> " + get_sfall_global_int(GV_SET_CASH) + ".";
    display_msg(msg);
 
@@ -264,7 +264,7 @@ procedure set_tick_all begin
          call set_people_return;
          set_sfall_global(GV_SET_NEWS, 2);
          set_sfall_global(GV_SET_SYNC, 1);
-         display_msg("Люди вернулись в лагерь у скал.");
+         display_msg("Люди вернулись в Скалистый приют.");
       end
       call set_tick(w);
    end

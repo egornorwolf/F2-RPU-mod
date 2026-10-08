@@ -25,8 +25,9 @@ procedure bury_speaker(variable pid, variable avoid);
 variable bury_was;
 
 procedure bury_resident(variable c) begin
-   // все живые на карте лагеря, кроме героя, его отряда, браминов и банды (команду жителей движок может поменять)
-   return c != dude_obj and not is_critter_dead(c) and not obj_in_party(c) and obj_pid(c) != PID_BRAHMIN
+   // все живые на карте лагеря и отряд героя (Егор 2026-10-08), кроме самого героя, браминов и банды
+   // (команду жителей движок может поменять, поэтому по команде не отбираем)
+   return c != dude_obj and not is_critter_dead(c) and obj_pid(c) != PID_BRAHMIN
       and obj_pid(c) != PID_RAIDER_MALE;
 end
 
@@ -35,7 +36,7 @@ procedure bury_speaker(variable pid, variable avoid) begin
    variable c, all, n := 0;
    all := list_as_array(LIST_CRITTERS);
    foreach (c in all) begin
-      if (bury_resident(c) and c != avoid) then begin
+      if (bury_resident(c) and not obj_in_party(c) and c != avoid) then begin
          if (pid and obj_pid(c) == pid) then return c;
          if (not pid and obj_pid(c) != PID_TED and obj_pid(c) != PID_HANK) then n += 1;
       end
@@ -43,7 +44,7 @@ procedure bury_speaker(variable pid, variable avoid) begin
    if (pid or n == 0) then return 0;
    n := random(1, n);
    foreach (c in all) begin
-      if (bury_resident(c) and c != avoid and obj_pid(c) != PID_TED and obj_pid(c) != PID_HANK) then begin
+      if (bury_resident(c) and not obj_in_party(c) and c != avoid and obj_pid(c) != PID_TED and obj_pid(c) != PID_HANK) then begin
          n -= 1;
          if (n == 0) then return c;
       end
