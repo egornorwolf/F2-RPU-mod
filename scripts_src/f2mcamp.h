@@ -13,6 +13,15 @@
 #define PID_WELL_FIXED  (33556410)  // WELL001 (RPU): тот же колодец, открытый
 #define PID_WELL_NEW    (33554815)  // well1: колодец с воротом
 
+// Хэнк стоит на дороге у южных ворот, рядом с начальником охраны (Егор 2026-10-08: у дерева его не видно);
+// в бою убегает вглубь лагеря, к костру, к своему прежнему месту. Нужен f2mtlay.h (LAY_*). Проходы проверены
+// Могила после набега (f2mbury.h). Надгробие ставим без скрипта: в прототипе стоит общий скрипт могил ziGenGrv,
+// его тексты на нашей карте дают «Error»
+#define BURY_GRAVE      (31760)     // x 160, y 158: внутри частокола у нижне-левой стены, между деревьями
+#define PID_BURY_STONE  (33555445)  // Headstone (GRAVSTN1), блокирует клетку; проходимость проверена
+#define HANK_SPOT       (tile_num_in_direction(LAY_CHIEF, 5, 2))
+#define HANK_SAFE       (LAY_FOREMAN)
+
 procedure camp_built(variable slot);
 procedure camp_set_built(variable slot);
 procedure camp_has_water;

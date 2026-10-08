@@ -18,6 +18,7 @@
 #include "f2mset.h"
 #include "f2mpay.h"
 #include "f2mbury.h"
+#include "f2mfine.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -96,7 +97,10 @@ end
 
 procedure look_at_p_proc begin
    script_overrides;
-   display_msg(mstr(100));
+   if (cur_map_index == MAP_F2MOD_CAMP) then
+      display_msg(mstr(105));
+   else
+      display_msg(mstr(100));
 end
 
 procedure description_p_proc begin
@@ -140,6 +144,7 @@ procedure damage_p_proc begin
       if (accidental_hit) then
          floater(random(205, 205 + 2));
       else begin
+         camp_fine_wound;
          set_sfall_global(GV_CARAVAN_HOSTILE, 1);
          attack(dude_obj);
       end
@@ -153,7 +158,10 @@ end
 
 procedure destroy_p_proc begin
    if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // лагерь убирает лишнего или ушедшего: это не смерть
-   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   if (is_dude_side(source_obj)) then begin
+      camp_fine_add(CAMP_FINE_KILL);
+      set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   end
    // Погиб в пути или при встрече: караван больше не встречается (иначе на следующей встрече
    // карта снова ставила живого Теда со всем караваном)
    if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_ESCORT
@@ -185,7 +193,9 @@ procedure talk_p_proc begin
    end
    start_gdialog(NAME, self_obj, 4, -1, -1);
    gSay_Start;
-      if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE) then
+      if (cur_map_index == MAP_F2MOD_CAMP and fine_due) then
+         call fine_node;
+      else if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE) then
          call Node007;
       else if (on_escort) then begin
          if (get_sfall_global_int(GV_ESCORT_STAGE) < ESCORT_STAGES) then
@@ -444,7 +454,9 @@ end
 // Отчет старосты: числа прямо в реплике (окно сообщений во время диалога не видно)
 procedure Node021 begin
    variable t;
-   if (camp_has_water) then
+   if (set_wells >= 2) then
+      t := mstr(234);
+   else if (camp_has_water) then
       t := mstr(230);
    else
       t := mstr(231);
@@ -464,7 +476,9 @@ procedure Node022 begin
    n := camp_people;
    left := 0;
    if (n > 0) then left := get_sfall_global_int(GV_SET_WATER) * 7 / n;
-   if (camp_has_water) then
+   if (set_wells >= 2) then
+      Reply(246);
+   else if (camp_has_water) then
       Reply(240);
    else if (left > 0) then
       Reply(mstr(243) + left + mstr(244) + " " + mstr(241) + " " + mstr(245));

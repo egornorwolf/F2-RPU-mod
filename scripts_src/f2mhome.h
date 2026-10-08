@@ -1,11 +1,15 @@
 // Жители по домам и на работу (Егор 2026-10-08): как только построены палатки или огороды, мирные не стоят
-// у костра, а расходятся: по двое в каждую новую палатку (места 3-7) и на каждый огород (1-2). Кому места
-// не хватило, остаются у костра. Клетки мест — f2mspots.h (проходимость проверена tools/layout/spots_emit.py).
-// Подключать после f2mcamp.h и f2mspots.h. Звать вне боя (вход на карту, после стройки в затемнении).
+// у костра, а расходятся: днем по двое у каждой новой палатки (места 3-7) и на каждом огороде (1-2),
+// ночью (с 21:00 до 6:00) спят в палатках, у кроватей: палатки лагеря 0-2 и палатки прораба 3-7, по трое.
+// Кому места не хватило, стоят у костра. Клетки мест — f2mspots.h (tools/layout/spots_emit.py).
+// Подключать после f2mcamp.h и f2mspots.h. camp_spread(0) — вход на карту или затемнение (людей просто ставим),
+// camp_spread(1) — из map_update: кого видно на экране, тот идет сам, кого не видно — переставляем.
 #ifndef F2MHOME_H
 #define F2MHOME_H
 
-procedure camp_spread;
+#define camp_night          (game_time_hour >= 2100 or game_time_hour < 600)
+
+procedure camp_spread(variable walk);
 procedure camp_is_civ(variable c);
 
 procedure camp_is_civ(variable c) begin
@@ -16,30 +20,55 @@ procedure camp_is_civ(variable c) begin
        or p == PID_WEAK_PEASANT_FEMALE or p == PID_CHILD_MALE or p == PID_CHILD_FEMALE;
 end
 
-procedure camp_spread begin
-   variable spots, n := 0, s, c, i := 0;
-   if (combat_is_initialized) then return;
+procedure camp_spread(variable walk) begin
+   variable spots, n := 0, s, c, i := 0, k, t;
+   if (combat_is_initialized or get_sfall_global_int(GV_BURY_ON) or get_sfall_global_int(GV_CARAVAN_HOSTILE)) then return;
    spots := temp_array(0, 0);
-   s := 3;
-   while (s <= 9) do begin
-      // сначала палатки 3-7, потом огороды 1-2 (s 8, 9)
-      i := s;
-      if (s == 8) then i := 1;
-      else if (s == 9) then i := 2;
-      if (camp_built(i)) then begin
-         resize_array(spots, n + 2);
-         spots[n] := lay_spot(i, 0);
-         spots[n + 1] := lay_spot(i, 1);
-         n += 2;
+   if (camp_night) then begin
+      // по одному месту в каждой палатке, потом по второму, потом по третьему
+      k := 0;
+      while (k < 3) do begin
+         s := 0;
+         while (s < 8) do begin
+            if (s < 3 or camp_built(s)) then begin
+               resize_array(spots, n + 1);
+               spots[n] := lay_night(s, k);
+               n += 1;
+            end
+            s += 1;
+         end
+         k += 1;
       end
-      s += 1;
+   end else begin
+      s := 3;
+      while (s <= 9) do begin
+         // сначала палатки 3-7, потом огороды 1-2 (s 8, 9)
+         i := s;
+         if (s == 8) then i := 1;
+         else if (s == 9) then i := 2;
+         if (camp_built(i)) then begin
+            resize_array(spots, n + 2);
+            spots[n] := lay_spot(i, 0);
+            spots[n + 1] := lay_spot(i, 1);
+            n += 2;
+         end
+         s += 1;
+      end
    end
-   if (n == 0) then return;
    i := 0;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (i < n and camp_is_civ(c)) then begin
-         if (tile_num(c) != spots[i]) then critter_attempt_placement(c, spots[i], 0);
-         anim(c, ANIMATE_ROTATION, random(0, 5));
+      if (camp_is_civ(c)) then begin
+         // кому места нет — у костра, как при приходе каравана (cv_civilians)
+         if (i < n) then t := spots[i];
+         else t := tile_num_in_direction(LAY_FIRE, (i - n) % 6, 2 + ((i - n) / 6) * 2);
+         if (tile_distance(tile_num(c), t) > 1) then begin
+            if (walk and tile_is_visible(tile_num(c))) then begin
+               if (not anim_busy(c)) then animate_move_obj_to_tile(c, t, 0);
+            end else begin
+               critter_attempt_placement(c, t, 0);
+               anim(c, ANIMATE_ROTATION, random(0, 5));
+            end
+         end
          i += 1;
       end
    end

@@ -105,7 +105,11 @@
 #define CAMP_WM_Y           (720)
 
 // Набег 1.3 и главарь у ворот 1.3а (f2mraid.h)
-#define GV_HANK_MOVED       "f2mhankm"  // 1 = Хэнк переставлен к начальнику охраны (0.6.4, Егор 2026-10-08)
+#define GV_HANK_MOVED       "f2mhankm"  // 1 = Хэнк переставлен к начальнику охраны (0.6.4), 2 = на дорогу рядом с Риком (0.6.6, Егор 2026-10-08)
+#define GV_BURY_ON          "f2mburon"  // 1 = идут похороны: людей у могилы не трогать (f2mbury.h, f2mhome.h)
+#define GV_CAMP_FINE        "f2mcfine"  // штраф за стрельбу по своим в лагере, крышки (f2mfine.h)
+#define GV_FINE_TALK        "f2mfntlk"  // 1 = герой уже уговаривал снизить этот штраф
+#define GV_GRAVE_FIX        "f2mgrvfx"  // 1 = надгробие переставлено без чужого скрипта могилы (0.6.6)
 #define GV_FENCE            "f2mfence"  // 1 = частокол вокруг лагеря построен (Хэнк)
 #define GV_MIL_HIRED        "f2mmilhr"  // 1 = ополчение нанято у Рика
 #define GV_COMP_STAY        "f2mcomps"  // 1 = герой ушел из лагеря, оставив там спутника
@@ -137,6 +141,14 @@
 #define BOSS_LEFT           (2)     // герой отказал, банда ушла
 #define BOSS_FIGHT          (3)     // бой у ворот
 #define BOSS_BEATEN         (4)     // бой кончился: Кейн убит или банда разбежалась
+#define PID_MILITIA_MALE    (16777575)  // ополчение Рика (1.3)
+#define PID_MILITIA_FEMALE  (16777427)
+// Штраф за стрельбу по своим в лагере (Егор 2026-10-08): ранение 500, убийство 2000, брамин 500
+#define CAMP_FINE_HIT       (500)
+#define CAMP_FINE_KILL      (2000)
+#define camp_fine_add(n)    if (cur_map_index == MAP_F2MOD_CAMP) then set_sfall_global(GV_CAMP_FINE, get_sfall_global_int(GV_CAMP_FINE) + (n))
+// Прицельно ранил своего, пока лагерь не воюет: штраф за ранение (убитому — за убийство в destroy_p_proc)
+#define camp_fine_wound     if (not get_sfall_global_int(GV_CARAVAN_HOSTILE) and not is_critter_dead(self_obj)) then camp_fine_add(CAMP_FINE_HIT)
 #define TEAM_F2M_GANG       (TEAM_RND_RAIDERS)
 #define is_gang(c)          (obj_pid(c) == PID_RAIDER_MALE and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_F2M_GANG)
 #define boss_fight_on       (cur_map_index == MAP_F2MOD_CAMP and get_sfall_global_int(GV_BOSS) == BOSS_FIGHT)

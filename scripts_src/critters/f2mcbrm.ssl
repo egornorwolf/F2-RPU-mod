@@ -54,8 +54,10 @@ procedure accidental_hit begin
 end
 
 procedure damage_p_proc begin
-   if (is_dude_side(source_obj) and not accidental_hit) then
+   if (is_dude_side(source_obj) and not accidental_hit) then begin
+      camp_fine_wound;
       set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   end
    floater(random(120, 122));
 end
 
@@ -63,6 +65,9 @@ end
 // На следующем участке дороги погибшего брамина уже нет.
 procedure destroy_p_proc begin
    if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // лагерь убирает лишнего или ушедшего: это не смерть
-   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   if (is_dude_side(source_obj)) then begin
+      camp_fine_add(CAMP_FINE_HIT);
+      set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   end
    call cv_mark_dead(obj_pid(self_obj));
 end

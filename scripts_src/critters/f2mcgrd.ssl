@@ -16,6 +16,8 @@
 #include "f2mcamp.h"
 #include "f2mset.h"
 #include "f2mpay.h"
+#include "f2mfine.h"
+#include "f2mgreet.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -45,8 +47,6 @@ variable warned;
 variable go_militia;
 
 // Ополчение (1.3): трое наемников (Mercenary, модель hmlthr) и наемница (Nomad, hflthr) — модели героя, анимации всего оружия
-#define PID_MILITIA_MALE    (16777575)
-#define PID_MILITIA_FEMALE  (16777427)
 
 procedure start begin
 end
@@ -98,13 +98,20 @@ procedure talk_p_proc begin
       floater(random(110, 113));
       return;
    end
+   // штраф за стрельбу по своим берет Тед, без Теда — начальник охраны (f2mfine.h)
+   if (fine_due and (not is_chief or fine_ted_here)) then begin
+      float_msg(self_obj, FINE_MSG(487 + not fine_ted_here), FLOAT_MSG_NORMAL);
+      return;
+   end
    if (not is_chief) then begin
-      floater(random(170, 172));
+      floater(greet_pick(170, 6));
       return;
    end
    start_gdialog(NAME, self_obj, 4, -1, -1);
    gSay_Start;
-      if (get_sfall_global_int(GV_RAID) and not (get_sfall_global_int(GV_RAID_TOLD) bwand 2)) then
+      if (fine_due) then
+         call fine_node;
+      else if (get_sfall_global_int(GV_RAID) and not (get_sfall_global_int(GV_RAID_TOLD) bwand 2)) then
          call Node003;
       else
          call Node001;
@@ -264,6 +271,7 @@ procedure damage_p_proc begin
       if (accidental_hit) then
          floater(random(120, 120 + 2));
       else begin
+         camp_fine_wound;
          set_sfall_global(GV_CARAVAN_HOSTILE, 1);
          attack(dude_obj);
       end
@@ -279,6 +287,9 @@ end
 // На следующем участке дороги погибшего уже нет.
 procedure destroy_p_proc begin
    if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // лагерь убирает лишнего или ушедшего: это не смерть
-   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   if (is_dude_side(source_obj)) then begin
+      camp_fine_add(CAMP_FINE_KILL);
+      set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   end
    call cv_mark_dead(obj_pid(self_obj));
 end

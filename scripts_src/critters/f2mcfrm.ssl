@@ -19,9 +19,11 @@
 #include "f2mbury.h"
 #include "f2mspots.h"
 #include "f2mhome.h"
+#include "f2mfine.h"
 
 procedure start;
 procedure critter_p_proc;
+procedure combat_p_proc;
 procedure damage_p_proc;
 procedure accidental_hit;
 procedure talk_p_proc;
@@ -81,6 +83,7 @@ variable go_build := -1;   // что строить после диалога
 variable helped;           // герой помогал сам
 variable go_fence;         // строить частокол после диалога
 variable go_bury;          // похороны после диалога: какая речь (f2mbury.h)
+variable fled;             // убегал от боя к костру: после боя вернуться к воротам
 
 procedure start begin
 end
@@ -96,6 +99,15 @@ procedure description_p_proc begin
 end
 
 procedure critter_p_proc begin
+   // бой кончился: назад на свое место у ворот
+   if (fled and not combat_is_initialized and cur_map_index == MAP_F2MOD_CAMP and not get_sfall_global_int(GV_BURY_ON)) then begin
+      if (tile_distance(tile_num(self_obj), HANK_SPOT) <= 1) then begin
+         fled := 0;
+         anim(self_obj, ANIMATE_ROTATION, 2);
+      end else if (not anim_busy(self_obj)) then
+         animate_move_obj_to_tile(self_obj, HANK_SPOT, 0);
+      return;
+   end
    if (not greeted and not combat_is_initialized and self_can_see_dude
        and tile_distance_objs(self_obj, dude_obj) < 6) then begin
       greeted := 1;
@@ -119,20 +131,42 @@ procedure damage_p_proc begin
       if (accidental_hit) then
          floater(random(105, 106));
       else begin
+         camp_fine_wound;
          set_sfall_global(GV_CARAVAN_HOSTILE, 1);
          floater(107);
       end
    end
 end
 
+// Хэнк не воин (Егор 2026-10-08): в бою не дерется, а бежит вглубь лагеря, к костру. В бою движок не дает
+// скриптам двигать людей, кроме reg_anim_* после reg_anim_combat_check(0) (sfall); -1 — бежит до места за один ход
+procedure combat_p_proc begin
+   if (fixed_param != COMBAT_SUBTYPE_TURN or cur_map_index != MAP_F2MOD_CAMP) then return;
+   script_overrides;
+   if (tile_distance(tile_num(self_obj), HANK_SAFE) > 2) then begin
+      fled := 1;
+      reg_anim_combat_check(0);
+      reg_anim_begin();
+      reg_anim_obj_run_to_tile(self_obj, HANK_SAFE, -1);
+      reg_anim_end();
+   end
+end
+
 procedure destroy_p_proc begin
    if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // лагерь убирает лишнего или ушедшего: это не смерть
-   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   if (is_dude_side(source_obj)) then begin
+      camp_fine_add(CAMP_FINE_KILL);
+      set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   end
 end
 
 procedure talk_p_proc begin
    if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then begin
       floater(107);
+      return;
+   end
+   if (fine_due) then begin
+      float_msg(self_obj, FINE_MSG(487 + not fine_ted_here), FLOAT_MSG_NORMAL);
       return;
    end
    go_build := -1;
@@ -185,7 +219,7 @@ procedure do_build begin
    game_time_advance(kind_hours(k) * ONE_GAME_HOUR);
    call camp_set_built(go_build);
    call lay_slot(go_build);
-   call camp_spread;
+   call camp_spread(0);
    gfade_in(1);
    if (go_build == BUILD_HERO) then display_msg(mstr(201));
    else display_msg(mstr(190 + k));

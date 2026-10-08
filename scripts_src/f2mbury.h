@@ -6,8 +6,6 @@
 #ifndef F2MBURY_H
 #define F2MBURY_H
 
-#define BURY_GRAVE          (31760)     // x 160, y 158: внутри частокола у нижне-левой стены, между деревьями
-#define PID_BURY_STONE      (33555445)  // Headstone (GRAVSTN1), блокирует клетку; проходимость проверена
 #define PID_HANK            (PID_DOCK_WORKER)
 #define PID_TED             (PID_AVERAGE_MERCHANT_MALE)
 #define BURY_SPEECH_SKILL   (50)        // Красноречие: речь у могилы, дух еще +5%
@@ -25,10 +23,13 @@ procedure bury_speaker(variable pid, variable avoid);
 variable bury_was;
 
 procedure bury_resident(variable c) begin
-   // все живые на карте лагеря и отряд героя (Егор 2026-10-08), кроме самого героя, браминов и банды
+   // все живые на карте лагеря и отряд героя (Егор 2026-10-08), кроме самого героя, браминов, банды
+   // и ополчения (наемники Рика на похороны не идут, стоят на посту)
    // (команду жителей движок может поменять, поэтому по команде не отбираем)
-   return c != dude_obj and not is_critter_dead(c) and obj_pid(c) != PID_BRAHMIN
-      and obj_pid(c) != PID_RAIDER_MALE;
+   variable p;
+   p := obj_pid(c);
+   return c != dude_obj and not is_critter_dead(c) and p != PID_BRAHMIN and p != PID_RAIDER_MALE
+      and p != PID_MILITIA_MALE and p != PID_MILITIA_FEMALE;
 end
 
 // Кто ответит: житель с этим PID (0 — любой, кроме Теда, Хэнка и avoid)
@@ -67,7 +68,7 @@ procedure bury_start(variable speech) begin
       end
    end
    set_sfall_global(GV_SET_LEAVING, 0);
-   if (not tile_contains_pid_obj(BURY_GRAVE, 0, PID_BURY_STONE)) then create_object(PID_BURY_STONE, BURY_GRAVE, 0);
+   if (not tile_contains_pid_obj(BURY_GRAVE, 0, PID_BURY_STONE)) then create_object_sid(PID_BURY_STONE, BURY_GRAVE, 0, -1);
    set_sfall_global(GV_RAID_BURY, 1);
    k := BURY_MORALE;
    if (speech == 2) then k += BURY_MORALE;
@@ -94,20 +95,29 @@ procedure bury_start(variable speech) begin
       end
       r += 1;
    end
-   // все жители к могиле, лицом к ней; где кто стоял — запомнить
+   // все жители к могиле, лицом к ней; где кто стоял — запомнить. Отряд героя — рядом с ним, у изголовья
+   set_sfall_global(GV_BURY_ON, 1);
    if (bury_was) then free_array(bury_was);
    bury_was := create_array_map;
-   foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (bury_resident(c) and i < n) then begin
-         bury_was[c] := tile_num(c);
-         critter_attempt_placement(c, places[i], 0);
-         anim(c, ANIMATE_ROTATION, rotation_to_tile(tile_num(c), BURY_GRAVE));
-         i += 1;
-      end
-   end
-   // герой у изголовья, со стороны лагеря
    critter_attempt_placement(dude_obj, tile_num_in_direction(BURY_GRAVE, 1, 1), 0);
    anim(dude_obj, ANIMATE_ROTATION, rotation_to_tile(tile_num(dude_obj), BURY_GRAVE));
+   k := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (bury_resident(c)) then begin
+         bury_was[c] := tile_num(c);
+         if (obj_in_party(c)) then begin
+            critter_attempt_placement(c, tile_num_in_direction(tile_num(dude_obj), (k * 5) % 6, 1 + k / 2), 0);
+            k += 1;
+         end else if (i < n) then begin
+            critter_attempt_placement(c, places[i], 0);
+            i += 1;
+         end
+         anim(c, ANIMATE_ROTATION, rotation_to_tile(tile_num(c), BURY_GRAVE));
+      end
+   end
+   #ifdef F2MOD_DEBUG
+   display_msg("F2mod (отладка): на похоронах жителей " + i + ", отряда " + k + ".");
+   #endif
    tile_set_center(BURY_GRAVE);
    gfade_in(1);
    float_msg(dude_obj, BURY_MSG(319 + speech), FLOAT_MSG_YELLOW);
@@ -131,6 +141,7 @@ procedure bury_step(variable step) begin
       return;
    end
    gfade_out(1);
+   set_sfall_global(GV_BURY_ON, 0);
    if (bury_was) then begin
       foreach (c: t in bury_was) begin
          if (not is_critter_dead(c)) then critter_attempt_placement(c, t, 0);

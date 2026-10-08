@@ -8,6 +8,7 @@
 #include "sfall.h"
 #include "f2mcdead.h"
 #include "f2mcamp.h"
+#include "f2mgreet.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -51,12 +52,18 @@ procedure description_p_proc begin
 end
 
 procedure critter_p_proc begin
+   variable k;
    if (not greeted and not combat_is_initialized and self_can_see_dude
        and tile_distance_objs(self_obj, dude_obj) < 5 and random(0, 3) == 0) then begin
       greeted := 1;
       if (cur_map_index == MAP_F2MOD_CAMP and not is_child) then
-         floater(random(170, 172));
-      else if (is_child) then
+         floater(greet_pick(200, 10));
+      else if (cur_map_index == MAP_F2MOD_CAMP) then begin
+         // дети: 140-142 и 146-149
+         k := greet_pick(0, 7);
+         if (k < 3) then floater(140 + k);
+         else floater(143 + k);
+      end else if (is_child) then
          floater(random(140, 142));
       else
          floater(random(143, 145));
@@ -73,7 +80,7 @@ procedure talk_p_proc begin
    else if (not camp_has_water) then
       floater(random(180, 182));
    else
-      floater(random(183, 188));
+      floater(greet_pick(183, 6));
 end
 
 // Свой попал случайно (очередью или взрывом) — прощаем; прицельно — бой
@@ -105,6 +112,7 @@ procedure damage_p_proc begin
       if (accidental_hit) then
          floater(random(130, 132));
       else begin
+         camp_fine_wound;
          set_sfall_global(GV_CARAVAN_HOSTILE, 1);
          floater(random(150, 152));
       end
@@ -115,7 +123,10 @@ end
 // На следующем участке дороги погибшего уже нет.
 procedure destroy_p_proc begin
    if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // лагерь убирает лишнего или ушедшего: это не смерть
-   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   if (is_dude_side(source_obj)) then begin
+      camp_fine_add(CAMP_FINE_KILL);
+      set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   end
    call cv_mark_dead(obj_pid(self_obj));
    if (not local_var(LVAR_STIM_USED)) then begin
       set_local_var(LVAR_STIM_USED, 1);

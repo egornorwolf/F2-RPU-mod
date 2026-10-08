@@ -70,6 +70,7 @@ procedure talk_p_proc begin
 end
 
 procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // тело убирают (собаки съели, f2mgore.h): это не смерть
    if (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT and gang_alive(self_obj) == 0) then begin
       set_sfall_global(GV_BOSS, BOSS_BEATEN);
       display_msg(mstr(130));

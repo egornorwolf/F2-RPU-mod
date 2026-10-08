@@ -174,6 +174,7 @@ end
 
 // Кейн убит; если и бойцов не осталось — банда разбита. Где логово, герой узнает обыском тела (gl_f2mod, boss_search)
 procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // тело убирают (собаки съели, f2mgore.h): это не смерть
    if (gang_alive(self_obj) == 0) then begin
       set_sfall_global(GV_BOSS, BOSS_BEATEN);
       display_msg(mstr(251));

@@ -8,6 +8,7 @@
 #include "command.h"
 #include "scenepid.h"
 #include "sfall.h"
+#include "define_extra.h"
 #include "f2mod.h"
 #include "f2mcv.h"
 #include "f2mcamp.h"
@@ -19,6 +20,7 @@
 #include "f2mraid.h"
 #include "f2mspots.h"
 #include "f2mhome.h"
+#include "f2mgore.h"
 
 
 procedure start;
@@ -38,9 +40,9 @@ procedure wagon_back;
 procedure boss_leftovers;
 procedure boss_corpse;
 procedure hank_move;
+procedure camp_peace;
+procedure grave_fix;
 
-// Хэнк стоит у начальника охраны внизу, у южных ворот (Егор 2026-10-08: бегать к нему далеко); проходы проверены
-#define HANK_SPOT       (tile_num_in_direction(LAY_CHIEF, 0, 3))
 
 
 procedure start begin
@@ -80,8 +82,11 @@ procedure map_enter_p_proc begin
    if (get_sfall_global_int(GV_RAID_DECOR)) then call raid_decor;
    if (get_sfall_global_int(GV_WAGON) == 1 and game_time / ONE_GAME_HOUR >= get_sfall_global_int(GV_RAID_HOUR) + WAGON_HOURS) then call wagon_back;
    call boss_leftovers;
-   if (not get_sfall_global_int(GV_HANK_MOVED)) then call hank_move;
-   call camp_spread;
+   call hank_move;
+   call camp_peace;
+   call grave_fix;
+   call gore_update;
+   call camp_spread(0);
    if (get_sfall_global_int(GV_BOSS_NOTE) == 2) then begin
       set_sfall_global(GV_BOSS_NOTE, 1);
       display_msg("Рик обыскал главаря налетчиков: «Знаем, где их нора. Старый карьер в горах, день пути на северо-восток».");
@@ -92,15 +97,44 @@ procedure map_enter_p_proc begin
    end
 end
 
+// Хэнк на своем месте у ворот: при первом входе после 0.6.6 и если после боя остался у костра
 procedure hank_move begin
    variable c;
-   set_sfall_global(GV_HANK_MOVED, 1);
+   if (combat_is_initialized) then return;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (obj_pid(c) == PID_DOCK_WORKER and not is_critter_dead(c)) then begin
+      if (obj_pid(c) == PID_DOCK_WORKER and not is_critter_dead(c) and not obj_in_party(c)
+          and (get_sfall_global_int(GV_HANK_MOVED) < 2 or tile_distance(tile_num(c), HANK_SPOT) > 3)) then begin
          critter_attempt_placement(c, HANK_SPOT, 0);
          anim(c, ANIMATE_ROTATION, 2);
       end
    end
+   set_sfall_global(GV_HANK_MOVED, 2);
+end
+
+// Герой ушел с карты и вернулся: лагерь опускает оружие, Тед (или Рик) требует штраф (f2mfine.h)
+procedure camp_peace begin
+   variable c;
+   if (not get_sfall_global_int(GV_CARAVAN_HOSTILE)) then return;
+   set_sfall_global(GV_CARAVAN_HOSTILE, 0);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (not is_critter_dead(c) and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_CARAVAN) then
+         set_object_data(c, OBJ_DATA_WHO_HIT_ME, 0);
+   end
+   if (get_sfall_global_int(GV_CAMP_FINE) > 0) then
+      display_msg("Жители опустили оружие, но смотрят косо. За стрельбу по своим с вас требуют штраф: " + get_sfall_global_int(GV_CAMP_FINE) + " крышек.");
+   else
+      display_msg("Жители опустили оружие, но смотрят косо.");
+end
+
+// Надгробие до 0.6.6 ставилось с чужим скриптом могилы из прототипа (в игре «Error»): ставим заново, без скрипта
+procedure grave_fix begin
+   variable g;
+   if (get_sfall_global_int(GV_GRAVE_FIX)) then return;
+   set_sfall_global(GV_GRAVE_FIX, 1);
+   g := tile_contains_pid_obj(BURY_GRAVE, 0, PID_BURY_STONE);
+   if (not g) then return;
+   destroy_object(g);
+   create_object_sid(PID_BURY_STONE, BURY_GRAVE, 0, -1);
 end
 
 procedure boss_corpse begin
@@ -127,6 +161,7 @@ procedure raid_corpse(variable pid, variable tile, variable art) begin
 end
 
 procedure raid_blood(variable center, variable n, variable r) begin
+   call gore_blood_mark;
    while (n > 0) do begin
       create_object(PID_BLOOD_1 + random(0, 8), tile_num_in_direction(center, random(0, 5), random(1, r)), 0);
       n -= 1;
@@ -288,6 +323,11 @@ end
 
 procedure map_update_p_proc begin
    Lighting;
+   // днем жители у палаток и на огородах, ночью в палатках (f2mhome.h)
+   if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE and not is_loading_game) then begin
+      call camp_spread(1);
+      call gore_update;   // кровь сохнет, собаки едят тела (f2mgore.h)
+   end
 end
 
 procedure map_exit_p_proc begin
