@@ -143,7 +143,7 @@ def src_pieces(mapname):
         for h in hit[1:]: g['pts'] += h['pts']; g['objs'] += h['objs']; groups.remove(h)
         g['pts'].append((x, y)); g['objs'].append(o)
     for o in objs:                                   # трава и прочие декорации рядом с куском — к нему
-        if o[0] >> 24 != 2: continue
+        if o[0] >> 24 != 2 or mapparse.subtype(o[0]) == 0: continue   # двери не берем: без своего проема висят в воздухе
         x, y = xy(o[1])
         for g in groups:
             if any(abs(x - a) <= 2 and abs(y - b) <= 2 for a, b in g['pts']): g['objs'].append(o); break

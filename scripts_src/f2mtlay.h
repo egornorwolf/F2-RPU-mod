@@ -882,7 +882,7 @@ procedure lay_x(variable pid, variable tile) begin
    if (obj) then destroy_object(obj);
 end
 
-// Развалины на участках будущих зданий: стены 4-го уровня с проломами, блоки, мусор (992 объектов)
+// Развалины на участках будущих зданий: стены 4-го уровня с проломами, блоки, мусор (991 объектов)
 procedure lay_ruins begin
    // Жилье 4: 45
    call lay_o(50332270, 7474, 0);
@@ -1831,7 +1831,7 @@ procedure lay_ruins begin
    call lay_o(50332203, 23098, 0);
    call lay_o(50332202, 23298, 0);
    call lay_o(50332277, 23498, 0);
-   // Медпункт: 89
+   // Медпункт: 88
    call lay_o(50332282, 25510, 0);
    call lay_o(50332222, 25710, 0);
    call lay_o(50332226, 25910, 0);
@@ -1871,8 +1871,6 @@ procedure lay_ruins begin
    call lay_o(33554499, 28124, 0);
    call lay_o(33554499, 28126, 0);
    call lay_o(33554713, 28325, 0);
-   call lay_o(33554778, 28329, 48);
-   call lay_flg(2684354576, 0);
    call lay_o(33554499, 28525, 0);
    call lay_o(50332241, 26516, 0);
    call lay_o(50332238, 26517, 0);
@@ -4360,7 +4358,6 @@ procedure lay_ruin_clear(variable plot) begin
       call lay_x(33554499, 28124);
       call lay_x(33554499, 28126);
       call lay_x(33554713, 28325);
-      call lay_x(33554778, 28329);
       call lay_x(33554499, 28525);
       call lay_x(50332241, 26516);
       call lay_x(50332238, 26517);
