@@ -115,9 +115,6 @@ procedure bury_start(variable speech) begin
          anim(c, ANIMATE_ROTATION, rotation_to_tile(tile_num(c), BURY_GRAVE));
       end
    end
-   #ifdef F2MOD_DEBUG
-   display_msg("F2mod (отладка): на похоронах жителей " + i + ", отряда " + k + ".");
-   #endif
    tile_set_center(BURY_GRAVE);
    gfade_in(1);
    float_msg(dude_obj, BURY_MSG(319 + speech), FLOAT_MSG_YELLOW);
