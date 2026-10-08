@@ -17,6 +17,7 @@
 #define GV_SET_NOLEAVE  "f2msnolv"  // 1 = люди привезены без колодца: без воды не уходят, только дух падает
 #define GV_SET_NEWS     "f2msnews"  // Тед скажет при встрече: 1 люди ушли, 2 люди вернулись
 #define GV_SET_HALF     "f2mshalf"  // 1 = Тед уговорен (Красноречие 60%): вернуть людей за полцены
+#define GV_SET_SYNC     "f2mssync"  // 1 = люди ушли или вернулись, карта лагеря еще не обновлена
 #define GV_SET_INIT     "f2msinit"  // 1 = запасы заведены (лагерь из сохранения до 0.4.0 заводится с текущей недели)
 
 #define ABANDON_NO       (0)
@@ -219,15 +220,18 @@ procedure set_tick(variable week) begin
       if (ws == 1) then begin
          call set_leave_half;
          set_sfall_global(GV_SET_NEWS, 1);
+         set_sfall_global(GV_SET_SYNC, 1);
          display_msg("Нечем пить: половина переселенцев собрала вещи и ушла. Дух -25%.");
       end else begin
          call set_abandon;
          set_sfall_global(GV_SET_NEWS, 1);
+         set_sfall_global(GV_SET_SYNC, 1);
          display_msg("Лагерь брошен: люди ушли. Остались Тед, Хэнк и один охранник.");
       end
    end else if (fs == 3) then begin
       call set_leave_half;
       set_sfall_global(GV_SET_NEWS, 1);
+         set_sfall_global(GV_SET_SYNC, 1);
       display_msg("Третью неделю нечего есть: половина переселенцев ушла.");
    end
    if (ws >= 1) then display_msg("Воды не хватает, денег в кассе на нее нет.");
@@ -253,6 +257,7 @@ procedure set_tick_all begin
       if (get_sfall_global_int(GV_SET_ABANDON) == ABANDON_RETURN and w >= get_sfall_global_int(GV_SET_RETURN)) then begin
          call set_people_return;
          set_sfall_global(GV_SET_NEWS, 2);
+         set_sfall_global(GV_SET_SYNC, 1);
          display_msg("Люди вернулись в лагерь у скал.");
       end
       call set_tick(w);

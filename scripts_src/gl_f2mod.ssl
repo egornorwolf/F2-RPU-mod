@@ -14,16 +14,20 @@
 #include "define.h"
 #include "command.h"
 #include "f2mod.h"
-#include "f2mcdead.h"
+#include "scenepid.h"
+#include "f2mcv.h"
 #include "f2mcamp.h"
+#include "f2mlay.h"
 #include "f2mset.h"
+#include "f2msync.h"
 
-#define F2MOD_VERSION "0.4.1"
+#define F2MOD_VERSION "0.4.2"
 
 procedure start;
 procedure encounter_handler;
 procedure combatdamage_handler;
 procedure keep_escort_wm_pos;
+procedure camp_fade_sync;
 procedure step_toward(variable a, variable b, variable s);
 
 procedure start begin
@@ -38,6 +42,7 @@ procedure start begin
    end else begin
       call keep_escort_wm_pos;
       call set_tick_all;
+      call camp_fade_sync;
    end
 end
 
@@ -48,6 +53,17 @@ procedure step_toward(variable a, variable b, variable s) begin
    end
    if (a - s < b) then return b;
    return a - s;
+end
+
+// Герой в лагере, а люди ушли или вернулись: экран гаснет, на карте меняются люди, экран светлеет.
+// Ждем, пока закрыты диалог, бой, инвентарь и прочие окна (все режимы, кроме самой карты).
+procedure camp_fade_sync begin
+   if (not get_sfall_global_int(GV_SET_SYNC) or cur_map_index != MAP_F2MOD_CAMP) then return;
+   if ((get_game_mode bwand 0x3FFFFD) != 0) then return;
+   set_sfall_global(GV_SET_SYNC, 0);
+   gfade_out(1);
+   call camp_sync_people;
+   gfade_in(1);
 end
 
 // На картах дороги: точка встречи, сдвинутая к лагерю на ESCORT_WM_STEP за каждый участок
