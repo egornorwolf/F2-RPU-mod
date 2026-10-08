@@ -47,6 +47,7 @@ procedure Node013;
 procedure Node014;
 procedure Node015;
 procedure Node020;
+procedure ted_buildings;
 procedure Node021;
 procedure Node022;
 procedure Node023;
@@ -452,6 +453,22 @@ procedure morale_text begin
 end
 
 // Отчет старосты: числа прямо в реплике (окно сообщений во время диалога не видно)
+// Коротко про каждую постройку (Егор 2026-10-08): колодцы, огороды, жилье, склад, центр, мастерская, пост, ферма, бар, медпункт, дом героя
+procedure ted_buildings begin
+   variable u := 0, lv, t := "", tents := 0, big := 0;
+   while (u < U_COUNT) do begin
+      lv := bld_level(u);
+      if (bld_is_house(u)) then begin
+         if (lv == 1) then tents += 1;
+         else if (lv >= 2) then big += 1;
+      end else if (lv >= 1) then
+         t += mstr(600 + u * 5 + lv) + " ";
+      if (u == U_HOUSE + 7) then t += mstr(590) + tents + mstr(591) + big + mstr(592) + " ";
+      u += 1;
+   end
+   return t;
+end
+
 procedure Node021 begin
    variable t;
    if (set_wells >= 2) then
@@ -460,7 +477,7 @@ procedure Node021 begin
       t := mstr(230);
    else
       t := mstr(231);
-   t := t + " " + mstr(232) + camp_people + mstr(233)
+   t := t + " " + ted_buildings + mstr(232) + camp_people + mstr(233)
       + " " + mstr(270) + (get_sfall_global_int(GV_SET_WEEK) + 1) + "."
       + " " + mstr(271) + get_sfall_global_int(GV_SET_FOOD) + mstr(272) + set_food_prod + "."
       + " " + mstr(273) + get_sfall_global_int(GV_SET_WATER) + mstr(274) + bld_water + "."

@@ -1,0 +1,188 @@
+// Кейн в логове (квест 1.4, npc-cards.md). Заговаривает сам, когда герой дошел до него без тревоги
+// (пропуск часового или Скрытность). Пути: союз (Красноречие 75), уход без боя (Красноречие 100 или 75 и 1000 крышек), бой.
+#define SCRIPT_REALNAME "f2mkane"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MKANE
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+#include "f2mlair.h"
+#include "f2mlairl.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure combat_p_proc;
+procedure damage_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+procedure Node001;
+procedure Node010;
+procedure Node011;
+procedure Node020;
+procedure Node021;
+procedure Node030;
+procedure Node040;
+procedure Node999;
+procedure kane_ally;
+procedure kane_leave;
+
+variable talked;
+variable go;    // после диалога: 1 союз, 2 уходят, 3 бой
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_ALLY or lair_done) then return;
+   if (get_sfall_global_int(GV_LAIR_ALARM)) then begin
+      if (not combat_is_initialized and obj_can_see_obj(self_obj, dude_obj)) then attack(dude_obj);
+      return;
+   end
+   if (not talked and not combat_is_initialized and tile_distance_objs(self_obj, dude_obj) <= 4) then begin
+      talked := 1;
+      dialogue_system_enter;
+   end
+end
+
+procedure combat_p_proc begin
+   if (fixed_param == COMBAT_SUBTYPE_TURN and get_sfall_global_int(GV_LAIR_ALARM)
+       and not get_object_data(self_obj, OBJ_DATA_WHO_HIT_ME)) then
+      set_object_data(self_obj, OBJ_DATA_WHO_HIT_ME, dude_obj);
+end
+
+procedure damage_p_proc begin
+   if (is_dude_side(source_obj) and get_sfall_global_int(GV_LAIR_HOW) != LAIR_HOW_ALLY and not lair_done) then begin
+      call lair_alarm;
+      attack(dude_obj);
+   end
+end
+
+procedure destroy_p_proc begin
+   if (lair_done or not get_sfall_global_int(GV_LAIR_ALARM)) then return;
+   if (lair_gang_alive(self_obj) == 0) then call lair_finish(LAIR_HOW_FIGHT);
+end
+
+procedure talk_p_proc begin
+   if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_ALLY) then begin
+      floater(random(150, 152));
+      return;
+   end
+   if (get_sfall_global_int(GV_LAIR_ALARM)) then begin
+      floater(113);
+      return;
+   end
+   talked := 1;
+   go := 0;
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+   if (go == 1) then call kane_ally;
+   else if (go == 2) then call kane_leave;
+   else if (go == 3) then begin
+      call lair_alarm;
+      attack(dude_obj);
+   end
+end
+
+procedure Node001 begin
+   if (get_sfall_global_int(GV_LAIR_PASS)) then Reply(110);
+   else Reply(111);   // герой подкрался незамеченным
+   NOption(120, Node010, 4);
+   if (has_skill(dude_obj, SKILL_SPEECH) >= LAIR_SPEECH_FREE
+       or (has_skill(dude_obj, SKILL_SPEECH) >= LAIR_SPEECH_ALLY and dude_caps >= LAIR_BRIBE)) then
+      NOption(121, Node020, 4);
+   NOption(122, Node030, 4);
+   NOption(123, Node040, 4);
+   NLowOption(124, Node030);
+end
+
+// Давай договоримся (Красноречие 75)
+procedure Node010 begin
+   if (has_skill(dude_obj, SKILL_SPEECH) >= LAIR_SPEECH_ALLY) then begin
+      Reply(130);
+      NOption(131, Node011, 4);
+   end else begin
+      Reply(132);
+      NOption(122, Node030, 4);
+      NOption(123, Node040, 4);
+   end
+end
+
+procedure Node011 begin
+   go := 1;
+end
+
+// Уходите без боя: Красноречие 100 даром, 75 — с 1000 крышек
+procedure Node020 begin
+   if (has_skill(dude_obj, SKILL_SPEECH) < LAIR_SPEECH_FREE) then begin
+      item_caps_adjust(dude_obj, -LAIR_BRIBE);
+      item_caps_adjust(self_obj, LAIR_BRIBE);
+      Reply(141);
+   end else
+      Reply(140);
+   NOption(142, Node021, 4);
+end
+
+procedure Node021 begin
+   go := 2;
+end
+
+// Я пришел за запасами: бой
+procedure Node030 begin
+   go := 3;
+   Reply(145);
+   NOption(146, Node999, 4);
+   NLowOption(146, Node999);
+end
+
+// Ухожу
+procedure Node040 begin
+   Reply(147);
+   NOption(148, Node999, 4);
+end
+
+procedure Node999 begin
+end
+
+// Союз: банда переходит к герою и держит карьер (будущая база), Кейн командует
+procedure kane_ally begin
+   variable c;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not is_critter_dead(c)) then
+         critter_add_trait(c, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
+   end
+   call lair_finish(LAIR_HOW_ALLY);
+   display_msg(mstr(160));
+end
+
+// Уходят без боя: экран гаснет на час, банда собирается и уходит, тайник за Кейном остается
+procedure kane_leave begin
+   gfade_out(1);
+   game_time_advance(ONE_GAME_HOUR);
+   call lair_gang_leave(self_obj);
+   call lair_finish(LAIR_HOW_PEACE);
+   gfade_in(1);
+   display_msg(mstr(161));
+   destroy_object(self_obj);   // последним: скрипт, убравший себя посреди затемнения, оставляет экран черным
+end

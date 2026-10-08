@@ -69,6 +69,10 @@ procedure Node062;
 procedure Node063;
 procedure Node064;
 procedure Node065;
+procedure Node066;
+procedure Node067;
+procedure Node068;
+procedure Node120;
 procedure Node070;
 procedure Node071;
 procedure Node072;
@@ -77,6 +81,7 @@ procedure Node074;
 procedure Node075;
 procedure Node076;
 procedure Node077;
+procedure Node078;
 procedure Node080;
 procedure Node081;
 procedure Node100;
@@ -554,13 +559,18 @@ procedure do_wait begin
    call bld_commit;
    call bld_apply;
    gfade_in(1);
+   if (helped) then begin
+      helped := 0;
+      give_exp_points(BLD_HELP_XP2);
+      display_msg(mstr(195) + BLD_HELP_XP2 + mstr(196));
+   end
 end
 
 // Следующий уровень, который можно заказать (0 — нельзя: уже наверху, строится, или 1-й уровень строит не этот пункт)
 procedure bld_offer(variable u) begin
    variable lv;
    lv := bld_level(u) + 1;
-   if (lv > U_TOP_LEVEL or bld_job_of(u)) then return 0;
+   if (lv > bld_top(u) or bld_job_of(u)) then return 0;
    if (lv == 1 and bld_price(u, 1) == 0) then return 0;
    if (bld_is_house(u) and lv == 1) then return 0;
    return lv;
@@ -571,10 +581,11 @@ procedure bld_opt(variable u) begin
    variable lv, t, h;
    lv := bld_offer(u);
    h := bld_hours(u, lv);
-   t := mstr(600 + u * 5 + lv) + ": " + bld_price(u, lv) + mstr(415);
-   if (lv == 1) then t += h + mstr(418);
+   t := mstr(bld_name(u, lv)) + ": " + bld_price(u, lv) + mstr(415);
+   if (lv == 1 and u != U_BASE_UNIT) then t += h + mstr(418);
    else if (h <= 24) then t += (h / 24) + mstr(416);
    else t += (h / 24) + mstr(417);
+   if (lv >= 2 or u == U_BASE_UNIT) then t += mstr(451);
    return t;
 end
 
@@ -586,7 +597,7 @@ procedure bld_jobs_text begin
       if (u) then begin
          if (n) then t += mstr(406);
          if (u > BLD_BATCH) then t += mstr(446);
-         else t += mstr(600 + (u - 1) * 5 + get_sfall_global_int(GV_JOB_L(j)));
+         else t += mstr(bld_name(u - 1, get_sfall_global_int(GV_JOB_L(j))));
          t += mstr(404) + bld_job_left(j) + mstr(405);
          n += 1;
       end
@@ -603,6 +614,7 @@ procedure Node060 begin
    NOption(409, Node063, 4);
    NOption(410, Node064, 4);
    if (bld_offer(U_HERO)) then NOption(411, Node065, 4);
+   if (get_sfall_global_int("f2mlairs") >= 2) then NOption(452, Node066, 4);   // логово взято (f2mlair.h): военная база
    NOption(412, Node001, 4);
    NLowOption(117, Node999);
 end
@@ -674,6 +686,31 @@ procedure Node065 begin
    call bld_sel(U_HERO);
 end
 
+// Военная база в карьере (1.5): этапы за крышки, гарнизон — наемники, живут бесплатно
+procedure Node066 begin
+   if (not bld_level(U_BASE_UNIT)) then Reply(460);
+   else if (bld_offer(U_BASE_UNIT)) then Reply(465);
+   else Reply(466);
+   if (bld_offer(U_BASE_UNIT)) then NOption(bld_opt(U_BASE_UNIT), Node120, 4);
+   NOption(461, Node067, 4);
+   NOption(463, Node068, 4);
+   NLowOption(117, Node999);
+end
+
+procedure Node067 begin
+   Reply(462);
+   NOption(419, Node066, 4);
+   NLowOption(117, Node999);
+end
+
+procedure Node068 begin
+   Reply(464);
+   NOption(419, Node060, 4);
+   NLowOption(117, Node999);
+end
+
+procedure Node120 begin call bld_sel(U_BASE_UNIT); end
+
 procedure Node100 begin call bld_sel(U_OLDWELL); end
 procedure Node101 begin call bld_sel(U_NEWWELL); end
 procedure Node102 begin call bld_sel(U_GARDEN); end
@@ -709,16 +746,20 @@ procedure Node070 begin
       call Node060;
       return;
    end
-   if (sel_lv == 1) then begin
+   if (sel_lv == 1 and sel_u != U_BASE_UNIT) then begin
       Reply(mstr(700 + sel_u * 5 + 1) + " " + mstr(421) + sel_price + mstr(424));
       NOption(431, Node071, 4);
       if (dude_caps >= sel_price) then NOption(432, Node072, 4);
    end else if (not bld_job_free) then begin
       Reply(420);
    end else begin
+      helped := 0;
       if (bld_is_house(sel_u)) then Reply(444);
-      else Reply(mstr(700 + sel_u * 5 + sel_lv) + " " + mstr(421) + sel_price + mstr(422) + (bld_hours(sel_u, sel_lv) / 24) + mstr(423));
+      else Reply(mstr(bld_desc(sel_u, sel_lv)) + " " + mstr(421) + sel_price + mstr(422) + (bld_hours(sel_u, sel_lv) / 24) + mstr(423));
       call bld_pay_opts(sel_price);
+      // 2-й уровень тоже можно строить своими руками (Егор 2026-10-08): на треть дешевле, но ждать на месте до конца
+      if (get_critter_stat(dude_obj, STAT_st) >= BLD_HELP_STAT and get_critter_stat(dude_obj, STAT_en) >= BLD_HELP_STAT) then
+         NOption(448, Node078, 4);
    end
    NOption(433, Node060, 4);
    NLowOption(117, Node999);
@@ -772,6 +813,12 @@ procedure bld_pay(variable who) begin
    end else
       j := bld_job_start(sel_u, sel_lv, bld_hours(sel_u, sel_lv));
    sel_lv := j;
+   if (helped) then begin
+      Reply(450);
+      NOption(435, Node076, 4);
+      NLowOption(445, Node076);
+      return;
+   end
    Reply(434);
    NOption(435, Node076, 4);
    NOption(436, Node077, 4);
@@ -780,6 +827,16 @@ end
 
 procedure Node076 begin
    go_wait := sel_lv;
+end
+
+// 2-й уровень своими руками: цена меньше на треть, бригада с героем, ждем на месте
+procedure Node078 begin
+   helped := 1;
+   sel_price := sel_price * BLD_HELP_PCT / 100;
+   Reply(mstr(449) + sel_price + mstr(422) + (bld_hours(sel_u, sel_lv) / 24) + mstr(423));
+   call bld_pay_opts(sel_price);
+   NOption(433, Node060, 4);
+   NLowOption(117, Node999);
 end
 
 procedure Node077 begin

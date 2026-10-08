@@ -62,3 +62,12 @@ ambient_sfx=gustwind:20, gustwin1:20, rattle:15, rattle1:15, vulture:15, vulture
 saved=Yes
 dead_bodies_age=No
 can_rest_here=Yes,Yes,Yes
+
+[Map 180]
+lookup_name=F2mod Lair
+map_name=f2mlair
+music=07desert
+ambient_sfx=gustwind:20, gustwin1:20, rattle:15, rattle1:15, vulture:15, vulture1:15
+saved=Yes
+dead_bodies_age=No
+can_rest_here=No,No,No

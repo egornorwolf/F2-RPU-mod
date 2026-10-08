@@ -20,12 +20,19 @@
 #define U_HERO          (19)
 #define U_COUNT         (20)
 #define U_TOP_LEVEL     (2)     // 0.7.0: строим до 2-го уровня (3-й — с караваном 2, 4-й — после квестов)
+#define U_BASE_UNIT     (20)    // военная база в карьере (1.5): строит та же бригада, на карте лагеря ее нет
+#define bld_top(u)      (((u) == U_BASE_UNIT) * 3 + ((u) != U_BASE_UNIT) * U_TOP_LEVEL)
+// Названия и описания уровней — в f2mcfrm.msg: здания 600 + u * 5 + lv и 700 + u * 5 + lv, база 452 + lv и 456 + lv
+#define bld_name(u, lv) (((u) == U_BASE_UNIT) * (452 + (lv)) + ((u) != U_BASE_UNIT) * (600 + (u) * 5 + (lv)))
+#define bld_desc(u, lv) (((u) == U_BASE_UNIT) * (456 + (lv)) + ((u) != U_BASE_UNIT) * (700 + (u) * 5 + (lv)))
 
 #define BLD_JOBS        (2)     // бригад у Хэнка: две стройки сразу (третья — мастерская 3 уровня)
 #define BLD_BATCH       (1000)  // бригада строит шатры вместо всех палаток разом: здание = BLD_BATCH + биты мест 0-7
 #define BLD_BATCH_HOURS (36)    // 4 дома одним заказом за полтора срока одного (map-plan.md, раздел 8)
 #define BLD_HELP_STAT   (5)     // помочь на стройке 1-го уровня: Сила и Выносливость
 #define BLD_HELP_XP     (25)
+#define BLD_HELP_PCT    (70)    // 2-й уровень своими руками: цена 70%, ждать на месте до конца
+#define BLD_HELP_XP2    (50)
 #define GV_BLD_SYNC     "f2mbsync"  // 1 = достроено, а на карте еще прежний уровень (Хэнк или карта лагеря поставят)
 
 #define GV_JOB_U(j)     ("f2mjobu" + (j))   // бригада j: здание + 1 (0 — свободна)
@@ -101,6 +108,7 @@ end
 
 // Цена уровня, крышки (таблица в buildings-levels.md)
 procedure bld_price(variable u, variable lv) begin
+   if (u == U_BASE_UNIT) then return lv * 1000;   // база: 1000 / 2000 / 3000 (military-base.md)
    if (lv == 1) then begin
       if (u == U_WORKSHOP or u == U_GUARD) then return 20;
       if (u == U_BAR or u == U_MED) then return 30;
@@ -115,6 +123,7 @@ end
 
 // Срок, часы: 1-й уровень несколько часов, 2-й день (дом героя два)
 procedure bld_hours(variable u, variable lv) begin
+   if (u == U_BASE_UNIT) then return (lv + 1) * 24;   // база: 2 / 3 / 4 дня
    if (lv == 1) then return 3;
    if (u == U_HERO) then return 48;
    return 24;
@@ -179,7 +188,7 @@ procedure bld_commit begin
          end else begin
             u -= 1;
             call bld_set_level(u, get_sfall_global_int(GV_JOB_L(j)));
-            display_msg(message_str(SCRIPT_F2MCFRM, 590) + message_str(SCRIPT_F2MCFRM, 600 + u * 5 + get_sfall_global_int(GV_JOB_L(j))) + ".");
+            display_msg(message_str(SCRIPT_F2MCFRM, 590) + message_str(SCRIPT_F2MCFRM, bld_name(u, get_sfall_global_int(GV_JOB_L(j)))) + ".");
          end
          n += 1;
       end

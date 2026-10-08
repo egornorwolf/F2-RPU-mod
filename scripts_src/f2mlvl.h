@@ -13,6 +13,8 @@
 procedure lvl_step(variable u, variable lv);
 procedure lvl_spot(variable slot, variable lv, variable k);
 procedure lvl_night(variable tent, variable lv, variable k);
+procedure lvl_well(variable w);
+procedure lvl_bar(variable lv, variable k);
 procedure lvl_s0_2;
 procedure lvl_s1_2;
 procedure lvl_s2_2;
@@ -1370,22 +1372,13 @@ procedure lvl_s15_1 begin
    call lay_o(33556348, 32904, 0);
 end
 
-// Охрана: уровень 2. Ставим 7, убираем 2
+// Охрана: уровень 2. Ставим 3, убираем 0
 procedure lvl_s15_2 begin
    variable nc := 0, oc;
-   call lay_o(33556361, 7103, 0);
-   call lay_o(33554433, 6705, 0);
-   call lay_lit(4, 100);
-   call lay_o(33554433, 6692, 0);
-   call lay_lit(4, 100);
-   call lay_o(33556361, 32103, 0);
-   call lay_o(33556362, 32094, 0);
-   call lay_o(33554433, 32105, 0);
-   call lay_lit(4, 100);
-   call lay_o(33554433, 32092, 0);
-   call lay_lit(4, 100);
-   call lay_x(33556361, 32907);
-   call lay_x(33556348, 32904);
+   call lay_o(33556361, 32907, 0);
+   call lay_o(33556348, 32904, 0);
+   call lay_o(33555818, 32910, 0);
+   call lay_lit(6, 100);
 end
 
 // Ферма браминов: уровень 2. Ставим 54, убираем 0
@@ -2191,6 +2184,19 @@ procedure lvl_night(variable tent, variable lv, variable k) begin
    if (tent == 5) then begin if (k == 0) then return 7665; if (k == 1) then return 7866; return 7468; end
    if (tent == 6) then begin if (k == 0) then return 8252; if (k == 1) then return 8250; return 8051; end
    if (tent == 7) then begin if (k == 0) then return 8637; if (k == 1) then return 8639; return 8240; end
+   return 0;
+end
+
+// Водонос у колодца w (0 старый, 1 новый)
+procedure lvl_well(variable w) begin
+   if (w == 0) then return 9952;
+   return 9944;
+end
+
+// Вечером в баре: место k = 0-2 у бара уровня lv
+procedure lvl_bar(variable lv, variable k) begin
+   if (lv == 1) then begin if (k == 0) then return 22714; if (k == 1) then return 22715; return 22716; end
+   if (lv == 2) then begin if (k == 0) then return 20914; if (k == 1) then return 20915; return 20916; end
    return 0;
 end
 

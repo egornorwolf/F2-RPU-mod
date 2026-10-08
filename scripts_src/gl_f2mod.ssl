@@ -25,8 +25,10 @@
 #include "f2mpay.h"
 #include "f2mraid.h"
 #include "f2msam.h"
+#include "f2mlair.h"
+#include "f2mlairl.h"
 
-#define F2MOD_VERSION "0.7.1"
+#define F2MOD_VERSION "0.8.0"
 
 procedure start;
 procedure encounter_handler;
@@ -37,6 +39,9 @@ procedure raid_tick;
 procedure boss_search;
 procedure step_toward(variable a, variable b, variable s);
 procedure sam_arrive;
+procedure lair_cellar_look;
+
+variable lair_hint;
 
 procedure start begin
    variable st;
@@ -55,6 +60,8 @@ procedure start begin
       call raid_tick;
       call sam_tick;
       call sam_arrive;
+      call lair_tick;
+      call lair_cellar_look;
    end
 end
 
@@ -88,6 +95,21 @@ procedure boss_search begin
          return;
       end
    end
+end
+
+// Логово (1.4): погреб под камнями замечает герой с Восприятием 7 (или знает от Кейна) рядом с ним
+procedure lair_cellar_look begin
+   if (cur_map_index != MAP_F2MOD_LAIR or lair_done or get_sfall_global_int(GV_LAIR_CELLAR) == 2) then return;
+   if (tile_distance(tile_num(dude_obj), LAIR_CELLAR) > 4 or combat_is_initialized) then return;
+   if (get_sfall_global_int(GV_LAIR_CELLAR) == 0) then begin
+      if (get_critter_stat(dude_obj, STAT_pe) < LAIR_PE) then return;
+      set_sfall_global(GV_LAIR_CELLAR, 1);
+      display_msg(lair_msg(223));
+   end else if (get_sfall_global_int(GV_LAIR_CELLAR) == 1 and not lair_hint) then begin
+      // подсказка над головой один раз за приход на карту
+   end else return;
+   lair_hint := 1;
+   float_msg(dude_obj, lair_msg(224), FLOAT_MSG_YELLOW);
 end
 
 // Радист пришел, пока герой в лагере: ждем, пока закрыты окна и нет боя, экран гаснет, Сэм у старосты

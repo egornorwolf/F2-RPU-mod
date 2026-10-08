@@ -33,6 +33,17 @@ make("desert3", "f2mesct", "f2mesct.int")
 make("desert2", "f2mesc2", "f2mesct.int")  # 2-й участок дороги
 make("desert1", "f2mesc3", "f2mesct.int")  # 3-й участок дороги
 
+# Карьер (логово налетчиков, 1.4): копия горной карты mountn5 из RPU (палатки у скалы). Герой входит с юго-востока,
+# за деревьями (LAIR_HERO из f2mlairl.h, точки пишет tools/layout/lair_emit.py), лицом к лагерю
+import os, re
+_lay = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts_src", "f2mlairl.h"), encoding="utf-8").read()
+make("mountn5", "f2mlair", "f2mlair.int")
+_lair = f"{out}/maps/f2mlair.map"
+_d = bytearray(open(_lair, "rb").read())
+struct.pack_into(">i", _d, 20, int(re.search(r"#define LAIR_HERO\s+\((\d+)\)", _lay).group(1)))
+struct.pack_into(">i", _d, 28, 5)
+open(_lair, "wb").write(_d)
+
 
 # Лагерь у скал на карте города (0.5.0): пол и выходы пишет tools/layout/settle_emit.py, здесь только номер скрипта
 settle = f"{out}/maps/f2mset.map"

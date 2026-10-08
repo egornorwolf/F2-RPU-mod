@@ -63,6 +63,10 @@ for u, d in U.items():
         else: objs = B(d['key'], lv)
         d['lv'][lv] = clean(objs)
     if d.get('empty1'): d['lv'][1] = []
+# Охрана 2 (buildings-levels.md): «Пост с прожектором» — тот же пост у южных ворот плюс прожектор vclight1.
+# В песочнице 2-й уровень — посты у обоих ворот (это ближе к караулке), поэтому собираем уровень здесь.
+SEARCHLIGHT = T(*[int(v) for v in os.environ.get('GUARD_LIGHT', '110,164').split(',')])
+U[15]['lv'][2] = [list(o) for o in U[15]['lv'][1]] + [[33555818, SEARCHLIGHT, 0, [('lit', '6, 100')]]]
 # сверка с тем, что уже ставит f2mtlay.h (основание и стройки прораба)
 have = {(o[0], o[1]) for o in CAMP + SLOTS}
 for u, d in U.items():
@@ -224,9 +228,9 @@ print('смеси: ок')
 # ---- места людей на 2-м уровне: днем у дома и на огороде (2), ночью у кровати (3)
 used = set()
 for v in list(DAY1.values()) + list(NIGHT1.values()): used |= set(v)
-def pick(anchor, n, inside_ok):
+def pick(anchor, n, inside_ok, rad=6):
     got = []
-    cand = sorted((t for t in ring(anchor, 6) if t not in blk_all and t not in used and not (ring(t, 1) & set(people(CFG2).values()))),
+    cand = sorted((t for t in ring(anchor, rad) if t not in blk_all and t not in used and not (ring(t, 1) & set(people(CFG2).values()))),
                   key=lambda t: (tdist(t, anchor), xy(t)))
     for t in cand:
         if any(t in ring(g, 1) for g in got): continue
@@ -253,6 +257,24 @@ for i in range(8):                       # дома 1-8: места постро
     NIGHT2[i] = pick(beds[0] if beds else mid, 3, True)
     if i >= 3: DAY2[i] = pick(mid, 2, False)
     print('дом', i + 1, 'кроватей', len(beds), 'ночь', [xy(t) for t in NIGHT2[i]], 'день', [xy(t) for t in DAY2[i]] if i >= 3 else '')
+
+# ---- водоносы (по одному у колодца: ходят от колодца к костру) и вечер в баре (3 места на уровень бара)
+WELL_SPOT = {0: pick(9952, 1, False)[0], 1: pick(9944, 1, False)[0]}
+BAR_SPOT = {}
+for lv in LEVELS:
+    # у столиков бара: клетка свободна при этом уровне бара (остальное — 2-й уровень), до нее можно дойти
+    cfg = dict(CFG2); cfg[17] = lv
+    wb = blocked(world(cfg)) | {GRAVE}
+    rr = flood(ENTRANCE, wb | used)
+    c = center(U[17]['lv'][lv]); a = T(round(c[0]), round(c[1]))
+    got = []
+    for t in sorted(ring(a, 9), key=lambda t: (tdist(t, a), xy(t))):
+        if t in rr and t not in used and t not in got and not (ring(t, 1) & set(people(CFG2).values())):
+            got.append(t)
+            if len(got) == 3: break
+    assert len(got) == 3, ('бар', lv, got)
+    used.update(got); BAR_SPOT[lv] = got
+print('водоносы', {k: xy(v) for k, v in WELL_SPOT.items()}, 'бар', {k: [xy(t) for t in v] for k, v in BAR_SPOT.items()})
 
 # ---- брамины в загоне (2-й уровень фермы): клетки браминов из песочницы
 BRAH2 = [o[1] for o in B('Ферма браминов', 2) if o[0] >> 24 == 1][:2]
@@ -289,7 +311,7 @@ o = ['// Уровни зданий поселения: переход здани
      f'#define LVL_BRAHMIN1   ({BRAH2[1]})',
      '',
      'procedure lvl_step(variable u, variable lv);', 'procedure lvl_spot(variable slot, variable lv, variable k);',
-     'procedure lvl_night(variable tent, variable lv, variable k);']
+     'procedure lvl_night(variable tent, variable lv, variable k);\nprocedure lvl_well(variable w);\nprocedure lvl_bar(variable lv, variable k);']
 body = []
 for u, d in U.items():
     for lv in LEVELS:
@@ -327,6 +349,12 @@ o += ['   return 0;', 'end', '', '// Ночью: дом 0-7 (0-2 основан�
       'procedure lvl_night(variable tent, variable lv, variable k) begin', '   if (lv < 2) then return lay_night(tent, k);']
 for i, ts in sorted(NIGHT2.items()):
     o.append(f'   if (tent == {i}) then begin if (k == 0) then return {ts[0]}; if (k == 1) then return {ts[1]}; return {ts[2]}; end')
+o += ['   return 0;', 'end', '', '// Водонос у колодца w (0 старый, 1 новый)', 'procedure lvl_well(variable w) begin',
+      f'   if (w == 0) then return {WELL_SPOT[0]};', f'   return {WELL_SPOT[1]};', 'end', '',
+      '// Вечером в баре: место k = 0-2 у бара уровня lv', 'procedure lvl_bar(variable lv, variable k) begin']
+for lv in LEVELS:
+    ts = BAR_SPOT[lv]
+    o.append(f'   if (lv == {lv}) then begin if (k == 0) then return {ts[0]}; if (k == 1) then return {ts[1]}; return {ts[2]}; end')
 o += ['   return 0;', 'end', '', '#endif', '']
 open(os.path.join(ROOT, 'scripts_src/f2mlvl.h'), 'w', encoding='utf-8').write('\n'.join(o))
 print('f2mlvl.h', len(o), 'строк, переходов', len(STEPS))

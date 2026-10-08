@@ -1,0 +1,42 @@
+// Боец гарнизона военной базы (1.5, military-base.md): наемник, живет в карьере бесплатно, ест из запасов поселения.
+// Вне боя держится у своего места; в бою за героя. Говорит одной репликой.
+#define SCRIPT_REALNAME "f2mgarr"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MGARR
+#include "command.h"
+#include "sfall.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+
+// LVAR 0: место (клетка + 1), запоминаем при первом запуске
+#define LVAR_HOME       (0)
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   variable h;
+   if (combat_is_initialized) then return;
+   if (not local_var(LVAR_HOME)) then set_local_var(LVAR_HOME, tile_num(self_obj) + 1);
+   h := local_var(LVAR_HOME) - 1;
+   if (tile_distance(tile_num(self_obj), h) > 4 and not anim_busy(self_obj)) then animate_move_obj_to_tile(self_obj, h, 0);
+end
+
+procedure talk_p_proc begin
+   floater(random(110, 114));
+end

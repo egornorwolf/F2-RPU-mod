@@ -2,7 +2,7 @@
 // Ctrl+1..7 — СПЕЦИАЛ +1, Ctrl+Shift+1..7 — СПЕЦИАЛ -1,
 // Ctrl+K — +10 очков навыков, Ctrl+N — все навыки 300%, Ctrl+B — переносимый вес +100,
 // Ctrl+E — открыть «Лагерь у скал» на карте мира, Ctrl+T — открыть песочницу стройки, Ctrl+R — сбросить встречу с караваном, Ctrl+O — +1 перк, Ctrl+U — +1 уровень,
-// Ctrl+H — лечение, Ctrl+I — сундук с броней, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
+// Ctrl+J — открыть карьер (логово, 1.4), Ctrl+H — лечение, Ctrl+I — сундук с броней, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
 // Alt+1 — +1 час, Alt+2 — +1 день, Alt+3 — +1 неделя, Alt+4 — +1 месяц игрового времени, Alt+0 — показать время и состояние (Егор, 2026-10-06: хоткеи для проверки поселения, docs/test-mode.md).
 #include "sfall.h"
 #include "dik.h"
@@ -64,7 +64,7 @@ procedure keypress_handler begin
    if (not(key_pressed(DIK_LCONTROL) or key_pressed(DIK_RCONTROL))) then return;
    if (key != DIK_1 and key != DIK_2 and key != DIK_3 and key != DIK_4 and key != DIK_5
        and key != DIK_6 and key != DIK_7 and key != DIK_K and key != DIK_N and key != DIK_B and key != DIK_E and key != DIK_R and key != DIK_O and key != DIK_U
-       and key != DIK_H and key != DIK_I and key != DIK_M and key != DIK_G and key != DIK_T) then return;
+       and key != DIK_H and key != DIK_I and key != DIK_M and key != DIK_G and key != DIK_T and key != DIK_J) then return;
    // Глушим букву, чтобы игра не открыла инвентарь или настройки
    set_sfall_return(DIK_UNLABELED);
    if (not pressed) then return;
@@ -119,6 +119,11 @@ procedure keypress_handler begin
    end else if (key == DIK_M) then begin
       item_caps_adjust(dude_obj, 5000);
       display_msg("F2mod: +5000 крышек.");
+   end else if (key == DIK_J) then begin
+      // TEST: карьер (логово, 1.4) на карте мира без поиска главаря
+      if (not get_sfall_global_int("f2mlairs")) then set_sfall_global("f2mlairs", 1);
+      mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_LAIR, MARK_STATE_KNOWN);
+      display_msg("F2mod: карьер (логово налетчиков) открыт на карте мира.");
    end else if (key == DIK_T) then begin
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_TOWN, MARK_STATE_KNOWN);
       display_msg("F2mod: на карте мира открыта Песочница стройки (рядом со Скалистым приютом).");
@@ -193,6 +198,6 @@ end
 procedure show_help begin
    display_msg("Ctrl+1..7: СПЕЦИАЛ +1 (С,В,Вн,П,И,Л,У). Ctrl+Shift+1..7: -1.");
    display_msg("Ctrl+K: +10 навыков. Ctrl+N: все навыки 300%. Ctrl+B: вес +100. Ctrl+O: +1 перк. Ctrl+U: +1 уровень.");
-   display_msg("Ctrl+E: открыть Скалистый приют. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек.");
+   display_msg("Ctrl+E: открыть Скалистый приют. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек. Ctrl+J: открыть карьер.");
    display_msg("Alt+1: +1 час. Alt+2: +1 день. Alt+3: +1 неделя. Alt+4: +1 месяц. Alt+0: время и состояние.");
 end

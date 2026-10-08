@@ -1,0 +1,131 @@
+// Предметы логова (квест 1.4): бочка с водой банды и камни над погребом с припасами.
+// Бочка: яд (Poison) с Наукой или Первой помощью 50 — половина банды падает, остальные слабеют.
+// Погреб: виден с Восприятием 7 или если Кейн проговорился у ворот; 2 динамита с Ремонтом или Наукой 40 —
+// запасы взлетают, банда уходит из карьера без еды. Если кто-то из банды видит героя — тревога.
+#define SCRIPT_REALNAME "f2mlobj"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MLOBJ
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+#include "f2mlair.h"
+
+procedure start;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure use_p_proc;
+procedure use_obj_on_p_proc;
+procedure noticed;
+procedure poison_water;
+procedure blow_cellar;
+
+#define is_water        (obj_pid(self_obj) == PID_LAIR_WATER)
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   if (is_water) then display_msg(mstr(230));
+   else if (get_sfall_global_int(GV_LAIR_CELLAR) == 2) then display_msg(mstr(243));
+   else if (get_sfall_global_int(GV_LAIR_CELLAR)) then display_msg(mstr(241));
+   else display_msg(mstr(240));
+end
+
+procedure description_p_proc begin
+   call look_at_p_proc;
+end
+
+procedure use_p_proc begin
+   script_overrides;
+   if (is_water) then display_msg(mstr(231));
+   else if (get_sfall_global_int(GV_LAIR_CELLAR) == 1) then display_msg(mstr(242));
+   else call look_at_p_proc;
+end
+
+// Кто-то из банды смотрит на героя прямо сейчас (со Скрытностью 60 — только вплотную)
+procedure noticed begin
+   variable c;
+   if (lair_done or get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_ALLY) then return 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not is_critter_dead(c) and lair_seen(c)) then return 1;
+   end
+   return 0;
+end
+
+procedure use_obj_on_p_proc begin
+   variable it;
+   it := obj_pid(obj_being_used_with);
+   if (lair_done or combat_is_initialized) then return;
+   if (is_water and it == PID_HYPO_POISON) then begin
+      script_overrides;
+      if (get_sfall_global_int(GV_LAIR_POISON)) then display_msg(mstr(234));
+      else if (has_skill(dude_obj, SKILL_SCIENCE) < LAIR_POISON_SKILL and has_skill(dude_obj, SKILL_FIRST_AID) < LAIR_POISON_SKILL) then
+         display_msg(mstr(232));
+      else if (noticed) then begin
+         display_msg(mstr(250));
+         call lair_alarm;
+      end else begin
+         rm_obj_from_inven(dude_obj, obj_being_used_with);
+         destroy_object(obj_being_used_with);
+         call poison_water;
+      end
+   end else if (not is_water and it == PID_DYNAMITE) then begin
+      script_overrides;
+      if (not get_sfall_global_int(GV_LAIR_CELLAR)) then display_msg(mstr(240));
+      else if (get_sfall_global_int(GV_LAIR_CELLAR) == 2) then display_msg(mstr(243));
+      else if (has_skill(dude_obj, SKILL_REPAIR) < LAIR_DYN_SKILL and has_skill(dude_obj, SKILL_SCIENCE) < LAIR_DYN_SKILL) then
+         display_msg(mstr(244));
+      else if (obj_is_carrying_obj_pid(dude_obj, PID_DYNAMITE) < LAIR_DYN_COUNT) then
+         display_msg(mstr(245));
+      else if (noticed) then begin
+         display_msg(mstr(250));
+         call lair_alarm;
+      end else begin
+         it := obj_being_used_with;
+         rm_obj_from_inven(dude_obj, it);
+         destroy_object(it);
+         it := obj_carrying_pid_obj(dude_obj, PID_DYNAMITE);
+         rm_obj_from_inven(dude_obj, it);
+         destroy_object(it);
+         call blow_cellar;
+      end
+   end
+end
+
+// Яд в бочке: экран гаснет на ночь, половина рядовых не просыпается, остальным плохо (Кейн жив)
+procedure poison_water begin
+   variable c, i := 0;
+   set_sfall_global(GV_LAIR_POISON, 1);
+   gfade_out(1);
+   game_time_advance(6 * ONE_GAME_HOUR);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not is_critter_dead(c) and (obj_art_fid(c) bwand 0xFFF) != GANG_ART_BOSS) then begin
+         if (i % 2 == 0) then kill_critter(c, ANIM_fall_front_sf);
+         else critter_injure(c, DAM_CRIP_LEG_LEFT);
+         i += 1;
+      end
+   end
+   gfade_in(1);
+   display_msg(mstr(233));
+   give_exp_points(250);
+end
+
+// Динамит в погреб: взрыв, припасы банды под камнями, банда уходит без еды, тайник Кейна остается
+procedure blow_cellar begin
+   set_sfall_global(GV_LAIR_CELLAR, 2);
+   display_msg(mstr(246));
+   gfade_out(1);
+   game_time_advance(2 * ONE_GAME_HOUR);
+   call lair_gang_leave(0);
+   call lair_finish(LAIR_HOW_BLAST);
+   gfade_in(1);
+   display_msg(mstr(247));
+end

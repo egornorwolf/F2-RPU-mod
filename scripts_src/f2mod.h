@@ -17,6 +17,8 @@
 #define is_escort_map(m)    ((m) >= MAP_F2MOD_ESCORT and (m) <= MAP_F2MOD_ESCORT3)
 #define AREA_F2MOD_TOWN     (62)    // [Area 62]: песочница для обкатки стройки (только с f2mod_test.dat)
 #define MAP_F2MOD_TOWN      (178)   // [Map 178]: карта песочницы f2mtown
+#define AREA_F2MOD_LAIR     (63)    // [Area 63]: карьер в горах (логово налетчиков, потом военная база)
+#define MAP_F2MOD_LAIR      (180)   // [Map 180]: карта карьера f2mlair (копия mountn5)
 
 // Номера скриптов = номер строки в scripts.lst
 #define SCRIPT_F2MCAMP      (1559)  // карта лагеря
@@ -35,6 +37,11 @@
 #define SCRIPT_F2MBOSS      (1572)  // главарь налетчиков Кейн у ворот (1.3а)
 #define SCRIPT_F2MRDR       (1573)  // налетчик Кейна у ворот (1.3а)
 #define SCRIPT_F2MRADIO     (1574)  // радист Сэм Мортон (0.7.1)
+#define SCRIPT_F2MLAIR      (1575)  // карта карьера: логово налетчиков (1.4), потом военная база (1.5)
+#define SCRIPT_F2MLRDR      (1576)  // налетчик в логове
+#define SCRIPT_F2MKANE      (1577)  // Кейн в логове
+#define SCRIPT_F2MLOBJ      (1578)  // бочка с водой и погреб в логове
+#define SCRIPT_F2MGARR      (1579)  // боец гарнизона базы
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU

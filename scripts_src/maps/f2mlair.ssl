@@ -1,0 +1,186 @@
+// Карьер в горах (квест 1.4 «Выследить налетчиков», 1.5 «Укрепить базу»).
+// Пока банда жива — логово «Ржавых шакалов»: пост у входа, патруль, палатки, Кейн в глубине у скалы,
+// за ним сундук с тайником, ящик со складом (там яд), бочка с водой, под камнями погреб с припасами.
+// После квеста — военная база героя: гарнизон по уровню базы (строит Хэнк, f2mbld.h).
+#define SCRIPT_REALNAME "f2mlair"
+#include "define.h"
+#include "updatmap.h"
+#include "command.h"
+#include "scenepid.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "f2mod.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mtlay.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+#include "f2mlair.h"
+#include "f2mlairl.h"
+
+procedure start;
+procedure map_enter_p_proc;
+procedure map_exit_p_proc;
+procedure lair_put;
+procedure lair_raider(variable tile, variable i);
+procedure lair_kane;
+procedure lair_loot;
+procedure garrison_alive;
+procedure garrison_put;
+procedure garrison_soldier(variable tile, variable i, variable lv);
+
+procedure start begin
+end
+
+procedure map_enter_p_proc begin
+   Lighting;
+   if (is_loading_game) then return;
+   if (not get_sfall_global_int(GV_LAIR)) then call lair_reveal(0);   // попал сюда иначе (тест): кружок остается
+   if (not get_sfall_global_int(GV_LAIR_PUT)) then call lair_put;
+   if (not lair_done) then begin
+      if (lair_kane_dead) then display_msg(lair_msg(220));
+      else display_msg(lair_msg(221));
+      if (get_sfall_global_int(GV_BOSS_WEAK) and not get_sfall_global_int(GV_LAIR_CELLAR)) then begin
+         set_sfall_global(GV_LAIR_CELLAR, 1);
+         display_msg(lair_msg(222));
+      end
+   end else
+      call garrison_put;
+end
+
+// Гарнизон ест из запасов поселения: считаем, сколько живых осталось на базе
+procedure map_exit_p_proc begin
+   if (lair_done) then set_sfall_global(GV_BASE_GARR, garrison_alive);
+end
+
+// Первый приход: банда, тайник Кейна, склад, бочка и погреб (карта сохраняется, ставим один раз)
+procedure lair_put begin
+   variable obj, i := 0, n;
+   set_sfall_global(GV_LAIR_PUT, 1);
+   obj := tile_contains_pid_obj(LAIR_OLD_CRATE, 0, PID_CONTAINER_WOOD_CRATE);
+   if (obj) then destroy_object(obj);
+   call lair_loot;
+   create_object_sid(PID_LAIR_WATER, LAIR_WATER, 0, SCRIPT_F2MLOBJ);
+   create_object_sid(PID_LAIR_CELLAR, LAIR_CELLAR, 0, SCRIPT_F2MLOBJ);
+   if (lair_done) then return;
+   n := LAIR_GANG;
+   if (lair_kane_dead) then n := LAIR_GANG_HEADLESS;
+   else call lair_kane;
+   // двое на посту у входа, остальные по лагерю
+   call lair_raider(LAIR_POST0, 0);
+   call lair_raider(LAIR_POST1, 1);
+   while (i < n - 2) do begin
+      call lair_raider(lair_spawn(i), i + 2);
+      i += 1;
+   end
+end
+
+// Рядовой налетчик (npc-cards.md): как у ворот (gang_raider в f2mraid.h), только со скриптом логова
+procedure lair_raider(variable tile, variable i) begin
+   variable obj, k, armor, it;
+   obj := create_object_sid(PID_RAIDER_MALE, cv_free_tile(tile), 0, SCRIPT_F2MLRDR);
+   if (i % 2) then begin
+      call gang_setup(obj, GANG_ART_JACKET);
+      armor := PID_LEATHER_JACKET;
+   end else begin
+      call gang_setup(obj, GANG_ART_ARMOR);
+      armor := PID_LEATHER_ARMOR;
+   end
+   it := create_object(armor, 0, 0);
+   add_obj_to_inven(obj, it);
+   wield_obj_critter(obj, it);
+   k := i % 6;
+   if (k == 0) then call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
+   else if (k == 1) then call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
+   else if (k == 2) then call cv_arm(obj, PID_KNIFE, 0);
+   else if (k == 3) then call cv_arm(obj, PID_10MM_PISTOL, PID_10MM_JHP);
+   else if (k == 4) then call cv_arm(obj, PID_SAWED_OFF_SHOTGUN, PID_SHOTGUN_SHELLS);
+   else call cv_arm(obj, PID_CLUB, 0);
+   anim(obj, ANIMATE_ROTATION, random(0, 5));
+   return obj;
+end
+
+// Кейн: снаряжение как у ворот (boss_put), боевая броня не на нем, а в сундуке за ним
+procedure lair_kane begin
+   variable obj;
+   obj := create_object_sid(PID_RAIDER_MALE, cv_free_tile(LAIR_KANE), 0, SCRIPT_F2MKANE);
+   call gang_setup(obj, GANG_ART_BOSS);
+   call cv_arm(obj, PID_COMBAT_SHOTGUN, PID_SHOTGUN_SHELLS);
+   add_obj_to_inven(obj, create_object(PID_10MM_SMG, 0, 0));
+   add_mult_objs_to_inven(obj, create_object(PID_10MM_JHP, 0, 0), 2);
+   add_obj_to_inven(obj, create_object(PID_KNIFE, 0, 0));
+   set_critter_base_stat(obj, STAT_max_hp, 90);
+   critter_heal(obj, 200);
+   anim(obj, ANIMATE_ROTATION, 2);
+end
+
+// Тайник главаря (quests-detailed.md 1.4) и склад банды: яд для бочки и мелочь
+procedure lair_loot begin
+   variable box;
+   box := create_object(PID_CHEST, LAIR_CHEST, 0);
+   item_caps_adjust(box, 1500);
+   add_mult_objs_to_inven(box, create_object(PID_STIMPAK, 0, 0), 10);
+   add_mult_objs_to_inven(box, create_object(PID_10MM_AP, 0, 0), 4);
+   add_mult_objs_to_inven(box, create_object(PID_5MM_AP, 0, 0), 4);
+   add_mult_objs_to_inven(box, create_object(PID_44_FMJ_MAGNUM, 0, 0), 4);
+   add_mult_objs_to_inven(box, create_object(PID_ROCKET_AP, 0, 0), 10);
+   add_mult_objs_to_inven(box, create_object(PID_FRAG_GRENADE, 0, 0), 5);
+   add_obj_to_inven(box, create_object(PID_COMBAT_ARMOR, 0, 0));
+   box := create_object(PID_CONTAINER_WOOD_CRATE, LAIR_STORE, 0);
+   add_obj_to_inven(box, create_object(PID_HYPO_POISON, 0, 0));
+   add_mult_objs_to_inven(box, create_object(PID_10MM_JHP, 0, 0), 2);
+   add_mult_objs_to_inven(box, create_object(PID_SHOTGUN_SHELLS, 0, 0), 2);
+   add_obj_to_inven(box, create_object(PID_ROPE, 0, 0));
+end
+
+// Гарнизон: свои бойцы на базе (люди Кейна после союза и солдаты базы)
+procedure garrison_alive begin
+   variable c, n := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (c != dude_obj and not obj_in_party(c) and not is_critter_dead(c)
+          and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then n += 1;
+   end
+   return n;
+end
+
+// Гарнизон по уровню базы: 6 / 8 / 10, погибших Хэнк заменяет наемниками при следующем приходе
+procedure garrison_put begin
+   variable lv, n, i := 0;
+   lv := base_level;
+   n := base_cap(lv) - garrison_alive;
+   while (i < n) do begin
+      call garrison_soldier(lair_spawn(i % LAIR_SPAWNS), i, lv);
+      i += 1;
+   end
+   set_sfall_global(GV_BASE_GARR, garrison_alive);
+end
+
+// Боец базы (military-base.md, раздел 5): модель героя в броне по уровню базы, у нее есть все анимации оружия
+procedure garrison_soldier(variable tile, variable i, variable lv) begin
+   variable obj, fem, art, k;
+   fem := (i % 3 == 2);
+   if (fem) then obj := create_object_sid(PID_MILITIA_FEMALE, cv_free_tile(tile), 0, SCRIPT_F2MGARR);
+   else obj := create_object_sid(PID_MILITIA_MALE, cv_free_tile(tile), 0, SCRIPT_F2MGARR);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
+   if (lv >= 3) then art := fem * FID_HFCMBT + (not fem) * FID_HMCMBT;
+   else if (lv == 2) then art := fem * FID_HFMETL + (not fem) * FID_HMMETL;
+   else art := fem * FID_HFLTHR + (not fem) * FID_HMLTHR;
+   art_change_fid_num(obj, art bwand 0xFFF);
+   k := i % 4;
+   if (lv >= 3) then begin
+      if (i == 0) then call cv_arm(obj, PID_MINIGUN, PID_5MM_JHP);
+      else if (k == 1) then call cv_arm(obj, PID_HK_CAWS, PID_SHOTGUN_SHELLS);
+      else if (k == 2) then call cv_arm(obj, PID_LASER_RIFLE, PID_MICRO_FUSION_CELL);
+      else call cv_arm(obj, PID_FN_FAL, PID_7_62MM_AMMO);
+   end else if (lv == 2) then begin
+      if (k % 2) then call cv_arm(obj, PID_PANCOR_JACKHAMMER, PID_SHOTGUN_SHELLS);
+      else call cv_arm(obj, PID_ASSAULT_RIFLE, PID_5MM_JHP);
+   end else begin
+      if (k == 0) then call cv_arm(obj, PID_SAWED_OFF_SHOTGUN, PID_SHOTGUN_SHELLS);
+      else if (k == 1) then call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
+      else if (k == 2) then call cv_arm(obj, PID_10MM_SMG, PID_10MM_JHP);
+      else call cv_arm(obj, PID_KNIFE, 0);
+   end
+   anim(obj, ANIMATE_ROTATION, random(0, 5));
+end
