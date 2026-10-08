@@ -113,6 +113,7 @@ procedure lair_cellar_look begin
    if (get_sfall_global_int(GV_LAIR_CELLAR) == 0) then begin
       if (get_critter_stat(dude_obj, STAT_pe) < LAIR_PE) then return;
       set_sfall_global(GV_LAIR_CELLAR, 1);
+      call lair_cellar_face;   // камни в сторону: виден лаз с лестницей
       display_msg(lair_msg(223));
    end else if (get_sfall_global_int(GV_LAIR_CELLAR) == 1 and not lair_hint) then begin
       // подсказка над головой один раз за приход на карту
