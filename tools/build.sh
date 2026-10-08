@@ -38,7 +38,11 @@ mkdir -p "$OUT/tmp" "$OUT/data/scripts" "$OUT/test/scripts"
 # а sfall ещё и в ../sfall, куда на него ссылается define.h из RPU
 mkdir -p "$OUT/tmp/sfall" "$OUT/tmp/src"
 cp "$HEADERS"/*.h "$OUT/tmp/sfall/"
-cp "$RPU_HEADERS"/*.h "$HEADERS"/*.h "$ROOT"/scripts_src/*.h "$ROOT"/scripts_src/test/*.h "$OUT/tmp/src/"
+cp "$RPU_HEADERS"/*.h "$HEADERS"/*.h "$OUT/tmp/src/"
+# Свои заголовки тоже в cp1251: строки в них (display_msg) иначе в игре абракадабра (0.4.0)
+for h in "$ROOT"/scripts_src/*.h "$ROOT"/scripts_src/test/*.h; do
+  iconv -f UTF-8 -t CP1251 "$h" > "$OUT/tmp/src/$(basename "$h")"
+done
 
 # Исходники в UTF-8, игра ждёт cp1251: перекодируем перед компиляцией
 compile() {

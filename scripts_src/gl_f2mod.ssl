@@ -18,7 +18,7 @@
 #include "f2mcamp.h"
 #include "f2mset.h"
 
-#define F2MOD_VERSION "0.4.0"
+#define F2MOD_VERSION "0.4.1"
 
 procedure start;
 procedure encounter_handler;

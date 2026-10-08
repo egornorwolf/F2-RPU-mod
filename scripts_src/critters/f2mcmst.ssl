@@ -505,10 +505,16 @@ procedure Node031 begin
    NLowOption(132, Node999);
 end
 
+// Уговор (Красноречие 60%): полцены. Колодец есть и деньги при себе — платим сразу.
 procedure Node032 begin
    if (has_skill(dude_obj, SKILL_SPEECH) >= RETURN_SPEECH) then begin
       set_sfall_global(GV_SET_HALF, 1);
-      Reply(320);
+      if (not camp_has_water) then
+         Reply(mstr(320) + " " + mstr(310));
+      else begin
+         Reply(mstr(320) + " " + mstr(311) + RETURN_PRICE_CH + mstr(312));
+         if (dude_caps >= RETURN_PRICE_CH) then NOption(mstr(313) + RETURN_PRICE_CH + mstr(314), Node034, 4);
+      end
    end else
       Reply(321);
    NOption(227, Node030, 4);
