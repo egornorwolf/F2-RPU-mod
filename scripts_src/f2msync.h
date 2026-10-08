@@ -6,6 +6,8 @@
 
 procedure camp_sync_pid(variable pid);
 procedure camp_sync_people;
+procedure camp_keep(variable pid, variable most);
+procedure camp_dedupe;
 
 // Сколько людей такого вида должно быть в лагере (живы и не ушли) и сколько стоит на карте.
 // Лишних убираем, недостающих ставим у костра. Переселенцы одного вида взаимозаменяемы.
@@ -42,6 +44,27 @@ procedure camp_sync_people begin
    call camp_sync_pid(PID_AVERAGE_PEASANT_FEMALE);
    call camp_sync_pid(PID_CHILD_MALE);
    call camp_sync_pid(PID_CHILD_FEMALE);
+end
+
+// Живых существ такого вида на карте не больше most: лишних убираем (двойники из 0.5.0-0.5.5,
+// когда флаг «люди поставлены» не сохранялся и Тед, Рик и брамины ставились при каждом входе)
+procedure camp_keep(variable pid, variable most) begin
+   variable c, n := 0;
+   set_sfall_global(GV_SET_LEAVING, 1);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (obj_pid(c) == pid and not is_critter_dead(c)) then begin
+         n += 1;
+         if (n > most) then destroy_object(c);
+      end
+   end
+   set_sfall_global(GV_SET_LEAVING, 0);
+end
+
+procedure camp_dedupe begin
+   call camp_keep(PID_AVERAGE_MERCHANT_MALE, 1);
+   call camp_keep(PID_DOCK_WORKER, 1);
+   call camp_keep(cv_slot_pid(CV_SLOT_GUARD), not cv_is_dead(CV_SLOT_GUARD));
+   call camp_keep(PID_BRAHMIN, (not cv_is_dead(CV_SLOT_BRAHMIN)) + (not cv_is_dead(CV_SLOT_BRAHMIN + 1)));
 end
 
 #endif

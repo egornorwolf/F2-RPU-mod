@@ -133,6 +133,7 @@ procedure pickup_p_proc begin
 end
 
 procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // лагерь убирает лишнего или ушедшего: это не смерть
    if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
    // Погиб в пути или при встрече: караван больше не встречается (иначе на следующей встрече
    // карта снова ставила живого Теда со всем караваном)

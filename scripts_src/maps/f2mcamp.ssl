@@ -40,24 +40,29 @@ procedure map_enter_p_proc begin
       if (old) then destroy_object(old);
    end
    // Развалины на участках будущих зданий стоят с первого визита (и появляются в сохранениях 0.5.0)
-   if (get_sfall_global_int(GV_TOWN_RUINS) < 4) then call camp_ruins;
+   if (get_sfall_global_int(GV_TOWN_RUINS) < 5) then call camp_ruins;
    if (get_sfall_global_int(GV_CARAVAN) != CARAVAN_DONE) then return;
    // Карта сохраняется: лагерь и люди ставятся один раз, при первом входе после координат.
    // Сохранения с прежней карты лагеря (173, до 0.5.0): все, что построено, и все, кто жив, — на новой карте.
    if (not get_sfall_global_int(GV_TOWN_LAYOUT)) then call camp_layout;
    if (not get_sfall_global_int(GV_TOWN_PEOPLE)) then call camp_people_put;
-   // Ушедшие из лагеря исчезают, вернувшиеся снова у костра (f2mset.h, недельный тик)
+   // До 0.5.6 палатку героя ставили сразу: в таких сохранениях она уже стоит, считаем ее построенной
+   if (not camp_built(BUILD_HERO) and tile_contains_pid_obj(LAY_HEROTENT, 0, LAY_HEROPID)) then call camp_set_built(BUILD_HERO);
+   // Ушедшие из лагеря исчезают, вернувшиеся снова у костра (f2mset.h, недельный тик); двойников убираем
    call camp_sync_people;
+   call camp_dedupe;
+   // Горящие бочки у людей и свет кострища
+   call lay_lights;
    set_sfall_global(GV_SET_SYNC, 0);
 end
 
-// Развалины (f2mtlay.h): целые куски руин из карт развалин города city1/city2. Что уже построено на участке жилья (палатки 4-7), стоит без развалин
+// Развалины (f2mtlay.h): целые куски руин из карт развалин города city1/city2. Что уже построено на участке жилья (палатки 4-8), стоит без развалин
 procedure camp_ruins begin
    variable i := 3;
-   if (get_sfall_global_int(GV_TOWN_RUINS)) then call lay_ruins_old;   // руины 0.5.1-0.5.4 в сохранении
-   set_sfall_global(GV_TOWN_RUINS, 4);
+   if (get_sfall_global_int(GV_TOWN_RUINS)) then call lay_ruins_old;   // руины 0.5.1-0.5.5 в сохранении
+   set_sfall_global(GV_TOWN_RUINS, 5);
    call lay_ruins;
-   while (i < BUILD_COUNT) do begin
+   while (i < BUILD_HERO) do begin
       if (camp_built(i)) then call lay_ruin_clear(i - 3);
       i += 1;
    end
@@ -71,7 +76,8 @@ procedure camp_layout begin
    if (not get_sfall_global_int(GV_CAMP_LAYOUT)) then begin
       set_sfall_global(GV_CAMP_LAYOUT, 1);
       set_sfall_global(GV_CAMP_DAY, game_time / ONE_GAME_HOUR);
-   end
+   end else
+      call camp_set_built(BUILD_HERO);   // лагерь с прежней карты (до 0.5.0): там палатка героя уже стояла
    call lay_camp;
    while (i < BUILD_COUNT) do begin
       if (camp_built(i)) then call lay_slot(i);

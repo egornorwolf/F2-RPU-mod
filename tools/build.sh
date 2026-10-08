@@ -7,6 +7,10 @@ DEPS="$ROOT/.deps"
 OUT="$ROOT/build"
 mkdir -p "$DEPS"
 
+# Имена глобальных переменных sfall — ровно 8 символов, иначе sfall молча не хранит значение (баг 0.5.0-0.5.5: двойники в лагере)
+BAD_GV=$(grep -rhoE '(#define\s+GV_\w+\s+"[^"]*"|sfall_global(_int|_float)?\("[^"]*")' --include=*.h --include=*.ssl "$ROOT/scripts_src" | grep -oE '"[^"]*"' | awk 'length($0) != 10' || true)
+if [ -n "$BAD_GV" ]; then echo "Имена sfall-глобалов не из 8 символов: $BAD_GV" >&2; exit 1; fi
+
 # Компилятор sfall и заголовки sfall
 if [ ! -x "$DEPS/sslc/build/bin/sslc" ]; then
   git clone -q --depth 1 https://github.com/sfall-team/sslc.git "$DEPS/sslc"

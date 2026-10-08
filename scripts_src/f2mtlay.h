@@ -11,9 +11,11 @@
 #define LAY_OLDWELL    (9952)
 #define LAY_NEWWELL    (9944)
 #define LAY_HEROTENT   (11640)
+#define LAY_HEROPID    (50332577)
 #define LAY_CAR        (32283)   // стоянка машины у двора каравана
 #define LAY_WAGONS     (30087)   // фургоны и брамины каравана: двор у южной дороги
-#define LAY_SLOTS      (7)    // 0 колодец, 1-2 огороды, 3-6 палатки
+#define LAY_SLOTS      (9)    // 0 колодец, 1-2 огороды, 3-7 палатки, 8 палатка героя
+#define LAY_FIREPIT    (33555632)   // кострище: светит, как фонарь
 
 #define RUIN_0         (0)    // Жилье 4
 #define RUIN_1         (1)    // Жилье 5
@@ -36,6 +38,7 @@ procedure lay_flg(variable fset, variable fclr);
 procedure lay_lit(variable dist, variable pct);
 procedure lay_camp;
 procedure lay_slot(variable slot);
+procedure lay_lights;
 procedure lay_x(variable pid, variable tile);
 procedure lay_ruins;
 procedure lay_ruins_old;
@@ -58,7 +61,7 @@ procedure lay_lit(variable dist, variable pct) begin
    if (lay_last) then obj_set_light_level(lay_last, pct, dist);
 end
 
-// Основание: деревья 131, костер со столом старосты 3, палатка героя с сундуком 65,
+// Основание: деревья 131, костер со столом старосты 3,
 // 3 армейские палатки переселенцев 70, 71, 70, заколоченный старый колодец
 procedure lay_camp begin
    call lay_o(33555378, 7304, 0);
@@ -195,72 +198,6 @@ procedure lay_camp begin
    call lay_o(33555632, 17283, 0);
    call lay_o(33554732, 16880, 0);
    call lay_o(33554833, 16878, 0);
-   call lay_o(50332577, 11640, 0);
-   call lay_o(50332270, 11641, 0);
-   call lay_o(50332575, 11642, 0);
-   call lay_o(50332574, 11643, 0);
-   call lay_o(50332573, 11644, 0);
-   call lay_o(50332572, 11645, 0);
-   call lay_o(50332603, 11646, 0);
-   call lay_o(50332578, 11840, 0);
-   call lay_o(50332576, 11841, 0);
-   call lay_o(33554499, 11844, 0);
-   call lay_o(33554499, 11845, 0);
-   call lay_o(33554499, 11846, 0);
-   call lay_o(245, 11846, 0);
-   call lay_o(50332269, 11847, 0);
-   call lay_o(50332579, 12040, 0);
-   call lay_o(33554499, 12041, 0);
-   call lay_o(33554499, 12042, 0);
-   call lay_o(33555380, 12043, 0);
-   call lay_o(33554808, 12044, 0);
-   call lay_o(50332837, 12047, 0);
-   call lay_o(33554776, 12048, 0);
-   call lay_o(50332580, 12240, 0);
-   call lay_o(33554499, 12241, 0);
-   call lay_o(33554499, 12242, 0);
-   call lay_o(50332269, 12247, 0);
-   call lay_o(33554776, 12248, 0);
-   call lay_o(50332581, 12440, 0);
-   call lay_o(33554499, 12441, 0);
-   call lay_o(246, 12441, 0);
-   call lay_flg(32768, 0);
-   call lay_o(33554809, 12443, 0);
-   call lay_o(33554573, 12444, 0);
-   call lay_o(50332838, 12447, 0);
-   call lay_o(33555345, 12447, 0);
-   call lay_o(33554776, 12448, 0);
-   call lay_o(50332582, 12640, 0);
-   call lay_o(33554499, 12641, 0);
-   call lay_o(244, 12641, 0);
-   call lay_o(50332839, 12647, 0);
-   call lay_o(33554776, 12648, 0);
-   call lay_o(50332604, 12840, 0);
-   call lay_o(33554499, 12841, 0);
-   call lay_o(243, 12841, 0);
-   call lay_o(33554810, 12843, 0);
-   call lay_o(50332840, 12847, 0);
-   call lay_o(33554776, 12848, 0);
-   call lay_o(50332269, 13040, 0);
-   call lay_o(50332841, 13047, 0);
-   call lay_o(33555342, 13047, 0);
-   call lay_o(33554776, 13048, 0);
-   call lay_o(50332269, 13240, 0);
-   call lay_o(50332847, 13242, 0);
-   call lay_o(33554817, 13243, 0);
-   call lay_o(50332844, 13246, 0);
-   call lay_o(50332842, 13247, 0);
-   call lay_o(50332848, 13441, 0);
-   call lay_o(50332270, 13442, 0);
-   call lay_o(33555350, 13442, 0);
-   call lay_o(50332846, 13443, 0);
-   call lay_o(50332845, 13445, 0);
-   call lay_o(50332270, 13446, 0);
-   call lay_o(50332843, 13447, 0);
-   call lay_o(33555354, 13447, 0);
-   call lay_o(33555343, 13447, 0);
-   call lay_o(33554776, 13641, 0);
-   call lay_o(128, 12844, 0);
    call lay_o(50332577, 10474, 0);
    call lay_o(50332575, 10476, 0);
    call lay_o(50332574, 10477, 0);
@@ -503,9 +440,26 @@ procedure lay_camp begin
    end
 end
 
-// Постройки прораба: 0 новый колодец, 1-2 огороды, 3-6 палатки (4-7-й участки жилья)
+// Горящие бочки у людей и свет кострища (Егор, 2026-10-08). Зовется при каждом входе: в старых сохранениях их нет
+procedure lay_lights begin
+   variable fp;
+   call lay_o(33554433, 32101, 0);
+   call lay_lit(4, 100);
+   call lay_o(33554433, 30483, 0);
+   call lay_lit(4, 100);
+   call lay_o(33554433, 17674, 0);
+   call lay_lit(4, 100);
+   call lay_o(33554433, 12878, 0);
+   call lay_lit(4, 100);
+   call lay_o(33554433, 13266, 0);
+   call lay_lit(4, 100);
+   fp := tile_contains_pid_obj(LAY_FIRE, 0, LAY_FIREPIT);
+   if (fp) then obj_set_light_level(fp, 100, 5);
+end
+
+// Постройки прораба: 0 новый колодец, 1-2 огороды, 3-7 палатки (4-8-й участки жилья), 8 палатка героя с сундуком
 procedure lay_slot(variable slot) begin
-   if (slot >= 3) then call lay_ruin_clear(slot - 3);   // палатки 4-7 встают на участки жилья 4-7: сперва снос развалин
+   if (slot >= 3 and slot <= 7) then call lay_ruin_clear(slot - 3);   // палатки 4-8 встают на участки жилья 4-8: сперва снос развалин
    if (slot == 0) then begin
       if (not tile_contains_pid_obj(LAY_NEWWELL, 0, PID_WELL_NEW)) then create_object_sid(PID_WELL_NEW, LAY_NEWWELL, 0, SCRIPT_F2MWELL);
    end else if (slot == 1) then begin   // огород 1: 24
@@ -872,6 +826,151 @@ procedure lay_slot(variable slot) begin
       call lay_o(33554499, 8246, 0);
       call lay_o(33554499, 8446, 0);
       call lay_o(33554820, 9246, 0);
+   end else if (slot == 7) then begin   // палатка 8: 70
+      call lay_o(33554499, 7433, 0);
+      call lay_o(33554499, 7633, 0);
+      call lay_o(33554499, 7634, 0);
+      call lay_o(50332577, 7636, 0);
+      call lay_o(50332575, 7638, 0);
+      call lay_o(50332574, 7639, 0);
+      call lay_o(50332573, 7640, 0);
+      call lay_o(50332572, 7641, 0);
+      call lay_o(50332269, 7642, 0);
+      call lay_o(50332603, 7642, 0);
+      call lay_o(33554499, 7834, 0);
+      call lay_o(50332578, 7836, 0);
+      call lay_o(50332576, 7837, 0);
+      call lay_o(33554816, 7837, 0);
+      call lay_o(33554819, 7837, 0);
+      call lay_o(33554499, 7838, 0);
+      call lay_o(33554499, 7839, 0);
+      call lay_o(33554499, 7840, 0);
+      call lay_o(50332270, 7841, 0);
+      call lay_o(50332269, 7843, 0);
+      call lay_o(33554499, 7844, 0);
+      call lay_o(33554499, 8034, 0);
+      call lay_o(50332579, 8036, 0);
+      call lay_o(33554499, 8037, 0);
+      call lay_o(33554499, 8038, 0);
+      call lay_o(33555380, 8039, 0);
+      call lay_o(33554499, 8040, 0);
+      call lay_o(33554499, 8041, 0);
+      call lay_o(130, 8041, 0);
+      call lay_o(50332584, 8043, 0);
+      call lay_o(33554499, 8044, 0);
+      call lay_o(33554499, 8045, 0);
+      call lay_o(33554499, 8233, 0);
+      call lay_o(50332580, 8236, 0);
+      call lay_o(33554499, 8241, 0);
+      call lay_o(50332585, 8243, 0);
+      call lay_o(33554499, 8433, 0);
+      call lay_o(50332581, 8436, 0);
+      call lay_o(50332269, 8443, 0);
+      call lay_o(33554654, 8445, 0);
+      call lay_o(50332582, 8636, 0);
+      call lay_o(50332597, 8643, 0);
+      call lay_o(33554499, 8644, 0);
+      call lay_o(33554499, 8645, 0);
+      call lay_o(50332269, 8836, 0);
+      call lay_o(50332598, 8843, 0);
+      call lay_o(33554499, 8844, 0);
+      call lay_o(33554655, 8845, 0);
+      call lay_o(50332599, 9043, 0);
+      call lay_o(33554499, 9045, 0);
+      call lay_o(33554499, 9234, 0);
+      call lay_o(33554499, 9235, 0);
+      call lay_o(33554499, 9236, 0);
+      call lay_o(50332602, 9238, 0);
+      call lay_flg(268435456, 0);
+      call lay_o(33554817, 9239, 0);
+      call lay_o(50332591, 9242, 0);
+      call lay_flg(268435456, 0);
+      call lay_o(50332589, 9243, 0);
+      call lay_flg(268435456, 0);
+      call lay_o(33554499, 9244, 0);
+      call lay_o(33554499, 9245, 0);
+      call lay_o(33554821, 9434, 0);
+      call lay_o(33554499, 9435, 0);
+      call lay_o(50332596, 9437, 0);
+      call lay_flg(268435456, 0);
+      call lay_o(50332270, 9438, 0);
+      call lay_o(50332601, 9439, 0);
+      call lay_flg(268435456, 0);
+      call lay_o(50332600, 9441, 0);
+      call lay_flg(268435456, 0);
+      call lay_o(50332270, 9442, 0);
+      call lay_o(50332590, 9443, 0);
+      call lay_flg(268435456, 0);
+      call lay_o(33554499, 9444, 0);
+      call lay_o(33554499, 9445, 0);
+      call lay_o(50332270, 9637, 0);
+   end else if (slot == 8) then begin   // палатка героя с сундуком: 65
+      call lay_o(50332577, 11640, 0);
+      call lay_o(50332270, 11641, 0);
+      call lay_o(50332575, 11642, 0);
+      call lay_o(50332574, 11643, 0);
+      call lay_o(50332573, 11644, 0);
+      call lay_o(50332572, 11645, 0);
+      call lay_o(50332603, 11646, 0);
+      call lay_o(50332578, 11840, 0);
+      call lay_o(50332576, 11841, 0);
+      call lay_o(33554499, 11844, 0);
+      call lay_o(33554499, 11845, 0);
+      call lay_o(33554499, 11846, 0);
+      call lay_o(245, 11846, 0);
+      call lay_o(50332269, 11847, 0);
+      call lay_o(50332579, 12040, 0);
+      call lay_o(33554499, 12041, 0);
+      call lay_o(33554499, 12042, 0);
+      call lay_o(33555380, 12043, 0);
+      call lay_o(33554808, 12044, 0);
+      call lay_o(50332837, 12047, 0);
+      call lay_o(33554776, 12048, 0);
+      call lay_o(50332580, 12240, 0);
+      call lay_o(33554499, 12241, 0);
+      call lay_o(33554499, 12242, 0);
+      call lay_o(50332269, 12247, 0);
+      call lay_o(33554776, 12248, 0);
+      call lay_o(50332581, 12440, 0);
+      call lay_o(33554499, 12441, 0);
+      call lay_o(246, 12441, 0);
+      call lay_flg(32768, 0);
+      call lay_o(33554809, 12443, 0);
+      call lay_o(33554573, 12444, 0);
+      call lay_o(50332838, 12447, 0);
+      call lay_o(33555345, 12447, 0);
+      call lay_o(33554776, 12448, 0);
+      call lay_o(50332582, 12640, 0);
+      call lay_o(33554499, 12641, 0);
+      call lay_o(244, 12641, 0);
+      call lay_o(50332839, 12647, 0);
+      call lay_o(33554776, 12648, 0);
+      call lay_o(50332604, 12840, 0);
+      call lay_o(33554499, 12841, 0);
+      call lay_o(243, 12841, 0);
+      call lay_o(33554810, 12843, 0);
+      call lay_o(50332840, 12847, 0);
+      call lay_o(33554776, 12848, 0);
+      call lay_o(50332269, 13040, 0);
+      call lay_o(50332841, 13047, 0);
+      call lay_o(33555342, 13047, 0);
+      call lay_o(33554776, 13048, 0);
+      call lay_o(50332269, 13240, 0);
+      call lay_o(50332847, 13242, 0);
+      call lay_o(33554817, 13243, 0);
+      call lay_o(50332844, 13246, 0);
+      call lay_o(50332842, 13247, 0);
+      call lay_o(50332848, 13441, 0);
+      call lay_o(50332270, 13442, 0);
+      call lay_o(33555350, 13442, 0);
+      call lay_o(50332846, 13443, 0);
+      call lay_o(50332845, 13445, 0);
+      call lay_o(50332270, 13446, 0);
+      call lay_o(50332843, 13447, 0);
+      call lay_o(33555354, 13447, 0);
+      call lay_o(33555343, 13447, 0);
+      call lay_o(33554776, 13641, 0);
+      call lay_o(128, 12844, 0);
    end
 end
 
@@ -1939,7 +2038,7 @@ procedure lay_ruins begin
    call lay_o(50332273, 26728, 0);
 end
 
-// Развалины прежних версий (0.5.1-0.5.4): убрать из сохранений, где они уже стоят
+// Развалины прежних версий (0.5.1-0.5.5): убрать из сохранений, где они уже стоят
 procedure lay_ruins_old begin
    call lay_x(33556259, 7036);
    call lay_x(50332157, 7036);
@@ -1994,10 +2093,19 @@ procedure lay_ruins_old begin
    call lay_x(50332527, 7081);
    call lay_x(50332269, 7082);
    call lay_x(50332279, 7082);
+   call lay_x(50332269, 7088);
+   call lay_x(50332150, 7089);
    call lay_x(50332269, 7089);
+   call lay_x(50332151, 7090);
    call lay_x(50332528, 7090);
+   call lay_x(50332153, 7091);
    call lay_x(50332531, 7091);
+   call lay_x(50332152, 7092);
    call lay_x(50332530, 7092);
+   call lay_x(50332153, 7093);
+   call lay_x(50332151, 7094);
+   call lay_x(50332153, 7095);
+   call lay_x(50332151, 7096);
    call lay_x(33556264, 7236);
    call lay_x(50332161, 7236);
    call lay_x(50332269, 7236);
@@ -2010,6 +2118,11 @@ procedure lay_ruins_old begin
    call lay_x(33556263, 7248);
    call lay_x(50332161, 7250);
    call lay_x(50332270, 7252);
+   call lay_x(50332280, 7252);
+   call lay_x(50332218, 7253);
+   call lay_x(50332214, 7254);
+   call lay_x(50332216, 7255);
+   call lay_x(50332269, 7256);
    call lay_x(50332274, 7256);
    call lay_x(33556262, 7262);
    call lay_x(50332270, 7263);
@@ -2019,12 +2132,26 @@ procedure lay_ruins_old begin
    call lay_x(33554713, 7268);
    call lay_x(33554499, 7269);
    call lay_x(50332269, 7270);
+   call lay_x(50332280, 7274);
    call lay_x(50332535, 7274);
+   call lay_x(50332211, 7275);
    call lay_x(50332270, 7275);
    call lay_x(50332210, 7277);
+   call lay_x(50332216, 7277);
+   call lay_x(50332214, 7278);
+   call lay_x(50332213, 7279);
    call lay_x(50332270, 7279);
+   call lay_x(50332212, 7280);
+   call lay_x(50332216, 7281);
    call lay_x(50332270, 7281);
+   call lay_x(50332279, 7282);
    call lay_x(50332535, 7288);
+   call lay_x(50332270, 7289);
+   call lay_x(50332270, 7291);
+   call lay_x(50332270, 7293);
+   call lay_x(33554697, 7295);
+   call lay_x(50332270, 7295);
+   call lay_x(50332270, 7297);
    call lay_x(50332160, 7436);
    call lay_x(50332222, 7436);
    call lay_x(50332243, 7438);
@@ -2032,8 +2159,12 @@ procedure lay_ruins_old begin
    call lay_x(50332510, 7444);
    call lay_x(50332160, 7450);
    call lay_x(50332282, 7452);
+   call lay_x(50332270, 7453);
+   call lay_x(50332270, 7455);
    call lay_x(33556265, 7456);
+   call lay_x(50332162, 7456);
    call lay_x(50332177, 7456);
+   call lay_x(50332270, 7462);
    call lay_x(50332281, 7466);
    call lay_x(33554499, 7467);
    call lay_x(33554499, 7468);
@@ -2041,6 +2172,10 @@ procedure lay_ruins_old begin
    call lay_x(50332510, 7470);
    call lay_x(50332270, 7474);
    call lay_x(50332536, 7474);
+   call lay_x(50332270, 7475);
+   call lay_x(50332210, 7477);
+   call lay_x(50332270, 7479);
+   call lay_x(50332270, 7481);
    call lay_x(50332536, 7488);
    call lay_x(33556261, 7496);
    call lay_x(50332157, 7636);
@@ -2056,6 +2191,8 @@ procedure lay_ruins_old begin
    call lay_x(50332157, 7650);
    call lay_x(50332242, 7652);
    call lay_x(50332178, 7656);
+   call lay_x(50332273, 7656);
+   call lay_x(50332282, 7662);
    call lay_x(50332506, 7670);
    call lay_x(50332282, 7674);
    call lay_x(50332537, 7674);
@@ -2090,6 +2227,7 @@ procedure lay_ruins_old begin
    call lay_x(50332279, 7854);
    call lay_x(33556260, 7856);
    call lay_x(50332177, 7856);
+   call lay_x(50332242, 7862);
    call lay_x(50332280, 7862);
    call lay_x(50332538, 7862);
    call lay_x(50332236, 7863);
@@ -2102,7 +2240,16 @@ procedure lay_ruins_old begin
    call lay_x(33556258, 7870);
    call lay_x(50332269, 7870);
    call lay_x(50332242, 7874);
+   call lay_x(50332280, 7874);
    call lay_x(50332538, 7874);
+   call lay_x(50332236, 7875);
+   call lay_x(50332237, 7876);
+   call lay_x(50332239, 7877);
+   call lay_x(50332292, 7878);
+   call lay_x(50332238, 7879);
+   call lay_x(50332234, 7880);
+   call lay_x(50332236, 7881);
+   call lay_x(50332269, 7882);
    call lay_x(50332269, 7888);
    call lay_x(50332538, 7888);
    call lay_x(50332270, 7889);
@@ -2125,6 +2272,7 @@ procedure lay_ruins_old begin
    call lay_x(50332270, 8053);
    call lay_x(50332270, 8055);
    call lay_x(50332288, 8056);
+   call lay_x(50332243, 8062);
    call lay_x(50332535, 8062);
    call lay_x(50332270, 8063);
    call lay_x(50332270, 8065);
@@ -2133,6 +2281,11 @@ procedure lay_ruins_old begin
    call lay_x(50332186, 8070);
    call lay_x(50332243, 8074);
    call lay_x(50332535, 8074);
+   call lay_x(50332270, 8075);
+   call lay_x(50332270, 8077);
+   call lay_x(50332270, 8079);
+   call lay_x(50332270, 8081);
+   call lay_x(50332186, 8082);
    call lay_x(50332201, 8088);
    call lay_x(50332535, 8088);
    call lay_x(50332246, 8090);
@@ -2150,7 +2303,15 @@ procedure lay_ruins_old begin
    call lay_x(50332161, 8250);
    call lay_x(50332249, 8252);
    call lay_x(50332177, 8256);
+   call lay_x(50332261, 8262);
    call lay_x(50332536, 8262);
+   call lay_x(50332236, 8263);
+   call lay_x(50332234, 8264);
+   call lay_x(50332239, 8265);
+   call lay_x(50332235, 8266);
+   call lay_x(50332238, 8267);
+   call lay_x(50332279, 8268);
+   call lay_x(50332270, 8269);
    call lay_x(50332155, 8270);
    call lay_x(50332261, 8274);
    call lay_x(50332536, 8274);
@@ -2161,6 +2322,7 @@ procedure lay_ruins_old begin
    call lay_x(50332238, 8279);
    call lay_x(50332279, 8280);
    call lay_x(50332270, 8281);
+   call lay_x(50332155, 8282);
    call lay_x(50332202, 8288);
    call lay_x(50332536, 8288);
    call lay_x(50332249, 8290);
@@ -2179,7 +2341,12 @@ procedure lay_ruins_old begin
    call lay_x(50332243, 8452);
    call lay_x(33556259, 8456);
    call lay_x(50332273, 8456);
+   call lay_x(50332269, 8462);
    call lay_x(50332537, 8462);
+   call lay_x(50332270, 8463);
+   call lay_x(50332270, 8465);
+   call lay_x(50332270, 8467);
+   call lay_x(50332270, 8469);
    call lay_x(33556261, 8470);
    call lay_x(50332156, 8470);
    call lay_x(50332269, 8474);
@@ -2187,6 +2354,7 @@ procedure lay_ruins_old begin
    call lay_x(50332270, 8477);
    call lay_x(50332270, 8479);
    call lay_x(50332270, 8481);
+   call lay_x(50332156, 8482);
    call lay_x(50332500, 8482);
    call lay_x(50332203, 8488);
    call lay_x(50332243, 8490);
@@ -2204,10 +2372,13 @@ procedure lay_ruins_old begin
    call lay_x(50332538, 8648);
    call lay_x(50332155, 8650);
    call lay_x(50332249, 8652);
+   call lay_x(50332242, 8662);
    call lay_x(50332538, 8662);
+   call lay_x(50332282, 8664);
    call lay_x(50332161, 8670);
    call lay_x(50332242, 8674);
    call lay_x(50332282, 8676);
+   call lay_x(50332161, 8682);
    call lay_x(50332202, 8688);
    call lay_x(50332246, 8690);
    call lay_x(50332270, 8695);
@@ -2232,12 +2403,17 @@ procedure lay_ruins_old begin
    call lay_x(50332239, 8855);
    call lay_x(50332270, 8855);
    call lay_x(50332279, 8856);
+   call lay_x(50332144, 8862);
    call lay_x(50332535, 8862);
+   call lay_x(50332246, 8864);
+   call lay_x(33554559, 8867);
    call lay_x(50332274, 8868);
    call lay_x(50332160, 8870);
    call lay_x(50332144, 8874);
    call lay_x(50332246, 8876);
    call lay_x(33554559, 8879);
+   call lay_x(50332274, 8880);
+   call lay_x(50332160, 8882);
    call lay_x(50332501, 8882);
    call lay_x(50332203, 8888);
    call lay_x(50332249, 8890);
@@ -2260,13 +2436,22 @@ procedure lay_ruins_old begin
    call lay_x(50332536, 9062);
    call lay_x(50332216, 9063);
    call lay_x(50332217, 9064);
+   call lay_x(50332249, 9064);
    call lay_x(50332218, 9065);
    call lay_x(50332214, 9066);
    call lay_x(50332216, 9067);
    call lay_x(50332734, 9068);
    call lay_x(50332155, 9070);
    call lay_x(50332506, 9070);
+   call lay_x(50332280, 9074);
+   call lay_x(50332216, 9075);
+   call lay_x(50332217, 9076);
    call lay_x(50332249, 9076);
+   call lay_x(50332218, 9077);
+   call lay_x(50332214, 9078);
+   call lay_x(50332216, 9079);
+   call lay_x(50332734, 9080);
+   call lay_x(50332155, 9082);
    call lay_x(50332506, 9082);
    call lay_x(50332201, 9088);
    call lay_x(50332243, 9090);
@@ -2287,13 +2472,19 @@ procedure lay_ruins_old begin
    call lay_x(50332507, 9256);
    call lay_x(50332537, 9262);
    call lay_x(50332270, 9263);
+   call lay_x(50332243, 9264);
    call lay_x(50332270, 9265);
    call lay_x(50332270, 9267);
    call lay_x(50332269, 9268);
    call lay_x(50332156, 9270);
    call lay_x(50332507, 9270);
    call lay_x(50332143, 9274);
+   call lay_x(50332270, 9275);
    call lay_x(50332243, 9276);
+   call lay_x(50332270, 9277);
+   call lay_x(50332270, 9279);
+   call lay_x(50332269, 9280);
+   call lay_x(50332156, 9282);
    call lay_x(50332507, 9282);
    call lay_x(50332202, 9288);
    call lay_x(50332246, 9290);
@@ -2308,12 +2499,16 @@ procedure lay_ruins_old begin
    call lay_x(50332538, 9448);
    call lay_x(50332243, 9452);
    call lay_x(50332508, 9456);
+   call lay_x(50332243, 9462);
    call lay_x(50332538, 9462);
+   call lay_x(50332249, 9464);
    call lay_x(50332273, 9468);
    call lay_x(50332288, 9470);
    call lay_x(50332508, 9470);
    call lay_x(50332243, 9474);
    call lay_x(50332249, 9476);
+   call lay_x(50332273, 9480);
+   call lay_x(50332288, 9482);
    call lay_x(50332508, 9482);
    call lay_x(50332202, 9488);
    call lay_x(50332249, 9490);
@@ -2330,14 +2525,20 @@ procedure lay_ruins_old begin
    call lay_x(50332246, 9652);
    call lay_x(50332249, 9652);
    call lay_x(50332509, 9656);
+   call lay_x(50332246, 9662);
    call lay_x(50332269, 9662);
+   call lay_x(50332154, 9664);
+   call lay_x(50332174, 9665);
    call lay_x(33554535, 9666);
+   call lay_x(50332271, 9666);
    call lay_x(33556259, 9670);
    call lay_x(50332155, 9670);
    call lay_x(50332246, 9674);
    call lay_x(50332154, 9676);
    call lay_x(50332174, 9677);
+   call lay_x(33554535, 9678);
    call lay_x(50332271, 9678);
+   call lay_x(50332155, 9682);
    call lay_x(50332509, 9682);
    call lay_x(50332201, 9688);
    call lay_x(50332154, 9690);
@@ -2354,14 +2555,19 @@ procedure lay_ruins_old begin
    call lay_x(50332281, 9852);
    call lay_x(50332515, 9854);
    call lay_x(50332511, 9856);
+   call lay_x(50332281, 9862);
+   call lay_x(50332270, 9865);
    call lay_x(33554535, 9866);
    call lay_x(33556264, 9866);
    call lay_x(33554537, 9868);
    call lay_x(50332273, 9870);
    call lay_x(50332281, 9874);
    call lay_x(50332270, 9877);
+   call lay_x(33554535, 9878);
    call lay_x(50332515, 9878);
+   call lay_x(33554537, 9880);
    call lay_x(50332515, 9880);
+   call lay_x(50332273, 9882);
    call lay_x(50332511, 9882);
    call lay_x(50332203, 9888);
    call lay_x(50332270, 9891);
@@ -3489,6 +3695,7 @@ procedure lay_ruins_old begin
    call lay_x(50332155, 25464);
    call lay_x(33556264, 25510);
    call lay_x(50332282, 25510);
+   call lay_x(50332282, 25512);
    call lay_x(50332534, 25514);
    call lay_x(50332527, 25515);
    call lay_x(50332532, 25516);
@@ -3541,14 +3748,27 @@ procedure lay_ruins_old begin
    call lay_x(50332209, 25662);
    call lay_x(50332156, 25664);
    call lay_x(50332222, 25710);
+   call lay_x(50332222, 25712);
    call lay_x(50332270, 25713);
    call lay_x(50332270, 25715);
+   call lay_x(50332234, 25716);
+   call lay_x(50332236, 25717);
+   call lay_x(50332234, 25718);
    call lay_x(50332546, 25718);
+   call lay_x(50332236, 25719);
    call lay_x(50332270, 25719);
+   call lay_x(50332234, 25720);
    call lay_x(50332269, 25720);
+   call lay_x(50332236, 25721);
    call lay_x(50332270, 25721);
+   call lay_x(50332234, 25722);
+   call lay_x(50332236, 25723);
    call lay_x(50332270, 25723);
+   call lay_x(50332234, 25724);
+   call lay_x(50332236, 25725);
    call lay_x(50332270, 25725);
+   call lay_x(50332234, 25726);
+   call lay_x(50332236, 25727);
    call lay_x(50332270, 25727);
    call lay_x(50332269, 25728);
    call lay_x(50332270, 25729);
@@ -3590,8 +3810,17 @@ procedure lay_ruins_old begin
    call lay_x(50332226, 25910);
    call lay_x(33554546, 25911);
    call lay_x(33554499, 25912);
+   call lay_x(50332226, 25912);
+   call lay_x(33554546, 25913);
    call lay_x(33554499, 25914);
+   call lay_x(50332270, 25917);
+   call lay_x(50332270, 25919);
    call lay_x(50332222, 25920);
+   call lay_x(50332270, 25921);
+   call lay_x(50332270, 25923);
+   call lay_x(50332270, 25925);
+   call lay_x(50332270, 25927);
+   call lay_x(50332186, 25928);
    call lay_x(50332510, 25928);
    call lay_x(50332276, 25936);
    call lay_x(50332192, 25937);
@@ -3616,6 +3845,7 @@ procedure lay_ruins_old begin
    call lay_x(50332202, 26062);
    call lay_x(50332273, 26064);
    call lay_x(50332223, 26110);
+   call lay_x(50332223, 26112);
    call lay_x(33554713, 26113);
    call lay_x(50332272, 26114);
    call lay_x(50332494, 26115);
@@ -3632,6 +3862,7 @@ procedure lay_ruins_old begin
    call lay_x(50332151, 26126);
    call lay_x(50332153, 26127);
    call lay_x(50332151, 26128);
+   call lay_x(50332155, 26128);
    call lay_x(50332499, 26128);
    call lay_x(50332270, 26137);
    call lay_x(50332270, 26139);
@@ -3654,6 +3885,7 @@ procedure lay_ruins_old begin
    call lay_x(50332515, 26262);
    call lay_x(50332269, 26263);
    call lay_x(50332289, 26310);
+   call lay_x(50332289, 26312);
    call lay_x(33554499, 26313);
    call lay_x(50332270, 26315);
    call lay_x(50332270, 26321);
@@ -3661,6 +3893,7 @@ procedure lay_ruins_old begin
    call lay_x(50332270, 26325);
    call lay_x(33554697, 26327);
    call lay_x(50332270, 26327);
+   call lay_x(50332156, 26328);
    call lay_x(50332500, 26328);
    call lay_x(50332270, 26329);
    call lay_x(50332539, 26352);
@@ -3684,6 +3917,7 @@ procedure lay_ruins_old begin
    call lay_x(50332270, 26463);
    call lay_x(50332229, 26510);
    call lay_x(50332535, 26510);
+   call lay_x(50332229, 26512);
    call lay_x(50332241, 26516);
    call lay_x(50332238, 26517);
    call lay_x(33556263, 26518);
@@ -3697,6 +3931,7 @@ procedure lay_ruins_old begin
    call lay_x(50332238, 26525);
    call lay_x(50332279, 26526);
    call lay_x(50332270, 26527);
+   call lay_x(50332157, 26528);
    call lay_x(50332246, 26560);
    call lay_x(50332269, 26562);
    call lay_x(50332536, 26644);
@@ -3707,6 +3942,7 @@ procedure lay_ruins_old begin
    call lay_x(50332276, 26710);
    call lay_x(50332536, 26710);
    call lay_x(50332200, 26711);
+   call lay_x(50332226, 26712);
    call lay_x(50332312, 26712);
    call lay_x(50332200, 26713);
    call lay_x(50332193, 26714);
@@ -3732,6 +3968,7 @@ procedure lay_ruins_old begin
    call lay_x(50332200, 26727);
    call lay_x(50332270, 26727);
    call lay_x(50332269, 26728);
+   call lay_x(50332273, 26728);
    call lay_x(50332501, 26728);
    call lay_x(50332280, 26752);
    call lay_x(50332236, 26753);
@@ -3757,7 +3994,10 @@ procedure lay_ruins_old begin
    call lay_x(33554499, 26911);
    call lay_x(50332270, 26911);
    call lay_x(33554655, 26912);
+   call lay_x(50332224, 26912);
+   call lay_x(33554499, 26913);
    call lay_x(50332270, 26913);
+   call lay_x(33554655, 26914);
    call lay_x(50332270, 26915);
    call lay_x(33554556, 26916);
    call lay_x(50332242, 26916);
@@ -3803,11 +4043,25 @@ procedure lay_ruins_old begin
    call lay_x(33556259, 27110);
    call lay_x(50332222, 27110);
    call lay_x(33554499, 27111);
+   call lay_x(50332222, 27112);
+   call lay_x(33554499, 27113);
+   call lay_x(50332241, 27116);
    call lay_x(50332243, 27116);
+   call lay_x(50332238, 27117);
+   call lay_x(50332235, 27118);
    call lay_x(50332553, 27118);
    call lay_x(33555376, 27119);
+   call lay_x(50332239, 27119);
+   call lay_x(50332293, 27120);
+   call lay_x(50332236, 27121);
+   call lay_x(50332237, 27122);
    call lay_x(33554744, 27123);
+   call lay_x(50332238, 27123);
    call lay_x(50332243, 27124);
+   call lay_x(50332257, 27124);
+   call lay_x(50332238, 27125);
+   call lay_x(50332279, 27126);
+   call lay_x(50332270, 27127);
    call lay_x(33554534, 27128);
    call lay_x(33554557, 27128);
    call lay_x(33554559, 27128);
@@ -3825,9 +4079,18 @@ procedure lay_ruins_old begin
    call lay_x(50332281, 27258);
    call lay_x(33554499, 27261);
    call lay_x(50332288, 27310);
+   call lay_x(50332288, 27312);
+   call lay_x(50332269, 27316);
    call lay_x(50332281, 27316);
+   call lay_x(50332270, 27317);
    call lay_x(50332550, 27318);
+   call lay_x(50332270, 27319);
+   call lay_x(50332270, 27321);
+   call lay_x(50332270, 27323);
    call lay_x(50332244, 27324);
+   call lay_x(50332269, 27324);
+   call lay_x(50332270, 27325);
+   call lay_x(50332270, 27327);
    call lay_x(50332202, 27328);
    call lay_x(50332504, 27328);
    call lay_x(50332282, 27352);
@@ -3835,7 +4098,10 @@ procedure lay_ruins_old begin
    call lay_x(50332499, 27362);
    call lay_x(50332223, 27510);
    call lay_x(50332282, 27510);
+   call lay_x(50332223, 27512);
+   call lay_x(50332242, 27516);
    call lay_x(50332549, 27518);
+   call lay_x(50332242, 27524);
    call lay_x(50332245, 27524);
    call lay_x(50332206, 27528);
    call lay_x(50332505, 27528);
@@ -3845,8 +4111,14 @@ procedure lay_ruins_old begin
    call lay_x(33556260, 27710);
    call lay_x(50332224, 27710);
    call lay_x(50332243, 27710);
+   call lay_x(50332224, 27712);
+   call lay_x(50332243, 27716);
    call lay_x(33556261, 27718);
+   call lay_x(50332243, 27724);
    call lay_x(50332281, 27724);
+   call lay_x(33554534, 27728);
+   call lay_x(33554557, 27728);
+   call lay_x(33554559, 27728);
    call lay_x(33556258, 27728);
    call lay_x(50332205, 27728);
    call lay_x(50332243, 27752);
@@ -3854,14 +4126,20 @@ procedure lay_ruins_old begin
    call lay_x(50332281, 27760);
    call lay_x(50332223, 27910);
    call lay_x(50332246, 27910);
+   call lay_x(50332223, 27912);
+   call lay_x(50332281, 27916);
+   call lay_x(50332244, 27924);
    call lay_x(50332204, 27928);
    call lay_x(50332246, 27952);
    call lay_x(50332538, 27952);
    call lay_x(50332249, 28110);
    call lay_x(50332269, 28110);
+   call lay_x(50332269, 28112);
    call lay_x(33554499, 28124);
+   call lay_x(50332245, 28124);
    call lay_x(33554499, 28126);
    call lay_x(33554499, 28127);
+   call lay_x(33554499, 28128);
    call lay_x(50332201, 28128);
    call lay_x(50332249, 28152);
    call lay_x(50332535, 28152);
@@ -3871,8 +4149,10 @@ procedure lay_ruins_old begin
    call lay_x(50332175, 28311);
    call lay_x(50332147, 28312);
    call lay_x(50332151, 28312);
+   call lay_x(50332270, 28312);
    call lay_x(50332150, 28313);
    call lay_x(50332153, 28313);
+   call lay_x(50332175, 28313);
    call lay_x(50332151, 28314);
    call lay_x(50332152, 28314);
    call lay_x(50332150, 28315);
@@ -3883,13 +4163,16 @@ procedure lay_ruins_old begin
    call lay_x(33556264, 28318);
    call lay_x(50332151, 28318);
    call lay_x(50332271, 28318);
+   call lay_x(50332150, 28319);
    call lay_x(50332153, 28319);
    call lay_x(50332147, 28320);
+   call lay_x(50332271, 28320);
    call lay_x(50332515, 28320);
    call lay_x(50332153, 28321);
    call lay_x(50332147, 28322);
    call lay_x(50332513, 28322);
    call lay_x(50332153, 28323);
+   call lay_x(50332281, 28324);
    call lay_x(50332525, 28324);
    call lay_x(33554713, 28325);
    call lay_x(33556263, 28326);
@@ -3897,6 +4180,7 @@ procedure lay_ruins_old begin
    call lay_x(33554713, 28327);
    call lay_x(50332494, 28327);
    call lay_x(50332270, 28328);
+   call lay_x(50332272, 28328);
    call lay_x(50332277, 28328);
    call lay_x(33554637, 28329);
    call lay_x(33554778, 28329);
@@ -3929,6 +4213,7 @@ procedure lay_ruins_old begin
    call lay_x(50332270, 28526);
    call lay_x(33554499, 28527);
    call lay_x(50332270, 28527);
+   call lay_x(50332270, 28529);
    call lay_x(50332269, 28552);
    call lay_x(50332270, 28553);
    call lay_x(50332270, 28555);

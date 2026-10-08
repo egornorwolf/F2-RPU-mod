@@ -21,7 +21,7 @@
 #include "f2mset.h"
 #include "f2msync.h"
 
-#define F2MOD_VERSION "0.5.5"
+#define F2MOD_VERSION "0.5.6"
 
 procedure start;
 procedure encounter_handler;

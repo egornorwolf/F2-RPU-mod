@@ -5,8 +5,9 @@
 
 #define BUILD_WELL      (0)     // новый колодец
 #define BUILD_GARDEN    (1)     // 1 и 2 — огороды
-#define BUILD_TENT      (3)     // 3..6 — палатки
-#define BUILD_COUNT     (7)
+#define BUILD_TENT      (3)     // 3..7 — палатки
+#define BUILD_HERO      (8)     // палатка героя с сундуком (с 0.5.6 тоже строит Хэнк)
+#define BUILD_COUNT     (9)
 
 #define PID_WELL_OLD    (33555425)  // MODWELL1: заколоченный колодец
 #define PID_WELL_FIXED  (33556410)  // WELL001 (RPU): тот же колодец, открытый

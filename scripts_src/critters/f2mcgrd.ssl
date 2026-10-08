@@ -145,6 +145,7 @@ end
 // Охранник погиб от руки героя или спутника, пусть даже случайно: караван воюет.
 // На следующем участке дороги погибшего уже нет.
 procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // лагерь убирает лишнего или ушедшего: это не смерть
    if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
    call cv_mark_dead(obj_pid(self_obj));
 end

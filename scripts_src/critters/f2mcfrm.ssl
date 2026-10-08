@@ -1,7 +1,7 @@
 // Прораб Хэнк, лагерь у скал. Первые постройки собирает «на коленке» сразу, прямо из диалога:
 // герой помогает сам (проверка Силы и Выносливости) или платит немного крышек на материалы.
 // Экран гаснет, проходит несколько часов, постройка уже стоит на своем месте (f2mtlay.h).
-// Колодец — в любой момент, огороды — только когда в лагере есть вода, палатки — 4 места.
+// Колодец — в любой момент, огороды — только когда в лагере есть вода, палатки — 5 мест, и палатка самому герою.
 // Еще продает детали, чтобы герой сам починил старый колодец.
 #define SCRIPT_REALNAME "f2mcfrm"
 #include "define.h"
@@ -28,6 +28,7 @@ procedure Node011;
 procedure Node015;
 procedure Node016;
 procedure Node017;
+procedure Node018;
 procedure Node012;
 procedure Node013;
 procedure Node014;
@@ -38,6 +39,7 @@ procedure Node999;
 procedure free_slot(variable first, variable last);
 procedure kind_of(variable slot);
 procedure do_build;
+procedure build_reply(variable k);
 
 // LVAR 0: 1 = уже знакомы
 #define LVAR_MET        (0)
@@ -101,6 +103,7 @@ procedure damage_p_proc begin
 end
 
 procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // лагерь убирает лишнего или ушедшего: это не смерть
    if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
 end
 
@@ -142,13 +145,20 @@ procedure do_build begin
    call camp_set_built(go_build);
    call lay_slot(go_build);
    gfade_in(1);
-   display_msg(mstr(190 + k));
+   if (go_build == BUILD_HERO) then display_msg(mstr(201));
+   else display_msg(mstr(190 + k));
    if (helped) then begin
       give_exp_points(kind_xp(k));
       display_msg(mstr(195) + kind_xp(k) + mstr(196));
    end
    if (k == KIND_WELL) then call camp_water_done(mstr(197));
    go_build := -1;
+end
+
+// Текст о выбранной постройке: у палатки героя свой
+procedure build_reply(variable k) begin
+   if (sel == BUILD_HERO) then Reply(200);
+   else Reply(130 + k);
 end
 
 procedure Node001 begin
@@ -169,11 +179,12 @@ end
 
 // Что можно построить
 procedure Node010 begin
-   variable g, t, w;
+   variable g, t, w, h;
    w := not camp_built(BUILD_WELL);
    g := free_slot(BUILD_GARDEN, BUILD_TENT - 1);
-   t := free_slot(BUILD_TENT, BUILD_COUNT - 1);
-   if (not w and g < 0 and t < 0) then begin
+   t := free_slot(BUILD_TENT, BUILD_HERO - 1);
+   h := not camp_built(BUILD_HERO);
+   if (not w and g < 0 and t < 0 and not h) then begin
       Reply(126);
       NOption(125, Node001, 4);
       NLowOption(117, Node999);
@@ -188,6 +199,7 @@ procedure Node010 begin
          NOption(123, Node013, 4);
    end
    if (t >= 0) then NOption(124, Node017, 4);
+   if (h) then NOption(202, Node018, 4);
    NOption(125, Node001, 4);
    if (w) then NLowOption(127, Node015);
    NLowOption(117, Node999);
@@ -205,7 +217,12 @@ procedure Node016 begin
 end
 
 procedure Node017 begin
-   sel := free_slot(BUILD_TENT, BUILD_COUNT - 1);
+   sel := free_slot(BUILD_TENT, BUILD_HERO - 1);
+   call Node011;
+end
+
+procedure Node018 begin
+   sel := BUILD_HERO;
    call Node011;
 end
 
@@ -217,7 +234,7 @@ procedure Node011 begin
       return;
    end
    k := kind_of(sel);
-   Reply(130 + k);
+   call build_reply(k);
    NOption(133 + k, Node012, 4);
    if (dude_caps >= kind_price(k)) then
       NOption(136 + k, Node014, 4);
