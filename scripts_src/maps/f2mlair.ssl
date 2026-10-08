@@ -34,10 +34,17 @@ procedure start begin
 end
 
 procedure map_enter_p_proc begin
+   variable obj;
    Lighting;
    if (is_loading_game) then return;
    if (not get_sfall_global_int(GV_LAIR)) then call lair_reveal(0);   // попал сюда иначе (тест): кружок остается
    if (not get_sfall_global_int(GV_LAIR_PUT)) then call lair_put;
+   // Динамит для погреба лежит в логове (Егор 2026-10-08): ящик у западной палатки, 2 шашки
+   if (not get_sfall_global_int(GV_LAIR_DYN)) then begin
+      set_sfall_global(GV_LAIR_DYN, 1);
+      obj := create_object(PID_CONTAINER_WOOD_CRATE, LAIR_DYNBOX, 0);
+      add_mult_objs_to_inven(obj, create_object(PID_DYNAMITE, 0, 0), LAIR_DYN_COUNT);
+   end
    if (not lair_done) then begin
       if (lair_kane_dead) then display_msg(lair_msg(220));
       else display_msg(lair_msg(221));

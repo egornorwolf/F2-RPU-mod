@@ -59,6 +59,7 @@ P = [
     ('CELLAR', 113,  91, 'погреб под камнями у западной палатки'),
     ('WATER',   82,  91, 'бак с водой посреди лагеря'),
     ('STORE',   95,  93, 'ящик со складом (яд)'),
+    ('DYNBOX', 108,  92, 'ящик с динамитом у западной палатки, рядом с погребом'),
     ('SPAWN0',  89,  99, 'патруль'), ('SPAWN1', 81,  97, 'патруль'), ('SPAWN2', 96, 100, 'патруль'),
     ('SPAWN3', 105,  92, 'у западной палатки'), ('SPAWN4', 92, 90, 'у шатра'), ('SPAWN5', 76, 93, 'у восточной палатки'),
     ('SPAWN6',  70,  90, 'у машины'), ('SPAWN7', 110, 95, 'у бочек'), ('SPAWN8', 99, 95, 'у ящиков'),
@@ -68,7 +69,7 @@ OUT = {}
 for n, x, y, c in P:
     OUT[n] = (snap(x, y), c)
 # Сундук и бак ставятся на клетку: не должны перекрыть проход к главарю и к погребу
-blk2 = blk | {OUT[k][0] for k in ('CHEST', 'WATER', 'STORE')} | ring(OUT['CELLAR'][0], 1)   # куча камней многоклеточная
+blk2 = blk | {OUT[k][0] for k in ('CHEST', 'WATER', 'STORE', 'DYNBOX')} | ring(OUT['CELLAR'][0], 1)   # куча камней многоклеточная
 def reach(a, b, blkx):
     s = {a}; q = [a]
     while q:
@@ -78,7 +79,7 @@ def reach(a, b, blkx):
             if n in ring(b, 2 if b == OUT['CELLAR'][0] else 1) and n in FREE and n not in blkx: return True
             if n not in s and n not in blkx and n in FREE: s.add(n); q.append(n)
     return False
-for k in ['KANE', 'CHEST', 'CELLAR', 'WATER', 'STORE'] + [p[0] for p in P if p[0].startswith('SPAWN')]:
+for k in ['KANE', 'CHEST', 'CELLAR', 'WATER', 'STORE', 'DYNBOX'] + [p[0] for p in P if p[0].startswith('SPAWN')]:
     assert reach(OUT['HERO'][0], OUT[k][0], blk2), k
 NSPAWN = sum(1 for p in P if p[0].startswith('SPAWN'))
 

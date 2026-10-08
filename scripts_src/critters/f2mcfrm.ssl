@@ -560,9 +560,9 @@ procedure do_wait begin
    call bld_apply;
    gfade_in(1);
    if (helped) then begin
+      give_exp_points(BLD_HELP_XP * helped);
+      display_msg(mstr(195) + (BLD_HELP_XP * helped) + mstr(196));
       helped := 0;
-      give_exp_points(BLD_HELP_XP2);
-      display_msg(mstr(195) + BLD_HELP_XP2 + mstr(196));
    end
 end
 
@@ -688,6 +688,13 @@ end
 
 // Военная база в карьере (1.5): этапы за крышки, гарнизон — наемники, живут бесплатно
 procedure Node066 begin
+   if (not bld_level(U_BASE_UNIT) and not bld_camp_ready(BASE_CAMP_LEVEL)) then begin
+      Reply(467);
+      NOption(461, Node067, 4);
+      NOption(419, Node060, 4);
+      NLowOption(117, Node999);
+      return;
+   end
    if (not bld_level(U_BASE_UNIT)) then Reply(460);
    else if (bld_offer(U_BASE_UNIT)) then Reply(465);
    else Reply(466);
@@ -831,7 +838,7 @@ end
 
 // 2-й уровень своими руками: цена меньше на треть, бригада с героем, ждем на месте
 procedure Node078 begin
-   helped := 1;
+   helped := sel_lv;   // опыт за помощь растет с уровнем: 25 за каждый
    sel_price := sel_price * BLD_HELP_PCT / 100;
    Reply(mstr(449) + sel_price + mstr(422) + (bld_hours(sel_u, sel_lv) / 24) + mstr(423));
    call bld_pay_opts(sel_price);

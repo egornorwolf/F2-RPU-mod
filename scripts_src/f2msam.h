@@ -1,7 +1,7 @@
 // Радист Сэм Мортон (0.7.1, карточка в docs/npc-cards.md, квест 1.3: «на следующий день после набега приходит радист»).
 // Приходит через сутки после первого набега, если в домах есть свободное место (палатка 2, шатер 4); нет места — ждет.
 // Ставит радио у старосты (стол с пультом, 1 день, бесплатно), продает герою рацию за 50. С рацией в рюкзаке
-// вдали от лагеря герой слышит, что еды или воды до конца недели не хватит (за 3 дня до недельной проверки).
+// вдали от лагеря герой слышит, что еды или воды до конца недели не хватит (сразу после недельной проверки, за неделю).
 // Подключать после define.h, command.h, sfall.h, f2mod.h, f2mcv.h, f2mcamp.h и f2mset.h (в нем f2mbld.h).
 #ifndef F2MSAM_H
 #define F2MSAM_H
@@ -22,7 +22,6 @@
 #define SAM_BUILD_HOURS (24)
 #define SAM_HANDS_SKILL (50)        // Ремонт или Наука: собрать рацию самому, бесплатно
 #define SAM_HANDS_XP    (50)
-#define SAM_WARN_DAY    (4)         // с 4-го дня недели: до проверки еще 3 дня пути
 
 procedure sam_places;
 procedure sam_free;
@@ -95,9 +94,10 @@ procedure sam_tick begin
       set_sfall_global(GV_SAM, SAM_RADIO);
       display_msg(message_str(SCRIPT_F2MRADIO, 300));
    end
-   // Рация: за три дня до недельной проверки, если запасов и кассы не хватит
+   // Рация: сразу после недельной проверки (или как только рация у героя), за неделю до следующей:
+   // с любого конца карты успеть вернуться (Егор 2026-10-08: 3 дня — мало)
    if (st != SAM_RADIO or cur_map_index == MAP_F2MOD_CAMP or not sam_has_radio or not set_founded) then return;
-   if (camp_days % 7 < SAM_WARN_DAY or get_sfall_global_int(GV_SAM_WEEK) == set_weeks_now + 1) then return;
+   if (get_sfall_global_int(GV_SAM_WEEK) == set_weeks_now + 1) then return;
    set_sfall_global(GV_SAM_WEEK, set_weeks_now + 1);
    n := set_people;
    have := get_sfall_global_int(GV_SET_FOOD) + set_food_prod;

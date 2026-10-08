@@ -21,6 +21,7 @@
 #define U_COUNT         (20)
 #define U_TOP_LEVEL     (2)     // 0.7.0: строим до 2-го уровня (3-й — с караваном 2, 4-й — после квестов)
 #define U_BASE_UNIT     (20)    // военная база в карьере (1.5): строит та же бригада, на карте лагеря ее нет
+#define BASE_CAMP_LEVEL (3)     // база строится, когда весь лагерь на 3-м уровне
 #define bld_top(u)      (((u) == U_BASE_UNIT) * 3 + ((u) != U_BASE_UNIT) * U_TOP_LEVEL)
 // Названия и описания уровней — в f2mcfrm.msg: здания 600 + u * 5 + lv и 700 + u * 5 + lv, база 452 + lv и 456 + lv
 #define bld_name(u, lv) (((u) == U_BASE_UNIT) * (452 + (lv)) + ((u) != U_BASE_UNIT) * (600 + (u) * 5 + (lv)))
@@ -30,9 +31,8 @@
 #define BLD_BATCH       (1000)  // бригада строит шатры вместо всех палаток разом: здание = BLD_BATCH + биты мест 0-7
 #define BLD_BATCH_HOURS (36)    // 4 дома одним заказом за полтора срока одного (map-plan.md, раздел 8)
 #define BLD_HELP_STAT   (5)     // помочь на стройке 1-го уровня: Сила и Выносливость
-#define BLD_HELP_XP     (25)
-#define BLD_HELP_PCT    (70)    // 2-й уровень своими руками: цена 70%, ждать на месте до конца
-#define BLD_HELP_XP2    (50)
+#define BLD_HELP_XP     (25)    // опыт за помощь: 25 за каждый уровень постройки (1-й 25, 2-й 50, 3-й 75)
+#define BLD_HELP_PCT    (70)    // 2-й уровень и выше своими руками: цена 70%, ждать на месте до конца
 #define GV_BLD_SYNC     "f2mbsync"  // 1 = достроено, а на карте еще прежний уровень (Хэнк или карта лагеря поставят)
 
 #define GV_JOB_U(j)     ("f2mjobu" + (j))   // бригада j: здание + 1 (0 — свободна)
@@ -68,6 +68,7 @@ procedure bld_commit;
 procedure bld_water;
 procedure bld_food;
 procedure bld_morale;
+procedure bld_camp_ready(variable lv);
 
 // Уровень, который был до 0.7.0 (без записи): что уже поставлено старым кодом лагеря
 procedure bld_base(variable u) begin
@@ -195,6 +196,18 @@ procedure bld_commit begin
       j += 1;
    end
    return n;
+end
+
+// Лагерь доведен до уровня lv: все здания (кроме незанятых мест под дома) не ниже lv.
+// Стройка военной базы открывается, когда лагерь на 3-м уровне (Егор 2026-10-08: сначала обустроить лагерь)
+procedure bld_camp_ready(variable lv) begin
+   variable u := 0, l;
+   while (u < U_COUNT) do begin
+      l := bld_level(u);
+      if (l < lv and not (bld_is_house(u) and l == 0)) then return 0;
+      u += 1;
+   end
+   return 1;
 end
 
 // Вода в неделю, пайков: старый колодец 10 / мотопомпа 20, новый 10 / бак 15

@@ -13,6 +13,7 @@
 #define GV_LAIR_CELLAR  "f2mlairc"  // 1 погреб найден, 2 взорван
 #define GV_LAIR_PUT     "f2mlairg"  // 1 = банда и предметы уже на карте
 #define GV_LAIR_TRACK   "f2mlairt"  // час, когда Рик расскажет, где логово (банда ушла от ворот)
+#define GV_LAIR_DYN     "f2mlaird"  // 1 = ящик с динамитом у погреба уже стоит (0.8.1, и в старых сохранениях)
 #define GV_BASE_GARR    "f2mbgarr"  // сколько бойцов гарнизона живет на базе (едят из запасов поселения)
 
 #define LAIR_KNOWN      (1)
