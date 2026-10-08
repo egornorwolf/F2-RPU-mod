@@ -4,6 +4,8 @@
 // Колодец — в любой момент, огороды — только когда в лагере есть вода, палатки — 5 мест, и палатка самому герою.
 // Еще продает детали, чтобы герой сам починил старый колодец.
 // 1.3: частокол вокруг лагеря, 1000 крышек и 4 дня; платит герой, касса или вскладчину (f2mpay.h).
+// 0.7.0: улучшения зданий до 2-го уровня (f2mbld.h, f2mlvl.h): две бригады, стройка день-два, ждать тут или уйти;
+//        мастерская, пост охраны, бар и медпункт 1-го уровня — сразу, как палатки; шатры вместо всех палаток разом.
 #define SCRIPT_REALNAME "f2mcfrm"
 #include "define.h"
 #include "f2mod.h"
@@ -18,7 +20,9 @@
 #include "f2mfence.h"
 #include "f2mbury.h"
 #include "f2mspots.h"
+#include "f2mlvl.h"
 #include "f2mhome.h"
+#include "f2mbldap.h"
 #include "f2mfine.h"
 
 procedure start;
@@ -59,6 +63,44 @@ procedure timed_event_p_proc;
 procedure fence_pay(variable who);
 procedure do_fence;
 procedure Node999;
+procedure Node060;
+procedure Node061;
+procedure Node062;
+procedure Node063;
+procedure Node064;
+procedure Node065;
+procedure Node070;
+procedure Node071;
+procedure Node072;
+procedure Node073;
+procedure Node074;
+procedure Node075;
+procedure Node076;
+procedure Node077;
+procedure Node080;
+procedure Node081;
+procedure Node100;
+procedure Node101;
+procedure Node102;
+procedure Node103;
+procedure Node112;
+procedure Node113;
+procedure Node114;
+procedure Node115;
+procedure Node116;
+procedure Node117;
+procedure Node118;
+procedure Node119;
+procedure bld_offer(variable u);
+procedure bld_opt(variable u);
+procedure bld_sel(variable u);
+procedure bld_pay_opts(variable price);
+procedure bld_pay(variable who);
+procedure bld_houses_free;
+procedure bld_jobs_text;
+procedure do_l1;
+procedure do_wait;
+procedure bld_map_sync;
 procedure free_slot(variable first, variable last);
 procedure kind_of(variable slot);
 procedure do_build;
@@ -84,6 +126,11 @@ variable helped;           // герой помогал сам
 variable go_fence;         // строить частокол после диалога
 variable go_bury;          // похороны после диалога: какая речь (f2mbury.h)
 variable fled;             // убегал от боя к костру: после боя вернуться к воротам
+variable sel_u := -1;      // улучшения (0.7.0): выбранное здание (U_*), -1 — шатры вместо всех палаток разом
+variable sel_lv;           // на какой уровень
+variable sel_price;
+variable go_l1 := -1;      // строить 1-й уровень после диалога (сразу, как палатки)
+variable go_wait;          // ждать на месте, пока бригада go_wait достроит
 
 procedure start begin
 end
@@ -99,6 +146,7 @@ procedure description_p_proc begin
 end
 
 procedure critter_p_proc begin
+   if (get_sfall_global_int(GV_BLD_SYNC)) then call bld_map_sync;
    // бой кончился: назад на свое место у ворот
    if (fled and not combat_is_initialized and cur_map_index == MAP_F2MOD_CAMP and not get_sfall_global_int(GV_BURY_ON)) then begin
       if (tile_distance(tile_num(self_obj), HANK_SPOT) <= 1) then begin
@@ -143,7 +191,7 @@ end
 procedure combat_p_proc begin
    if (fixed_param != COMBAT_SUBTYPE_TURN or cur_map_index != MAP_F2MOD_CAMP) then return;
    script_overrides;
-   if (tile_distance(tile_num(self_obj), HANK_SAFE) > 2) then begin
+   if (tile_distance(tile_num(self_obj), HANK_SAFE) > 2) then begin   // HANK_SAFE: у шатра старосты — LVL_SAFE2
       fled := 1;
       reg_anim_combat_check(0);
       reg_anim_begin();
@@ -171,6 +219,8 @@ procedure talk_p_proc begin
    end
    go_build := -1;
    go_bury := 0;
+   go_l1 := -1;
+   go_wait := 0;
    start_gdialog(NAME, self_obj, 4, -1, -1);
    gSay_Start;
       call Node001;
@@ -179,6 +229,8 @@ procedure talk_p_proc begin
    if (go_build >= 0) then call do_build;
    if (go_fence) then call do_fence;
    if (go_bury) then call bury_start(go_bury);
+   if (go_l1 >= 0) then call do_l1;
+   if (go_wait) then call do_wait;
 end
 
 procedure timed_event_p_proc begin
@@ -247,6 +299,7 @@ procedure Node001 begin
    NOption(112, Node010, 4);
    if (get_sfall_global_int(GV_WELL_OLD) == WELL_OLD_BROKEN) then
       NOption(113, Node020, 4);
+   NOption(400, Node060, 4);
    NOption(114, Node030, 4);
    if (get_sfall_global_int(GV_RAID_DEAD) and not get_sfall_global_int(GV_RAID_BURY)) then NOption(300, Node050, 4);
    NOption(115, Node999, 4);
@@ -460,4 +513,299 @@ procedure Node056 begin
 end
 
 procedure Node999 begin
+end
+
+// ---- Улучшения зданий (0.7.0) ----
+
+// Достроено, пока герой на карте: экран гаснет, на карте новый уровень (ждем, пока закрыты диалог, бой и окна)
+procedure bld_map_sync begin
+   if (cur_map_index != MAP_F2MOD_CAMP or combat_is_initialized or get_sfall_global_int(GV_BURY_ON)) then return;
+   if ((get_game_mode bwand 0x3FFFFD) != 0) then return;
+   gfade_out(1);
+   call bld_apply;
+   gfade_in(1);
+end
+
+// 1-й уровень (мастерская, пост, бар, медпункт): экран гаснет, три часа, постройка на месте
+procedure do_l1 begin
+   variable u;
+   u := go_l1;
+   go_l1 := -1;
+   gfade_out(1);
+   game_time_advance(bld_hours(u, 1) * ONE_GAME_HOUR);
+   call bld_set_level(u, 1);
+   call bld_commit;
+   call bld_apply;
+   gfade_in(1);
+   display_msg(mstr(590) + mstr(600 + u * 5 + 1) + ".");
+   if (helped) then begin
+      give_exp_points(BLD_HELP_XP);
+      display_msg(mstr(195) + BLD_HELP_XP + mstr(196));
+   end
+end
+
+// Герой ждет у Хэнка: экран гаснет, проходит срок стройки, здание стоит
+procedure do_wait begin
+   variable j;
+   j := go_wait;
+   go_wait := 0;
+   gfade_out(1);
+   game_time_advance(bld_job_left(j) * ONE_GAME_HOUR);
+   call bld_commit;
+   call bld_apply;
+   gfade_in(1);
+end
+
+// Следующий уровень, который можно заказать (0 — нельзя: уже наверху, строится, или 1-й уровень строит не этот пункт)
+procedure bld_offer(variable u) begin
+   variable lv;
+   lv := bld_level(u) + 1;
+   if (lv > U_TOP_LEVEL or bld_job_of(u)) then return 0;
+   if (lv == 1 and bld_price(u, 1) == 0) then return 0;
+   if (bld_is_house(u) and lv == 1) then return 0;
+   return lv;
+end
+
+// Пункт меню: «Название: цена, срок»
+procedure bld_opt(variable u) begin
+   variable lv, t, h;
+   lv := bld_offer(u);
+   h := bld_hours(u, lv);
+   t := mstr(600 + u * 5 + lv) + ": " + bld_price(u, lv) + mstr(415);
+   if (lv == 1) then t += h + mstr(418);
+   else if (h <= 24) then t += (h / 24) + mstr(416);
+   else t += (h / 24) + mstr(417);
+   return t;
+end
+
+// Кто сейчас строит и сколько осталось
+procedure bld_jobs_text begin
+   variable j := 1, t := "", n := 0, u;
+   while (j <= BLD_JOBS) do begin
+      u := get_sfall_global_int(GV_JOB_U(j));
+      if (u) then begin
+         if (n) then t += mstr(406);
+         if (u > BLD_BATCH) then t += mstr(446);
+         else t += mstr(600 + (u - 1) * 5 + get_sfall_global_int(GV_JOB_L(j)));
+         t += mstr(404) + bld_job_left(j) + mstr(405);
+         n += 1;
+      end
+      j += 1;
+   end
+   if (n) then return mstr(402) + t;
+   return mstr(403);
+end
+
+procedure Node060 begin
+   Reply(mstr(401) + bld_jobs_text);
+   NOption(407, Node061, 4);
+   NOption(408, Node062, 4);
+   NOption(409, Node063, 4);
+   NOption(410, Node064, 4);
+   if (bld_offer(U_HERO)) then NOption(411, Node065, 4);
+   NOption(412, Node001, 4);
+   NLowOption(117, Node999);
+end
+
+// Вода и огороды
+procedure Node061 begin
+   if ((bld_offer(U_OLDWELL) != 0) + (bld_offer(U_NEWWELL) != 0) + (bld_offer(U_GARDEN) != 0) + (bld_offer(U_GARDEN + 1) != 0)) then Reply(414);
+   else Reply(413);
+   if (bld_offer(U_OLDWELL)) then NOption(bld_opt(U_OLDWELL), Node100, 4);
+   if (bld_offer(U_NEWWELL)) then NOption(bld_opt(U_NEWWELL), Node101, 4);
+   if (bld_offer(U_GARDEN)) then NOption(bld_opt(U_GARDEN), Node102, 4);
+   if (bld_offer(U_GARDEN + 1)) then NOption(bld_opt(U_GARDEN + 1), Node103, 4);
+   NOption(419, Node060, 4);
+   NLowOption(117, Node999);
+end
+
+// Сколько палаток еще не шатры и не в стройке; первая такая — в sel_u
+procedure bld_houses_free begin
+   variable i := 0, n := 0;
+   sel_u := -1;
+   while (i < 8) do begin
+      if (bld_offer(bld_house_unit(i))) then begin
+         if (sel_u < 0) then sel_u := bld_house_unit(i);
+         n += 1;
+      end
+      i += 1;
+   end
+   return n;
+end
+
+// Жилье: шатер вместо одной палатки или вместо всех разом
+procedure Node062 begin
+   variable n;
+   n := bld_houses_free;
+   if (not n) then Reply(413);
+   else begin
+      Reply(414);
+      NOption(441, Node080, 4);
+      if (n >= 2) then NOption(mstr(439) + n + mstr(440), Node081, 4);
+   end
+   NOption(419, Node060, 4);
+   NLowOption(117, Node999);
+end
+
+// Хозяйство
+procedure Node063 begin
+   if ((bld_offer(U_STORE) != 0) + (bld_offer(U_WORKSHOP) != 0) + (bld_offer(U_FARM) != 0)) then Reply(414);
+   else Reply(413);
+   if (bld_offer(U_STORE)) then NOption(bld_opt(U_STORE), Node112, 4);
+   if (bld_offer(U_WORKSHOP)) then NOption(bld_opt(U_WORKSHOP), Node114, 4);
+   if (bld_offer(U_FARM)) then NOption(bld_opt(U_FARM), Node116, 4);
+   NOption(419, Node060, 4);
+   NLowOption(117, Node999);
+end
+
+// Для людей
+procedure Node064 begin
+   if ((bld_offer(U_CENTRE) != 0) + (bld_offer(U_GUARD) != 0) + (bld_offer(U_BAR) != 0) + (bld_offer(U_MED) != 0)) then Reply(414);
+   else Reply(413);
+   if (bld_offer(U_CENTRE)) then NOption(bld_opt(U_CENTRE), Node113, 4);
+   if (bld_offer(U_GUARD)) then NOption(bld_opt(U_GUARD), Node115, 4);
+   if (bld_offer(U_BAR)) then NOption(bld_opt(U_BAR), Node117, 4);
+   if (bld_offer(U_MED)) then NOption(bld_opt(U_MED), Node118, 4);
+   NOption(419, Node060, 4);
+   NLowOption(117, Node999);
+end
+
+procedure Node065 begin
+   call bld_sel(U_HERO);
+end
+
+procedure Node100 begin call bld_sel(U_OLDWELL); end
+procedure Node101 begin call bld_sel(U_NEWWELL); end
+procedure Node102 begin call bld_sel(U_GARDEN); end
+procedure Node103 begin call bld_sel(U_GARDEN + 1); end
+procedure Node112 begin call bld_sel(U_STORE); end
+procedure Node113 begin call bld_sel(U_CENTRE); end
+procedure Node114 begin call bld_sel(U_WORKSHOP); end
+procedure Node115 begin call bld_sel(U_GUARD); end
+procedure Node116 begin call bld_sel(U_FARM); end
+procedure Node117 begin call bld_sel(U_BAR); end
+procedure Node118 begin call bld_sel(U_MED); end
+procedure Node119 begin call bld_sel(U_HERO); end
+
+procedure bld_sel(variable u) begin
+   sel_u := u;
+   sel_lv := bld_offer(u);
+   sel_price := bld_price(u, sel_lv);
+   call Node070;
+end
+
+// Кто платит: герой, касса или вскладчину (как частокол)
+procedure bld_pay_opts(variable price) begin
+   variable c;
+   c := pay_cash_now;
+   if (can_pay_hero(price)) then NOption(425, Node073, 4);
+   if (can_pay_cash(price)) then NOption(mstr(426) + c + mstr(427), Node074, 4);
+   if (can_pay_split(price)) then NOption(mstr(428) + c + mstr(429) + (price - c) + mstr(430), Node075, 4);
+end
+
+// Выбранное здание: что даст, цена, срок
+procedure Node070 begin
+   if (not sel_lv) then begin
+      call Node060;
+      return;
+   end
+   if (sel_lv == 1) then begin
+      Reply(mstr(700 + sel_u * 5 + 1) + " " + mstr(421) + sel_price + mstr(424));
+      NOption(431, Node071, 4);
+      if (dude_caps >= sel_price) then NOption(432, Node072, 4);
+   end else if (not bld_job_free) then begin
+      Reply(420);
+   end else begin
+      if (bld_is_house(sel_u)) then Reply(444);
+      else Reply(mstr(700 + sel_u * 5 + sel_lv) + " " + mstr(421) + sel_price + mstr(422) + (bld_hours(sel_u, sel_lv) / 24) + mstr(423));
+      call bld_pay_opts(sel_price);
+   end
+   NOption(433, Node060, 4);
+   NLowOption(117, Node999);
+end
+
+// 1-й уровень: помогает сам (Сила и Выносливость)
+procedure Node071 begin
+   if (get_critter_stat(dude_obj, STAT_st) >= BLD_HELP_STAT and get_critter_stat(dude_obj, STAT_en) >= BLD_HELP_STAT) then begin
+      helped := 1;
+      go_l1 := sel_u;
+      Reply(447);
+      NOption(153, Node999, 4);
+      NLowOption(154, Node999);
+   end else begin
+      Reply(155);
+      if (dude_caps >= sel_price) then NOption(432, Node072, 4);
+      NOption(433, Node060, 4);
+      NLowOption(117, Node999);
+   end
+end
+
+// 1-й уровень: платит крышками
+procedure Node072 begin
+   item_caps_adjust(dude_obj, -sel_price);
+   item_caps_adjust(self_obj, sel_price);
+   helped := 0;
+   go_l1 := sel_u;
+   Reply(165);
+   NOption(166, Node999, 4);
+   NLowOption(154, Node999);
+end
+
+procedure Node073 begin call bld_pay(PAY_HERO); end
+procedure Node074 begin call bld_pay(PAY_CASH); end
+procedure Node075 begin call bld_pay(PAY_SPLIT); end
+
+// Оплачено: бригада начинает. Шатры разом — одна бригада на все свободные палатки
+procedure bld_pay(variable who) begin
+   variable j, i := 0, mask := 0;
+   if (not bld_job_free) then begin
+      call Node070;
+      return;
+   end
+   call pay_do(sel_price, who);
+   if (sel_u < 0) then begin
+      while (i < 8) do begin
+         if (bld_offer(bld_house_unit(i))) then mask := mask bwor cv_bit(i);
+         i += 1;
+      end
+      j := bld_job_start(BLD_BATCH + mask - 1, 2, BLD_BATCH_HOURS);
+   end else
+      j := bld_job_start(sel_u, sel_lv, bld_hours(sel_u, sel_lv));
+   sel_lv := j;
+   Reply(434);
+   NOption(435, Node076, 4);
+   NOption(436, Node077, 4);
+   NLowOption(445, Node999);
+end
+
+procedure Node076 begin
+   go_wait := sel_lv;
+end
+
+procedure Node077 begin
+   Reply(437);
+   NOption(438, Node999, 4);
+   NLowOption(445, Node999);
+end
+
+// Шатер вместо одной палатки
+procedure Node080 begin
+   call bld_houses_free;
+   call bld_sel(sel_u);
+end
+
+// Шатры вместо всех палаток разом
+procedure Node081 begin
+   variable n;
+   n := bld_houses_free;
+   sel_u := -1;
+   sel_lv := 2;
+   sel_price := n * bld_price(U_HOUSE, 2);
+   if (not bld_job_free) then Reply(420);
+   else begin
+      Reply(mstr(442) + sel_price + mstr(443));
+      call bld_pay_opts(sel_price);
+   end
+   NOption(433, Node060, 4);
+   NLowOption(117, Node999);
 end

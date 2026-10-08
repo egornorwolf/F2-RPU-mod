@@ -5,6 +5,8 @@
 #ifndef F2MSET_H
 #define F2MSET_H
 
+#include "f2mbld.h"   // уровни зданий: вода, еда и дух от построек (0.7.0)
+
 #define GV_SET_WEEK     "f2msweek"  // сколько недель с основания уже посчитано
 #define GV_SET_FOOD     "f2msfood"  // запас еды, пайков
 #define GV_SET_WATER    "f2mswatr"  // запас воды, пайков (паек = 21 л: 3 л в день)
@@ -34,7 +36,7 @@
 #define SET_WATER_PRICE  (21)   // вода у каравана: 1 крышка за литр, 21 л на паек (1.2)
 #define SET_SURPLUS      (5)    // излишки староста продает караванам: 5 за паек
 #define SET_KEEP_WEEKS   (2)    // запас сверх двух недель продается
-#define MORALE_TENTS     (-20)  // живут в палатках (growth.md 13)
+#define MORALE_TENTS     (-20)  // до 0.7.0: живут в палатках (growth.md 13); теперь дух жилья по уровням, f2mbld.h
 #define RETURN_PRICE     (1000) // 1.7: колодец и тысяча на дорогу
 #define RETURN_PRICE_CH  (500)  // 1.7: Красноречие 60% — полцены
 #define RETURN_SPEECH    (60)
@@ -100,15 +102,16 @@ procedure set_gardens begin
    return camp_built(BUILD_GARDEN) + camp_built(BUILD_GARDEN + 1);
 end
 
-// Огороды — работа жителей: умножается на дух (growth.md 13). Колодцы дают воду без людей.
+// Огороды и брамины — работа жителей: умножается на дух (growth.md 13). Колодцы дают воду без людей.
+// Сколько дает каждый уровень здания — f2mbld.h (0.7.0)
 procedure set_food_prod begin
-   return set_gardens * SET_GARDEN_FOOD * (100 + get_sfall_global_int(GV_SET_MORALE)) / 100;
+   return bld_food * (100 + get_sfall_global_int(GV_SET_MORALE)) / 100;
 end
 
-// Дух: палатки -20% и нехватка (еда: -10%, со второй недели -25%; вода: -25%);
+// Дух: жилье и бар (f2mbld.h: палатка -10%, шатер 0%, бар +5%) и нехватка (еда: -10%, со второй недели -25%; вода: -25%);
 // после набега (1.3): злы на неделю -10%, похоронили погибшего +5% навсегда
 procedure set_short_morale(variable fs, variable ws) begin
-   variable m := MORALE_TENTS;
+   variable m := bld_morale;   // жилье по уровням и бар (0.7.0; до него палатки -20)
    m += get_sfall_global_int(GV_SET_MBONUS);
    if (game_time / ONE_GAME_HOUR < get_sfall_global_int(GV_SET_ANGRY)) then m -= 10;
    if (fs == 1) then m -= 10;
@@ -206,7 +209,7 @@ procedure set_tick(variable week) begin
    variable n, food, water, fspent, wspent, fs, ws, cash0, msg;
    n := set_people;
    food := set_food_prod;
-   water := set_wells * SET_WELL_WATER;
+   water := bld_water;
    cash0 := get_sfall_global_int(GV_SET_CASH);
    fspent := set_resource(GV_SET_FOOD, GV_SET_FSHORT, food, n, SET_FOOD_PRICE);
    wspent := set_resource(GV_SET_WATER, GV_SET_WSHORT, water, n, SET_WATER_PRICE);

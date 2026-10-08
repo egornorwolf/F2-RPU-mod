@@ -20,7 +20,8 @@
 #define BURY_GRAVE      (31760)     // x 160, y 158: внутри частокола у нижне-левой стены, между деревьями
 #define PID_BURY_STONE  (33555445)  // Headstone (GRAVSTN1), блокирует клетку; проходимость проверена
 #define HANK_SPOT       (tile_num_in_direction(LAY_CHIEF, 5, 2))
-#define HANK_SAFE       (LAY_FOREMAN)
+// Куда Хэнк убегает в бою: на 2-м уровне центра место у костра занял шатер старосты (нужны f2mbld.h и f2mlvl.h)
+#define HANK_SAFE       ((bld_shown(U_CENTRE) >= 2) * LVL_SAFE2 + (bld_shown(U_CENTRE) < 2) * LAY_FOREMAN)
 
 procedure camp_built(variable slot);
 procedure camp_set_built(variable slot);

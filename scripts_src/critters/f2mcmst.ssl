@@ -463,7 +463,7 @@ procedure Node021 begin
    t := t + " " + mstr(232) + camp_people + mstr(233)
       + " " + mstr(270) + (get_sfall_global_int(GV_SET_WEEK) + 1) + "."
       + " " + mstr(271) + get_sfall_global_int(GV_SET_FOOD) + mstr(272) + set_food_prod + "."
-      + " " + mstr(273) + get_sfall_global_int(GV_SET_WATER) + mstr(274) + (set_wells * SET_WELL_WATER) + "."
+      + " " + mstr(273) + get_sfall_global_int(GV_SET_WATER) + mstr(274) + bld_water + "."
       + " " + mstr(275) + get_sfall_global_int(GV_SET_CASH) + "."
       + " " + mstr(281) + get_sfall_global_int(GV_SET_MORALE) + "%. " + morale_text;
    Reply(t);

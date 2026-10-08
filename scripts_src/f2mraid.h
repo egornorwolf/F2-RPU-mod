@@ -81,14 +81,15 @@ procedure raid_do begin
    if (out == RAID_OUT_NONE) then begin
       // Половина палаток прораба (с конца), фургон угнан
       i := BUILD_TENT;
+      // ломают только палатки: шатры (2-й уровень, 0.7.0) и то, что сейчас перестраивают, не трогают
       while (i < BUILD_HERO) do begin
-         if (camp_built(i)) then n += 1;
+         if (camp_built(i) and bld_level(bld_house_unit(i)) < 2 and not bld_job_of(bld_house_unit(i))) then n += 1;
          i += 1;
       end
       n := (n + 1) / 2;
       i := BUILD_HERO - 1;
       while (i >= BUILD_TENT and n > 0) do begin
-         if (camp_built(i)) then begin
+         if (camp_built(i) and bld_level(bld_house_unit(i)) < 2 and not bld_job_of(bld_house_unit(i))) then begin
             set_sfall_global(GV_CAMP_BUILT, get_sfall_global_int(GV_CAMP_BUILT) bwand bwnot(cv_bit(i)));
             lost := lost bwor cv_bit(i);
             n -= 1;

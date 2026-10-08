@@ -2,6 +2,7 @@
 // М2 (тестовый режим): после координат караван Теда Бернса уже стоит в лагере.
 // 0.5.0: лагерь на карте города (f2mset.map, f2mtlay.h). М3: палаточный лагерь (раньше f2mlay.h): костер, стол старосты, 3 палатки переселенцев и палатка героя
 // с сундуком, старый заколоченный колодец, прораб Хэнк. Позже караван будет приходить через пару недель.
+// 0.7.0: уровни зданий (f2mbld.h, f2mlvl.h): достроенное без героя встает на карту при входе.
 #define SCRIPT_REALNAME "f2mcamp"
 #include "define.h"
 #include "updatmap.h"
@@ -19,7 +20,9 @@
 #include "f2mpay.h"
 #include "f2mraid.h"
 #include "f2mspots.h"
+#include "f2mlvl.h"
 #include "f2mhome.h"
+#include "f2mbldap.h"
 #include "f2mgore.h"
 
 
@@ -77,6 +80,10 @@ procedure map_enter_p_proc begin
    call camp_dedupe;
    // Горящие бочки у людей и свет кострища
    call lay_lights;
+   // Уровни зданий (0.7.0): что Хэнк достроил, пока героя не было, встает на карту
+   call bld_commit;
+   call bld_apply;
+   call bld_fire_light;
    set_sfall_global(GV_SET_SYNC, 0);
    // Следы набега, угнанный фургон, главарь у ворот (1.3а)
    if (get_sfall_global_int(GV_RAID_DECOR)) then call raid_decor;
@@ -236,7 +243,7 @@ procedure raid_decor begin
    // кровь у ворот и у костра, трупы налетчиков перед воротами, погибший житель у ворот
    call raid_blood(RAID_GATE_IN, 3 + 2 * (out != RAID_OUT_NONE), 5);
    call raid_blood(RAID_GATE_OUT, 3, 4);
-   call raid_blood(LAY_FIRE, 2, 4);
+   call raid_blood(camp_fire, 2, 4);
    i := 2;
    if (out == RAID_OUT_GUARD) then i := 5;
    while (i > 0) do begin
@@ -318,7 +325,7 @@ procedure camp_people_put begin
    call cv_brahmin(CV_SLOT_BRAHMIN, tile_num_in_direction(LAY_WAGONS, 4, 4));
    call cv_brahmin(CV_SLOT_BRAHMIN + 1, tile_num_in_direction(LAY_WAGONS, 3, 4));
    call cv_wagons(LAY_WAGONS);
-   call cv_civilians(LAY_FIRE, 0);
+   call cv_civilians(camp_fire, 0);
 end
 
 procedure map_update_p_proc begin

@@ -29,7 +29,7 @@ procedure camp_sync_pid(variable pid) begin
       if (pid == PID_GUN_GUARD_FEMALE) then
          call cv_guard(CV_SLOT_SARA, tile_num_in_direction(LAY_CHIEF, 2, 3));
       else begin
-         obj := cv_put(pid, SCRIPT_F2MCCIV, tile_num_in_direction(LAY_FIRE, random(0, 5), random(2, 4)));
+         obj := cv_put(pid, SCRIPT_F2MCCIV, tile_num_in_direction(camp_fire, random(0, 5), random(2, 4)));
          critter_add_trait(obj, TRAIT_OBJECT, OBJECT_AI_PACKET, AI_ADDICT_WIMPY);
       end
       n += 1;
