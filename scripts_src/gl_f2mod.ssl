@@ -24,11 +24,14 @@
 #include "f2msync.h"
 #include "f2mpay.h"
 #include "f2mraid.h"
+#include "f2mspots.h"
+#include "f2mlvl.h"
 #include "f2msam.h"
 #include "f2mlair.h"
 #include "f2mlairl.h"
+#include "f2mfarm.h"
 
-#define F2MOD_VERSION "0.8.3"
+#define F2MOD_VERSION "0.9.0"
 
 procedure start;
 procedure encounter_handler;
@@ -62,6 +65,7 @@ procedure start begin
       call sam_arrive;
       call lair_tick;
       call lair_cellar_look;
+      call farm_tick;
    end
 end
 

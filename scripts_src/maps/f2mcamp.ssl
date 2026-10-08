@@ -25,6 +25,7 @@
 #include "f2mbldap.h"
 #include "f2mgore.h"
 #include "f2msam.h"
+#include "f2mfarm.h"
 
 
 procedure start;
@@ -47,6 +48,7 @@ procedure hank_move;
 procedure camp_peace;
 procedure grave_fix;
 procedure sam_enter;
+procedure farm_enter;
 
 
 
@@ -87,6 +89,7 @@ procedure map_enter_p_proc begin
    call bld_apply;
    call bld_fire_light;
    call sam_enter;
+   call farm_enter;
    set_sfall_global(GV_SET_SYNC, 0);
    // Следы набега, угнанный фургон, главарь у ворот (1.3а)
    if (get_sfall_global_int(GV_RAID_DECOR)) then call raid_decor;
@@ -117,6 +120,16 @@ procedure sam_enter begin
    if (nw == 1) then display_msg(message_str(SCRIPT_F2MRADIO, 304));
    else if (nw == 2) then display_msg(message_str(SCRIPT_F2MRADIO, 305));
    if (nw == 1 or (nw == 2 and st != SAM_NONE)) then set_sfall_global(GV_SAM_NEWS, 0);
+end
+
+// Старший фермер (2.2, 2.3): живет на огородах; новость о его приходе
+procedure farm_enter begin
+   if (not farm_here) then return;
+   call farm_put;
+   if (get_sfall_global_int(GV_FARM_NEWS) == 1) then begin
+      set_sfall_global(GV_FARM_NEWS, 0);
+      display_msg(farm_msg(205));
+   end
 end
 
 // Хэнк на своем месте у ворот: при первом входе после 0.6.6 и если после боя остался у костра

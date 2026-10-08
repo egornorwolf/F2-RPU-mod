@@ -1,0 +1,80 @@
+// Крысы на огородах (квест 2.2) и нора под забором, через которую они лезут.
+// Крыса: ночью идет на героя и на жителей. Нора: взрывчатка (динамит, граната, коктейль Молотова)
+// закрывает вопрос без боя — крысы уходят, урожай почти цел.
+#define SCRIPT_REALNAME "f2mrat"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MRAT
+#include "command.h"
+#include "sfall.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mtlay.h"
+#include "f2mbld.h"
+#include "f2mspots.h"
+#include "f2mlvl.h"
+#include "f2mset.h"
+#include "f2msam.h"
+#include "f2mfarm.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure destroy_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure use_p_proc;
+procedure use_obj_on_p_proc;
+
+#define is_hole         (obj_pid(self_obj) == PID_RAT_HOLE)
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   if (is_hole) then display_msg(mstr(100));
+   else display_msg(mstr(101));
+end
+
+procedure description_p_proc begin
+   call look_at_p_proc;
+end
+
+procedure use_p_proc begin
+   if (not is_hole) then return;
+   script_overrides;
+   display_msg(mstr(102));
+end
+
+// Взрывчатка в нору: крысы уходят, урожай почти цел
+procedure use_obj_on_p_proc begin
+   variable it;
+   if (not is_hole) then return;
+   it := obj_pid(obj_being_used_with);
+   if (it != PID_DYNAMITE and it != PID_FRAG_GRENADE and it != PID_MOLOTOV_COCKTAIL) then return;
+   script_overrides;
+   if (get_sfall_global_int(GV_RATS) != 1) then begin
+      display_msg(mstr(102));
+      return;
+   end
+   rm_obj_from_inven(dude_obj, obj_being_used_with);
+   destroy_object(obj_being_used_with);
+   gfade_out(1);
+   game_time_advance(ONE_GAME_HOUR);
+   call rats_win(RATS_BLAST_XP);
+   call farm_loss(RATS_LOSS_BLAST);
+   gfade_in(1);
+   display_msg(mstr(103));
+end
+
+procedure critter_p_proc begin
+   if (is_hole or combat_is_initialized) then return;
+   if (self_can_see_dude and tile_distance_objs(self_obj, dude_obj) <= 10) then attack(dude_obj);
+end
+
+// Последняя крыса пала: огород отбит
+procedure destroy_p_proc begin
+   if (is_hole) then return;
+   if (rats_alive <= 1) then call rats_win(RATS_XP);
+end

@@ -94,7 +94,8 @@ procedure set_people begin
    variable sam;
    sam := get_sfall_global_int("f2msamst");
    return 2 + set_here(CV_SLOT_GUARD) + set_here(CV_SLOT_SARA) + set_civs_here + get_sfall_global_int(GV_SET_MILIT)
-      + (sam >= 1 and sam <= 3) + get_sfall_global_int("f2mbgarr");   // гарнизон базы (f2mlair.h)
+      + (sam >= 1 and sam <= 3) + (get_sfall_global_int("f2mfarst") == 1)   // радист и старший фермер
+      + get_sfall_global_int("f2mbgarr");   // гарнизон базы (f2mlair.h)
 end
 
 procedure set_wells begin
