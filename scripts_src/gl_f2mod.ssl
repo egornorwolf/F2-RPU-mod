@@ -6,6 +6,8 @@
        на дороге с караваном держит героя на карте мира у места встречи (движок после
        load_map на карту без города переносит героя в Арройо).
    М4: недельный тик поселения (f2mset.h): еда, вода, касса, дух, уход и возврат жителей.
+   1.3: первый набег за кадром, пока героя нет в лагере; 1.3а: главарь у ворот через сутки после набега,
+        если герой в лагере (иначе его поставит карта лагеря при следующем приходе).
 */
 
 #include "sfall.h"
@@ -20,14 +22,17 @@
 #include "f2mtlay.h"
 #include "f2mset.h"
 #include "f2msync.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
 
-#define F2MOD_VERSION "0.5.6"
+#define F2MOD_VERSION "0.6.0"
 
 procedure start;
 procedure encounter_handler;
 procedure combatdamage_handler;
 procedure keep_escort_wm_pos;
 procedure camp_fade_sync;
+procedure raid_tick;
 procedure step_toward(variable a, variable b, variable s);
 
 procedure start begin
@@ -43,7 +48,22 @@ procedure start begin
       call keep_escort_wm_pos;
       call set_tick_all;
       call camp_fade_sync;
+      call raid_tick;
    end
+end
+
+// Набег идет, пока герой где-то еще (на другой карте). Главарь приходит при герое в лагере:
+// ждем, пока закрыты диалог, бой и окна, экран гаснет, Кейн у ворот.
+procedure raid_tick begin
+   if (cur_map_index != MAP_F2MOD_CAMP) then begin
+      if (raid_due) then call raid_do;
+      return;
+   end
+   if (not boss_due or combat_is_initialized or (get_game_mode bwand 0x3FFFFD) != 0) then return;
+   gfade_out(1);
+   call boss_put;
+   gfade_in(1);
+   display_msg("У южных ворот встал главарь налетчиков. Его люди ждут на краю карты.");
 end
 
 procedure step_toward(variable a, variable b, variable s) begin

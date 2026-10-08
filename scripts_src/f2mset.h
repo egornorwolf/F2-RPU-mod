@@ -19,6 +19,9 @@
 #define GV_SET_HALF     "f2mshalf"  // 1 = Тед уговорен (Красноречие 60%): вернуть людей за полцены
 #define GV_SET_SYNC     "f2mssync"  // 1 = люди ушли или вернулись, карта лагеря еще не обновлена
 #define GV_SET_INIT     "f2msinit"  // 1 = запасы заведены (лагерь из сохранения до 0.4.0 заводится с текущей недели)
+#define GV_SET_MILIT    "f2msmilt"  // сколько ополченцев (наняты у Рика) живы: живут в лагере и едят
+#define GV_SET_ANGRY    "f2msangr"  // до какого часа игры люди злы после набега: дух -10% (1.3, забор; неделя)
+#define GV_SET_MBONUS   "f2msmbon"  // постоянная прибавка к духу, % (1.3: похоронили погибшего +5)
 
 #define ABANDON_NO       (0)
 #define ABANDON_YES      (1)
@@ -84,9 +87,9 @@ procedure set_civs_here begin
    return n;
 end
 
-// Едят все: Тед, Хэнк, охрана и переселенцы
+// Едят все: Тед, Хэнк, охрана, ополченцы и переселенцы
 procedure set_people begin
-   return 2 + set_here(CV_SLOT_GUARD) + set_here(CV_SLOT_SARA) + set_civs_here;
+   return 2 + set_here(CV_SLOT_GUARD) + set_here(CV_SLOT_SARA) + set_civs_here + get_sfall_global_int(GV_SET_MILIT);
 end
 
 procedure set_wells begin
@@ -102,9 +105,12 @@ procedure set_food_prod begin
    return set_gardens * SET_GARDEN_FOOD * (100 + get_sfall_global_int(GV_SET_MORALE)) / 100;
 end
 
-// Дух: палатки -20% и нехватка (еда: -10%, со второй недели -25%; вода: -25%)
+// Дух: палатки -20% и нехватка (еда: -10%, со второй недели -25%; вода: -25%);
+// после набега (1.3): злы на неделю -10%, похоронили погибшего +5% навсегда
 procedure set_short_morale(variable fs, variable ws) begin
    variable m := MORALE_TENTS;
+   m += get_sfall_global_int(GV_SET_MBONUS);
+   if (game_time / ONE_GAME_HOUR < get_sfall_global_int(GV_SET_ANGRY)) then m -= 10;
    if (fs == 1) then m -= 10;
    else if (fs >= 2) then m -= 25;
    if (ws >= 1) then m -= 25;

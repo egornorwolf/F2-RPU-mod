@@ -31,6 +31,9 @@
 #define SCRIPT_F2MTOWN      (1568)  // карта песочницы (тест)
 #define SCRIPT_F2MTBLD      (1569)  // строитель песочницы (тест)
 #define SCRIPT_F2MTUR       (1570)  // турель песочницы (тест)
+#define SCRIPT_F2MCMIL      (1571)  // ополченец у ворот лагеря (нанимает Рик)
+#define SCRIPT_F2MBOSS      (1572)  // главарь налетчиков Кейн у ворот (1.3а)
+#define SCRIPT_F2MRDR       (1573)  // налетчик Кейна у ворот (1.3а)
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU
@@ -100,6 +103,42 @@
 #define ESCORT_WM_STEP      (25)    // на сколько точек карты мира караван продвигается к лагерю за участок
 #define CAMP_WM_X           (800)   // лагерь на карте мира (city.txt, Area 61)
 #define CAMP_WM_Y           (720)
+
+// Набег 1.3 и главарь у ворот 1.3а (f2mraid.h)
+#define GV_FENCE            "f2mfence"  // 1 = частокол вокруг лагеря построен (Хэнк)
+#define GV_MIL_HIRED        "f2mmilhr"  // 1 = ополчение нанято у Рика
+#define GV_COMP_STAY        "f2mcomps"  // 1 = герой ушел из лагеря, оставив там спутника
+#define GV_RAID_AWAY        "f2mraway"  // 1 = герой ушел с карты лагеря (набег ждет, пока он там)
+#define GV_RAID             "f2mraid1"  // первый набег: 0 не было, 1 был
+#define GV_RAID_OUT         "f2mrout1"  // итог набега: RAID_OUT_* (f2mraid.h)
+#define GV_RAID_HOUR        "f2mrhour"  // когда был набег: game_time / ONE_GAME_HOUR
+#define GV_RAID_DECOR       "f2mrdeco"  // 1 = следы набега еще не расставлены на карте лагеря
+#define GV_RAID_FOOD        "f2mrfood"  // сколько пайков еды унесли
+#define GV_RAID_WATER       "f2mrwatr"  // сколько пайков воды унесли
+#define GV_RAID_TENTS       "f2mrtent"  // биты мест палаток прораба (3-7), которые сломали
+#define GV_RAID_DEAD        "f2mrdead"  // PID погибшего жителя (0 — никто не погиб)
+#define GV_RAID_BURY        "f2mrbury"  // 1 = погибшего похоронили
+#define GV_RAID_TOLD        "f2mrtold"  // 1 = Тед рассказал о набеге; 2 = и Рик тоже
+#define GV_RAID_TRACK       "f2mrtrck"  // следы: 1 прочитаны (намек на логово), 2 не вышло
+#define GV_RAID_PAID        "f2mrpaid"  // 1 = унесенные запасы восполнили деньгами
+#define GV_RAID_NEXT        "f2mrnext"  // на сколько налетчиков следующий набег сильнее
+#define GV_WAGON            "f2mwagon"  // 1 = фургон угнан (Тед купит новый с ближайшим караваном)
+#define GV_BOSS             "f2mboss1"  // главарь у ворот: BOSS_* ниже
+#define GV_BOSS_WEAK        "f2mbweak"  // 1 = Кейн проговорился про погреб (путь с динамитом в 1.4)
+#define GV_BOSS_NOTE        "f2mbnote"  // 1 = с тела Кейна взята записка с координатами логова
+
+// Ворота частокола в южной стене (x 97-104, f2mfence.h): клетка внутри у ворот и снаружи перед ними
+#define RAID_GATE_IN        (32500)     // x 100, y 162: тут встает ополчение
+#define RAID_GATE_OUT       (34500)     // x 100, y 172: тут встает Кейн
+
+#define BOSS_NONE           (0)
+#define BOSS_WAIT           (1)     // стоит у ворот, ждет разговора
+#define BOSS_LEFT           (2)     // герой отказал, банда ушла
+#define BOSS_FIGHT          (3)     // бой у ворот
+#define BOSS_BEATEN         (4)     // бой кончился: Кейн убит или банда разбежалась
+#define TEAM_F2M_GANG       (TEAM_RND_RAIDERS)
+#define is_gang(c)          (obj_pid(c) == PID_RAIDER_MALE and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_F2M_GANG)
+#define boss_fight_on       (cur_map_index == MAP_F2MOD_CAMP and get_sfall_global_int(GV_BOSS) == BOSS_FIGHT)
 
 // Отладочные сообщения в окне игры (на время тестов)
 #define F2MOD_DEBUG

@@ -1,6 +1,8 @@
 // Охранник каравана «Хорошее место». Случайное попадание героя или спутника прощает и ругается;
 // прицельный выстрел или смерть охранника от их руки — весь караван воюет с героем.
 // В лагере у скал охранник Рик — начальник охраны (если погиб в пути, начальник — Сара).
+// 1.3: нанимает ополчение (четверо наемников у южных ворот, 500; платит герой, касса или вскладчину),
+// после набега: «Я не снимаю вины с себя».
 #define SCRIPT_REALNAME "f2mcgrd"
 #include "define.h"
 #include "f2mod.h"
@@ -9,7 +11,11 @@
 #include "sfall.h"
 #include "define_extra.h"
 #include "f2mcfgt.h"
-#include "f2mcdead.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
+#include "f2mpay.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -23,9 +29,24 @@ procedure description_p_proc;
 procedure destroy_p_proc;
 procedure Node001;
 procedure Node002;
+procedure Node003;
+procedure Node004;
+procedure Node005;
+procedure Node010;
+procedure Node011;
+procedure Node012;
+procedure Node013;
+procedure militia_pay(variable who);
+procedure militia_put;
+procedure defense_text;
 procedure Node999;
 
 variable warned;
+variable go_militia;
+
+// Ополчение (1.3): трое наемников (Mercenary, модель hmlthr) и наемница (Nomad, hflthr) — модели героя, анимации всего оружия
+#define PID_MILITIA_MALE    (16777575)
+#define PID_MILITIA_FEMALE  (16777427)
 
 procedure start begin
 end
@@ -83,9 +104,40 @@ procedure talk_p_proc begin
    end
    start_gdialog(NAME, self_obj, 4, -1, -1);
    gSay_Start;
-      call Node001;
+      if (get_sfall_global_int(GV_RAID) and not (get_sfall_global_int(GV_RAID_TOLD) bwand 2)) then
+         call Node003;
+      else
+         call Node001;
    gSay_End;
    end_dialogue;
+   // Ополчение приходит к вечеру: экран гаснет, 6 часов, четверо у южных ворот
+   if (go_militia) then begin
+      go_militia := 0;
+      gfade_out(1);
+      game_time_advance(6 * ONE_GAME_HOUR);
+      call militia_put;
+      gfade_in(1);
+      display_msg(mstr(188));
+   end
+end
+
+procedure militia_put begin
+   variable i := 0, obj;
+   set_sfall_global(GV_MIL_HIRED, 1);
+   set_sfall_global(GV_SET_MILIT, MILITIA_COUNT);
+   while (i < MILITIA_COUNT) do begin
+      if (i == MILITIA_COUNT - 1) then
+         obj := cv_put(PID_MILITIA_FEMALE, SCRIPT_F2MCMIL, tile_num_in_direction(RAID_GATE_IN, i, 2));
+      else
+         obj := cv_put(PID_MILITIA_MALE, SCRIPT_F2MCMIL, tile_num_in_direction(RAID_GATE_IN, i, 2));
+      if (i == 0) then
+         call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
+      else
+         call cv_arm(obj, PID_10MM_PISTOL, PID_10MM_JHP);
+      call cv_stims(obj, 2);
+      anim(obj, ANIMATE_ROTATION, 2);
+      i += 1;
+   end
 end
 
 // Начальник охраны лагеря
@@ -97,18 +149,91 @@ procedure Node001 begin
    else
       Reply(130);
    NOption(133, Node002, 4);
+   if (not get_sfall_global_int(GV_MIL_HIRED)) then NOption(136, Node010, 4);
    NOption(134, Node999, 4);
    NLowOption(135, Node999);
 end
 
-procedure Node002 begin
-   if (cv_is_dead(CV_SLOT_GUARD) or cv_is_dead(CV_SLOT_SARA)) then
-      Reply(142);
+// Как с обороной: что уже есть, и подсказка про ополчение и спутника
+procedure defense_text begin
+   variable t, f, m;
+   f := get_sfall_global_int(GV_FENCE);
+   m := get_sfall_global_int(GV_SET_MILIT);
+   if (not f and not m) then begin
+      if (cv_is_dead(CV_SLOT_GUARD) or cv_is_dead(CV_SLOT_SARA)) then t := mstr(142);
+      else t := mstr(140);
+   end else if (f and m) then
+      t := mstr(145);
+   else if (f) then
+      t := mstr(143);
    else
-      Reply(140);
+      t := mstr(144);
+   if (not get_sfall_global_int(GV_MIL_HIRED)) then t := t + " " + mstr(146);
+   return t;
+end
+
+procedure Node002 begin
+   Reply(defense_text);
+   if (not get_sfall_global_int(GV_MIL_HIRED)) then NOption(136, Node010, 4);
    NOption(141, Node001, 4);
    NOption(134, Node999, 4);
    NLowOption(135, Node999);
+end
+
+// После набега (1.3)
+procedure Node003 begin
+   set_sfall_global(GV_RAID_TOLD, get_sfall_global_int(GV_RAID_TOLD) bwor 2);
+   Reply(150);
+   if (not get_sfall_global_int(GV_MIL_HIRED)) then NOption(151, Node010, 4);
+   if (not get_sfall_global_int(GV_FENCE)) then NOption(152, Node004, 4);
+   NOption(154, Node005, 4);
+   NLowOption(135, Node999);
+end
+
+procedure Node004 begin
+   Reply(153);
+   NOption(141, Node001, 4);
+   NOption(134, Node999, 4);
+   NLowOption(135, Node999);
+end
+
+procedure Node005 begin
+   Reply(155);
+   NOption(141, Node001, 4);
+   NOption(134, Node999, 4);
+   NLowOption(135, Node999);
+end
+
+// Ополчение: кто платит — герой, касса или вскладчину
+procedure Node010 begin
+   variable c;
+   c := pay_cash_now;
+   Reply(180);
+   if (can_pay_hero(MILITIA_PRICE)) then NOption(181, Node011, 4);
+   if (can_pay_cash(MILITIA_PRICE)) then NOption(mstr(182) + c + mstr(185), Node012, 4);
+   if (can_pay_split(MILITIA_PRICE)) then NOption(mstr(183) + c + mstr(184) + (MILITIA_PRICE - c) + mstr(189), Node013, 4);
+   NOption(186, Node001, 4);
+   NLowOption(135, Node999);
+end
+
+procedure militia_pay(variable who) begin
+   call pay_do(MILITIA_PRICE, who);
+   go_militia := 1;
+   Reply(187);
+   NOption(141, Node999, 4);
+   NLowOption(135, Node999);
+end
+
+procedure Node011 begin
+   call militia_pay(PAY_HERO);
+end
+
+procedure Node012 begin
+   call militia_pay(PAY_CASH);
+end
+
+procedure Node013 begin
+   call militia_pay(PAY_SPLIT);
 end
 
 procedure Node999 begin

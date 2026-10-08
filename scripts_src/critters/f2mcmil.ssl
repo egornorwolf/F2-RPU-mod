@@ -1,0 +1,103 @@
+// Ополченец лагеря у скал (1.3): наемник из Реддинга, нанят у Рика, стоит у южных ворот.
+// В бою у ворот (1.3а) сам стреляет по банде Кейна. Случайное попадание героя прощает;
+// прицельный выстрел или смерть от руки героя — весь лагерь воюет.
+#define SCRIPT_REALNAME "f2mcmil"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MCMIL
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "f2mcfgt.h"
+#include "f2mcdead.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure combat_p_proc;
+procedure damage_p_proc;
+procedure accidental_hit;
+procedure pickup_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+
+variable greeted;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   if (get_critter_stat(self_obj, STAT_gender) == GENDER_FEMALE) then
+      display_msg(mstr(101));
+   else
+      display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(102));
+end
+
+procedure critter_p_proc begin
+   if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then begin
+      attack(dude_obj);
+      return;
+   end
+   if (not combat_is_initialized) then begin
+      if (cv_fight) then return;
+   end
+   if (not greeted and not combat_is_initialized and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 5) then begin
+      greeted := 1;
+      floater(random(110, 112));
+   end
+end
+
+procedure combat_p_proc begin
+   if (fixed_param == COMBAT_SUBTYPE_TURN or fixed_param == COMBAT_SUBTYPE_NONCOM_TURN) then
+      call cv_fight;
+end
+
+procedure talk_p_proc begin
+   if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then
+      floater(random(130, 131));
+   else
+      floater(random(113, 116));
+end
+
+procedure accidental_hit begin
+   variable hits, r := 0;
+   hits := load_array(ARR_CARAVAN_HITS);
+   if (hits) then begin
+      r := hits[self_obj];
+      hits[self_obj] := 0;
+   end
+   return r;
+end
+
+procedure damage_p_proc begin
+   if (is_dude_side(source_obj)) then begin
+      if (accidental_hit) then
+         floater(random(120, 121));
+      else begin
+         set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+         attack(dude_obj);
+      end
+   end else
+      attack(source_obj);
+end
+
+procedure pickup_p_proc begin
+   attack(source_obj);
+end
+
+// Погиб: ополченцев меньше (едоков тоже); от руки героя — лагерь воюет
+procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_SET_LEAVING)) then return;
+   if (is_dude_side(source_obj)) then set_sfall_global(GV_CARAVAN_HOSTILE, 1);
+   if (get_sfall_global_int(GV_SET_MILIT) > 0) then
+      set_sfall_global(GV_SET_MILIT, get_sfall_global_int(GV_SET_MILIT) - 1);
+end

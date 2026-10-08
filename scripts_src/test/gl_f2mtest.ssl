@@ -184,6 +184,10 @@ procedure show_state begin
       + " (+" + (set_wells * SET_WELL_WATER) + "), касса " + get_sfall_global_int(GV_SET_CASH) + ", дух " + get_sfall_global_int(GV_SET_MORALE)
       + "%, без еды " + get_sfall_global_int(GV_SET_FSHORT) + " нед., без воды " + get_sfall_global_int(GV_SET_WSHORT)
       + " нед., брошен " + get_sfall_global_int(GV_SET_ABANDON) + ".");
+   display_msg("Набег 1.3: часов с основания " + (game_time / ONE_GAME_HOUR - get_sfall_global_int(GV_CAMP_DAY)) + " (нужно 24), герой ушел " + get_sfall_global_int(GV_RAID_AWAY)
+      + ", был " + get_sfall_global_int(GV_RAID) + ", итог " + get_sfall_global_int(GV_RAID_OUT) + ". Частокол " + get_sfall_global_int(GV_FENCE)
+      + ", ополченцев " + get_sfall_global_int(GV_SET_MILIT) + ", спутник в лагере " + get_sfall_global_int(GV_COMP_STAY)
+      + ". Главарь " + get_sfall_global_int(GV_BOSS) + " (через 24 ч после набега, час набега " + get_sfall_global_int(GV_RAID_HOUR) + ").");
 end
 
 procedure show_help begin

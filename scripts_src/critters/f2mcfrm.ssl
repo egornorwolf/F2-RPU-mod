@@ -3,6 +3,7 @@
 // Экран гаснет, проходит несколько часов, постройка уже стоит на своем месте (f2mtlay.h).
 // Колодец — в любой момент, огороды — только когда в лагере есть вода, палатки — 5 мест, и палатка самому герою.
 // Еще продает детали, чтобы герой сам починил старый колодец.
+// 1.3: частокол вокруг лагеря, 1000 крышек и 4 дня; платит герой, касса или вскладчину (f2mpay.h).
 #define SCRIPT_REALNAME "f2mcfrm"
 #include "define.h"
 #include "f2mod.h"
@@ -12,6 +13,9 @@
 #include "f2mcdead.h"
 #include "f2mcamp.h"
 #include "f2mtlay.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mfence.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -35,6 +39,12 @@ procedure Node014;
 procedure Node020;
 procedure Node021;
 procedure Node030;
+procedure Node040;
+procedure Node041;
+procedure Node042;
+procedure Node043;
+procedure fence_pay(variable who);
+procedure do_fence;
 procedure Node999;
 procedure free_slot(variable first, variable last);
 procedure kind_of(variable slot);
@@ -58,6 +68,7 @@ variable greeted;
 variable sel := -1;        // выбранное место в диалоге
 variable go_build := -1;   // что строить после диалога
 variable helped;           // герой помогал сам
+variable go_fence;         // строить частокол после диалога
 
 procedure start begin
 end
@@ -119,6 +130,18 @@ procedure talk_p_proc begin
    gSay_End;
    end_dialogue;
    if (go_build >= 0) then call do_build;
+   if (go_fence) then call do_fence;
+end
+
+// Частокол: экран гаснет, 4 дня, колья стоят (f2mfence.h)
+procedure do_fence begin
+   go_fence := 0;
+   gfade_out(1);
+   game_time_advance(FENCE_DAYS * ONE_GAME_DAY);
+   set_sfall_global(GV_FENCE, 1);
+   call lay_fence;
+   gfade_in(1);
+   display_msg(mstr(217));
 end
 
 // Первое свободное место из диапазона, -1 если все занято
@@ -184,7 +207,7 @@ procedure Node010 begin
    g := free_slot(BUILD_GARDEN, BUILD_TENT - 1);
    t := free_slot(BUILD_TENT, BUILD_HERO - 1);
    h := not camp_built(BUILD_HERO);
-   if (not w and g < 0 and t < 0 and not h) then begin
+   if (not w and g < 0 and t < 0 and not h and get_sfall_global_int(GV_FENCE)) then begin
       Reply(126);
       NOption(125, Node001, 4);
       NLowOption(117, Node999);
@@ -200,6 +223,7 @@ procedure Node010 begin
    end
    if (t >= 0) then NOption(124, Node017, 4);
    if (h) then NOption(202, Node018, 4);
+   if (not get_sfall_global_int(GV_FENCE)) then NOption(128, Node040, 4);
    NOption(125, Node001, 4);
    if (w) then NLowOption(127, Node015);
    NLowOption(117, Node999);
@@ -304,6 +328,38 @@ procedure Node030 begin
    Reply(180);
    NOption(181, Node001, 4);
    NLowOption(117, Node999);
+end
+
+// Частокол (1.3): кто платит — герой, касса или вскладчину
+procedure Node040 begin
+   variable c;
+   c := pay_cash_now;
+   Reply(210);
+   if (can_pay_hero(FENCE_PRICE)) then NOption(211, Node041, 4);
+   if (can_pay_cash(FENCE_PRICE)) then NOption(mstr(212) + c + mstr(215), Node042, 4);
+   if (can_pay_split(FENCE_PRICE)) then NOption(mstr(213) + c + mstr(214) + (FENCE_PRICE - c) + mstr(219), Node043, 4);
+   NOption(218, Node010, 4);
+   NLowOption(117, Node999);
+end
+
+procedure fence_pay(variable who) begin
+   call pay_do(FENCE_PRICE, who);
+   go_fence := 1;
+   Reply(216);
+   NOption(166, Node999, 4);
+   NLowOption(154, Node999);
+end
+
+procedure Node041 begin
+   call fence_pay(PAY_HERO);
+end
+
+procedure Node042 begin
+   call fence_pay(PAY_CASH);
+end
+
+procedure Node043 begin
+   call fence_pay(PAY_SPLIT);
 end
 
 procedure Node999 begin

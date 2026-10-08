@@ -1,0 +1,77 @@
+// Боец Кейна у ворот лагеря (1.3а). Стоит на краю карты, пока главарь говорит; в бою идет на героя.
+#define SCRIPT_REALNAME "f2mrdr"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MRDR
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure combat_p_proc;
+procedure damage_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+
+variable shouted;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   if (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT) then begin
+      if (not combat_is_initialized) then attack(dude_obj);
+      return;
+   end
+   if (not shouted and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6 and random(0, 2) == 0) then begin
+      shouted := 1;
+      floater(random(110, 114));
+   end
+end
+
+procedure combat_p_proc begin
+   if (fixed_param == COMBAT_SUBTYPE_TURN and get_sfall_global_int(GV_BOSS) == BOSS_FIGHT
+       and not get_object_data(self_obj, OBJ_DATA_WHO_HIT_ME)) then
+      set_object_data(self_obj, OBJ_DATA_WHO_HIT_ME, dude_obj);
+end
+
+// Герой стреляет первым, пока главарь говорит: бой у ворот
+procedure damage_p_proc begin
+   variable c;
+   if (get_sfall_global_int(GV_BOSS) != BOSS_WAIT) then return;
+   set_sfall_global(GV_BOSS, BOSS_FIGHT);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not is_critter_dead(c)) then set_object_data(c, OBJ_DATA_WHO_HIT_ME, dude_obj);
+   end
+   attack(dude_obj);
+end
+
+procedure talk_p_proc begin
+   floater(random(120, 123));
+end
+
+procedure destroy_p_proc begin
+   if (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT and gang_alive(self_obj) == 0) then begin
+      set_sfall_global(GV_BOSS, BOSS_BEATEN);
+      display_msg(mstr(130));
+   end
+end

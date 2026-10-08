@@ -1,0 +1,160 @@
+// Главарь «Ржавых шакалов» Кейн у южных ворот лагеря (1.3а). Подходит к воротам один, 20 бойцов ждут на краю карты.
+// «Каждый месяц половина вашей воды мне. Или уходите сами». Согласиться нельзя. Пути:
+// отказать (банда уходит), Красноречие 60% — имя и слабость банды (погреб, путь с динамитом в 1.4, +200 опыта),
+// напасть — бой у ворот, лагерь помогает; с тела Кейна записка с координатами логова.
+#define SCRIPT_REALNAME "f2mboss"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MBOSS
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure combat_p_proc;
+procedure damage_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+procedure Node001;
+procedure Node002;
+procedure Node003;
+procedure Node004;
+procedure Node999;
+procedure boss_fight_start;
+
+variable talked;
+variable go_leave;
+variable go_fight;
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   if (get_sfall_global_int(GV_BOSS_WEAK)) then
+      display_msg(mstr(101));
+   else
+      display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   display_msg(mstr(102));
+end
+
+// Герой подошел к воротам: Кейн заговаривает сам
+procedure critter_p_proc begin
+   if (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT) then begin
+      if (not combat_is_initialized) then attack(dude_obj);
+      return;
+   end
+   if (get_sfall_global_int(GV_BOSS) == BOSS_WAIT and not talked and not combat_is_initialized
+       and tile_distance_objs(self_obj, dude_obj) <= 8) then begin
+      talked := 1;
+      dialogue_system_enter;
+   end
+end
+
+procedure combat_p_proc begin
+   if (fixed_param == COMBAT_SUBTYPE_TURN and get_sfall_global_int(GV_BOSS) == BOSS_FIGHT
+       and not get_object_data(self_obj, OBJ_DATA_WHO_HIT_ME)) then
+      set_object_data(self_obj, OBJ_DATA_WHO_HIT_ME, dude_obj);
+end
+
+// Бой: Кейн и вся банда на героя, охрана, ополчение и Тед стреляют по банде сами (f2mcfgt.h)
+procedure boss_fight_start begin
+   variable c;
+   set_sfall_global(GV_BOSS, BOSS_FIGHT);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not is_critter_dead(c)) then set_object_data(c, OBJ_DATA_WHO_HIT_ME, dude_obj);
+   end
+   attack(dude_obj);
+end
+
+procedure damage_p_proc begin
+   if (get_sfall_global_int(GV_BOSS) == BOSS_WAIT) then call boss_fight_start;
+end
+
+procedure talk_p_proc begin
+   if (get_sfall_global_int(GV_BOSS) != BOSS_WAIT) then begin
+      floater(random(110, 112));
+      return;
+   end
+   talked := 1;
+   go_leave := 0;
+   go_fight := 0;
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+   // Отказ: банда уходит (экран гаснет, у ворот пусто)
+   if (go_leave) then begin
+      set_sfall_global(GV_BOSS, BOSS_LEFT);
+      gfade_out(1);
+      call gang_remove;
+      gfade_in(1);
+      display_msg(mstr(240));
+   end else if (go_fight) then
+      call boss_fight_start;
+end
+
+procedure Node001 begin
+   Reply(200);
+   NOption(201, Node002, 4);
+   if (not get_sfall_global_int(GV_BOSS_WEAK)) then NOption(202, Node003, 4);
+   NOption(203, Node004, 4);
+   NLowOption(204, Node002);
+   NLowOption(205, Node004);
+end
+
+// Отказ
+procedure Node002 begin
+   go_leave := 1;
+   Reply(210);
+   NOption(211, Node999, 4);
+   NLowOption(211, Node999);
+end
+
+// Красноречие 60%: имя и слабость банды
+procedure Node003 begin
+   if (has_skill(dude_obj, SKILL_SPEECH) >= BOSS_SPEECH) then begin
+      set_sfall_global(GV_BOSS_WEAK, 1);
+      give_exp_points(BOSS_XP_SPEECH);
+      display_msg(mstr(221));
+      Reply(220);
+   end else
+      Reply(222);
+   NOption(201, Node002, 4);
+   NOption(203, Node004, 4);
+end
+
+// Бой у ворот
+procedure Node004 begin
+   go_fight := 1;
+   Reply(230);
+   NOption(231, Node999, 4);
+   NLowOption(231, Node999);
+end
+
+procedure Node999 begin
+end
+
+// Кейн убит: записка с координатами логова (1.4); если и бойцов не осталось — банда разбита
+procedure destroy_p_proc begin
+   set_sfall_global(GV_BOSS_NOTE, 1);
+   display_msg(mstr(250));
+   if (gang_alive(self_obj) == 0) then begin
+      set_sfall_global(GV_BOSS, BOSS_BEATEN);
+      display_msg(mstr(251));
+   end
+end
