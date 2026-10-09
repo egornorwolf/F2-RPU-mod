@@ -375,3 +375,44 @@ for i, ts in NIGHT1.items():
             if lv == 1 and d.get('old1'): continue
             assert not set(ts) & blocked(d['lv'][lv]), ('ночью', i, d['name'], lv)
 print('места 1-го уровня свободны')
+
+# ---- временный стол радиста (Егор 2026-10-09): маленький стол table1 с пультом comp5 снаружи, рядом с любым
+# построенным зданием лагеря, не на людях. Для каждого здания — клетка стола (1-3 клетки от его стен на любом уровне)
+# и место радиста рядом; клетки свободны при всех уровнях всех зданий и не отрезают людей от въезда.
+# Пишет scripts_src/f2mradl.h: radio_spot(u) и radio_sam(u), 0 — места нет
+RADIO_ORDER = [13, 12, 14, 15, 17, 18, 16, 19] + list(range(4, 12)) + [0, 1, 2, 3]
+spots_all = set(used) | {t for v in DAY1.values() for t in v} | {t for v in NIGHT1.values() for t in v}
+pp_all = set(people(CFG1).values()) | set(people(CFG2).values()) | spots_all
+pp_all |= {T(149, 34)}   # лопата у северного частокола (CAMP_SHOVEL)
+b1 = blocked(world(CFG1)) | {GRAVE}; b2 = blocked(world(CFG2)) | {GRAVE}
+RSPOT = {}
+for u in RADIO_ORDER:
+    walls = set()
+    for lv in LEVELS: walls |= blocked(U[u]['lv'][lv])
+    if not walls: continue
+    cand, seen_l, layer = [], set(walls), set(walls)
+    for _k in range(3):   # слои 1, 2, 3 клетки от стен здания
+        layer = {tdir(t, r, 1) for t in layer for r in range(6)} - seen_l
+        seen_l |= layer; cand += sorted(layer, key=xy)
+    for t in cand:
+        if t in blk_all or ring(t, 1) & pp_all or t not in reach1 or t not in reach2: continue
+        sam = [n for n in sorted(ring(t, 1) - {t}) if n not in blk_all and n in reach1 and n in reach2 and not ring(n, 1) & (pp_all - {n})]
+        if not sam: continue
+        r1 = flood(ENTRANCE, b1 | {t}); r2 = flood(ENTRANCE, b2 | {t})
+        if all((ring(q, 1) - {q}) & r1 for q in people(CFG1).values()) and all((ring(q, 1) - {q}) & r2 for q in people(CFG2).values()) \
+           and all(s in r1 and s in r2 for s in spots_all if s in reach1 and s in reach2) and sam[0] in r1 and sam[0] in r2:
+            RSPOT[u] = (t, sam[0]); break
+print('стол радиста:', {U[u]['name']: xy(v[0]) for u, v in RSPOT.items()})
+assert 13 in RSPOT
+o = ['// Сгенерировано tools/layout/levels_emit.py: временный стол радиста (table1 + comp5) у построенных зданий лагеря.',
+     '// Не править руками. Порядок выбора здания — RADIO_ORDER в levels_emit.py (центр, склад, мастерская...).',
+     '#ifndef F2MRADL_H', '#define F2MRADL_H',
+     f'#define RADIO_ORDER_N  ({len(RADIO_ORDER)})',
+     'procedure radio_unit(variable i) begin']
+for i, u in enumerate(RADIO_ORDER): o.append(f'   {"if" if i == 0 else "else if"} (i == {i}) then return {u};')
+o += ['   return -1;', 'end', 'procedure radio_spot(variable u) begin']
+for u, (t, s) in RSPOT.items(): o.append(f'   if (u == {u}) then return {t};   // {xy(t)[0]}, {xy(t)[1]}: {U[u]["name"]}')
+o += ['   return 0;', 'end', 'procedure radio_sam(variable u) begin']
+for u, (t, s) in RSPOT.items(): o.append(f'   if (u == {u}) then return {s};')
+o += ['   return 0;', 'end', '#endif', '']
+open(os.path.join(ROOT, 'scripts_src/f2mradl.h'), 'w', encoding='utf-8').write('\n'.join(o))

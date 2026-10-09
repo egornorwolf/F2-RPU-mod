@@ -11,6 +11,7 @@
 #define GV_GORE_HOUR        "f2mgoreh"  // когда пролилась кровь (час игры + 1, 0 — крови нет)
 #define GV_DOG_HOUR         "f2mdogh0"  // когда придет стая (час игры + 1, 0 — ждать некого)
 #define GV_DOG_ON           "f2mdogon"  // 1 = стая пришла (на карте или «за кадром»)
+#define GV_FENCE_GORE       "f2mfncgo"  // 1 = тела с линии частокола уже вынесены за забор
 #define GORE_HOURS          (48)
 #define DOG_WAIT_HOURS      (24)
 #define DOG_EAT_HOURS       (48)
@@ -18,9 +19,10 @@
 #define gore_now            (game_time / ONE_GAME_HOUR)
 
 procedure gore_blood_mark;
-procedure gore_update;
+procedure gore_update(variable entering);
 procedure gore_is_food(variable c);
 procedure gore_dogs;
+procedure gore_fence_corpses;
 
 // Звать, когда на карте пролилась кровь
 procedure gore_blood_mark begin
@@ -43,8 +45,10 @@ procedure gore_dogs begin
    return n;
 end
 
-// Вход на карту и map_update (вне боя)
-procedure gore_update begin
+// Вход на карту (entering = 1) и map_update (вне боя). При герое на карте (в том числе после пропуска дней на стройке)
+// собаки сначала приходят, и 2 дня еды считаются с их прихода: тела не пропадают, пока стаю не видно (0.9.6).
+// «За кадром» (герой входит после отлучки) тела могут быть уже съедены
+procedure gore_update(variable entering) begin
    variable c, all, food := 0, t, h, i, dog, any := 0;
    if (combat_is_initialized) then return;
    h := gore_now;
@@ -96,7 +100,7 @@ procedure gore_update begin
       set_sfall_global(GV_DOG_HOUR, h + 1 + DOG_WAIT_HOURS);
       return;
    end
-   if (h + 1 >= t + DOG_EAT_HOURS) then begin
+   if (h + 1 >= t + DOG_EAT_HOURS and (get_sfall_global_int(GV_DOG_ON) or entering)) then begin
       // съели: тел нет, стая ушла
       set_sfall_global(GV_SET_LEAVING, 1);
       foreach (c in all) begin
@@ -110,6 +114,7 @@ procedure gore_update begin
    // стая пришла и ест
    if (not get_sfall_global_int(GV_DOG_ON)) then begin
       set_sfall_global(GV_DOG_ON, 1);
+      set_sfall_global(GV_DOG_HOUR, h + 1);
       i := 0;
       while (i < DOG_COUNT) do begin
          dog := create_object_sid(PID_WILD_DOG, cv_free_tile(tile_num_in_direction(tile_num(any), random(0, 5), random(2, 3))), 0, -1);
@@ -118,6 +123,30 @@ procedure gore_update begin
          i += 1;
       end
       display_msg("К телам у лагеря пришли дикие собаки.");
+   end
+end
+
+// Частокол встал (f2mcfrm do_fence): тела на линии забора выносим за южную стену, в пустыню, где ходят набеги.
+// Второго ряда забора нет (map-plan.md); если появится внешняя линия турелей, выносить за нее (Егор 2026-10-09)
+#define GORE_FENCE_LO       (30)
+#define GORE_FENCE_HI       (169)
+#define GORE_OUT_Y          (176)
+procedure gore_fence_corpses begin
+   variable c, x, y, n := 0;
+   if (not get_sfall_global_int(GV_FENCE) or get_sfall_global_int(GV_FENCE_GORE)) then return;
+   set_sfall_global(GV_FENCE_GORE, 1);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_critter_dead(c) and not obj_in_party(c) and elevation(c) == 0) then begin
+         x := tile_num(c) % 200;
+         y := tile_num(c) / 200;
+         if (x >= GORE_FENCE_LO - 2 and x <= GORE_FENCE_HI + 2 and y >= GORE_FENCE_LO - 2 and y <= GORE_FENCE_HI + 2
+             and (x <= GORE_FENCE_LO + 2 or x >= GORE_FENCE_HI - 2 or y <= GORE_FENCE_LO + 2 or y >= GORE_FENCE_HI - 2)) then begin
+            if (x < 40) then x := 40 + n;
+            if (x > 160) then x := 160 - n;
+            move_to(c, cv_free_tile(GORE_OUT_Y * 200 + x), 0);
+            n += 1;
+         end
+      end
    end
 end
 

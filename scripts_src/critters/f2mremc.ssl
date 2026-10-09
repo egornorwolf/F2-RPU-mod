@@ -56,8 +56,13 @@ procedure description_p_proc begin
    call look_at_p_proc;
 end
 
-// Вожак заговаривает сам, когда герой подошел
+// Вожак заговаривает сам, когда герой подошел. Бой начался — враждебные идут на героя сами
+// (attack() сразу после end_dialogue бой не начинает, как у ворот лагеря, f2mboss.ssl)
 procedure critter_p_proc begin
+   if (get_sfall_global_int(GV_REMN_FIGHT) and self_hostile and not is_critter_dead(self_obj)) then begin
+      if (not combat_is_initialized) then attack(dude_obj);
+      return;
+   end
    if (combat_is_initialized or not remn_lead(self_obj) or talked or not self_hostile) then return;
    if (tile_distance_objs(self_obj, dude_obj) <= 8) then begin
       talked := 1;
@@ -85,6 +90,7 @@ end
 // Бой со всеми: каждый из остатков идет на героя
 procedure fight_all begin
    variable c;
+   set_sfall_global(GV_REMN_FIGHT, 1);
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (remn_is(c) and not is_critter_dead(c)) then set_object_data(c, OBJ_DATA_WHO_HIT_ME, dude_obj);
    end
@@ -94,6 +100,7 @@ end
 // Бойцы уговорены: переходят на сторону героя и бьют вожака, вожак дерется один
 procedure fight_lead begin
    variable c, i := 0;
+   set_sfall_global(GV_REMN_FIGHT, 1);
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (c != self_obj and remn_is(c) and not is_critter_dead(c)) then begin
          critter_add_trait(c, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
@@ -113,8 +120,9 @@ procedure Node001 begin
       if (is_kane) then Reply(110);
       else Reply(111);
    end else begin
-      if (is_kane) then Reply(116);
-      else Reply(117);
+      if (not is_kane) then Reply(117);
+      else if (get_sfall_global_int(GV_LAIR_BRIBE)) then Reply(118);   // откупился
+      else Reply(116);                                                // уговорил Красноречием
    end
    NOption(112, Node010, 4);   // добить
    NOption(113, Node020, 4);   // позвать в поселение

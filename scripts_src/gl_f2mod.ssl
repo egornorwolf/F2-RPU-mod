@@ -35,17 +35,19 @@
 #include "f2mthief.h"
 #include "f2mremn.h"
 
-#define F2MOD_VERSION "0.9.5"
+#define F2MOD_VERSION "0.9.6"
 
 procedure start;
 procedure encounter_handler;
 procedure combatdamage_handler;
+procedure explosion_handler;
 procedure keep_escort_wm_pos;
 procedure camp_fade_sync;
 procedure raid_tick;
 procedure boss_search;
 procedure step_toward(variable a, variable b, variable s);
 procedure sam_arrive;
+procedure farm_arrive;
 procedure lair_cellar_look;
 
 variable lair_hint;
@@ -57,6 +59,7 @@ procedure start begin
       for (st := STAT_st; st <= STAT_lu; st++) set_pc_stat_max(st, F2MOD_STAT_MAX);
       register_hook_proc(HOOK_ENCOUNTER, encounter_handler);
       register_hook_proc(HOOK_COMBATDAMAGE, combatdamage_handler);
+      register_hook_proc(HOOK_ONEXPLOSION, explosion_handler);
       set_global_script_repeat(60);
       display_msg("Мод поселения F2mod " + F2MOD_VERSION + " загружен.");
    end else begin
@@ -70,6 +73,7 @@ procedure start begin
       call lair_tick;
       call lair_cellar_look;
       call farm_tick;
+      call farm_arrive;
       call wild_tick;
       call thief_tick;
    end
@@ -132,6 +136,19 @@ procedure sam_arrive begin
    call sam_put;
    gfade_in(1);
    display_msg(message_str(SCRIPT_F2MRADIO, 304));
+end
+
+// Старший фермер пришел, пока герой в лагере (0.9.6: раньше вставал только при следующем входе на карту)
+procedure farm_arrive begin
+   if (cur_map_index != MAP_F2MOD_CAMP or not farm_here or farm_obj) then return;
+   if (combat_is_initialized or (get_game_mode bwand 0x3FFFFD) != 0) then return;
+   gfade_out(1);
+   call farm_put;
+   gfade_in(1);
+   if (get_sfall_global_int(GV_FARM_NEWS) == 1) then begin
+      set_sfall_global(GV_FARM_NEWS, 0);
+      display_msg(farm_msg(205));
+   end
 end
 
 procedure step_toward(variable a, variable b, variable s) begin
@@ -206,4 +223,16 @@ procedure combatdamage_handler begin
    // C_ATTACK_TARGET при промахе меняется на того, в кого пуля попала по пути (так брамин
    // получал «прицельный» выстрел, когда герой промахивался по врагу рядом с ним).
    hits[target] := (target != get_object_data(args[12], C_ATTACK_MAIN_TARGET));
+end
+
+// Взрыв в лагере (граната, динамит): рядом с норой крыс (2 клетки) — нору завалило, разберет farm_tick (f2mfarm.h).
+// Возврат не меняем: урон идет как обычно
+procedure explosion_handler begin
+   variable ev, tile, h;
+   ev := get_sfall_arg;
+   tile := get_sfall_arg;   // нападающий
+   tile := get_sfall_arg;   // клетка взрыва
+   if (ev != 0 or cur_map_index != MAP_F2MOD_CAMP or get_sfall_global_int(GV_RATS_BOOM)) then return;
+   h := rats_hole_obj;
+   if (h and tile_distance(tile_num(h), tile) <= 2) then set_sfall_global(GV_RATS_BOOM, 1);
 end

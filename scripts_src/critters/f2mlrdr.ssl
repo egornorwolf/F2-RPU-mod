@@ -57,14 +57,17 @@ procedure critter_p_proc begin
    end
    if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_ALLY or lair_done) then return;
    if (get_sfall_global_int(GV_LAIR_ALARM)) then begin
-      if (not combat_is_initialized and obj_can_see_obj(self_obj, dude_obj)) then attack(dude_obj);
+      if (not combat_is_initialized and (obj_can_see_obj(self_obj, dude_obj) or tile_distance_objs(self_obj, dude_obj) <= 2 * LAIR_SEE)) then
+         attack(dude_obj);
       return;
    end
    if (get_sfall_global_int(GV_LAIR_PASS) or not lair_seen(self_obj)) then return;
    if (is_post) then begin
+      // Часовой окликает и сам заговаривает, как Кейн у ворот поселения
       if (not local_var(LVAR_WARNED)) then begin
          set_local_var(LVAR_WARNED, 1);
          floater(110);
+         dialogue_system_enter;
       end
    end else begin
       floater(111);

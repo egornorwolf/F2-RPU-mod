@@ -28,6 +28,10 @@ procedure cell_clear;
 procedure cell_ruin;
 procedure cell_looted(variable c);
 procedure cell_rot;
+procedure cell_move;
+procedure cell_mv(variable old, variable new, variable pid);
+
+#define GV_CELL_MOVED   "f2mcellm"  // 1 = погреб обставлен по точкам 0.9.6 (на полу пещеры, а не в черной пустоте)
 
 procedure start begin
 end
@@ -36,7 +40,11 @@ procedure map_enter_p_proc begin
    Cavern_Lighting;
    if (is_loading_game) then return;
    override_map_start_hex(cv_free_tile(CELL_HERO), 0, 2);
-   if (not get_sfall_global_int(GV_CELL_PUT)) then call cell_put;
+   if (not get_sfall_global_int(GV_CELL_PUT)) then begin
+      set_sfall_global(GV_CELL_MOVED, 1);
+      call cell_put;
+   end
+   if (not get_sfall_global_int(GV_CELL_MOVED)) then call cell_move;
    if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_BLAST and not get_sfall_global_int(GV_CELL_RUIN)) then call cell_ruin;
    call cell_rot;
    if (lair_done) then call cell_clear;
@@ -143,5 +151,32 @@ procedure cell_rot begin
    if (not t or bld_hour + 1 < t + 7 * 24) then return;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (is_gang(c) and is_critter_dead(c) and cell_looted(c)) then destroy_object(c);
+   end
+end
+
+// Сохранения 0.8.3-0.9.5 (Егор 2026-10-09: черный экран в погребе): лестница, ящики и охрана стояли в черной
+// пустоте пещеры. Переносим их на пол, к новым точкам f2mcelll.h; содержимое ящиков и трупы остаются как были
+procedure cell_mv(variable old, variable new, variable pid) begin
+   variable obj;
+   obj := tile_contains_pid_obj(old, 0, pid);
+   if (obj) then move_to(obj, new, 0);
+end
+
+procedure cell_move begin
+   variable c, i := 0;
+   set_sfall_global(GV_CELL_MOVED, 1);
+   call cell_mv(19899, CELL_LADDER, PID_CELL_LADDER);
+   call cell_mv(21309, CELL_STACK, PID_CELL_STACK);
+   call cell_mv(21309, CELL_STACK, PID_LAIR_CELLAR);
+   call cell_mv(21908, CELL_BOX0, PID_CONTAINER_WOOD_CRATE);
+   call cell_mv(20710, CELL_BOX1, PID_CONTAINER_WOOD_CRATE);
+   call cell_mv(20908, CELL_BOX2, PID_CONTAINER_WOOD_CRATE);
+   call cell_mv(20697, CELL_DYN, PID_CONTAINER_WOOD_CRATE);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not obj_in_party(c)) then begin
+         if (i % 2) then move_to(c, cv_free_tile(CELL_GUARD1), 0);
+         else move_to(c, cv_free_tile(CELL_GUARD0), 0);
+         i += 1;
+      end
    end
 end

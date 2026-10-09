@@ -53,8 +53,8 @@ end
 
 procedure critter_p_proc begin
    if (combat_is_initialized or cur_map_index != MAP_F2MOD_CAMP or get_sfall_global_int(GV_BURY_ON)) then return;
-   if (tile_distance(tile_num(self_obj), BLD_SAM) > 3 and not anim_busy(self_obj)) then
-      animate_move_obj_to_tile(self_obj, BLD_SAM, 0);
+   if (tile_distance(tile_num(self_obj), sam_home) > 3 and not anim_busy(self_obj)) then
+      animate_move_obj_to_tile(self_obj, sam_home, 0);
    if (not greeted and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
       greeted := 1;
       floater(random(102, 104));
@@ -134,8 +134,14 @@ procedure Node010 begin
    NLowOption(118, Node999);
 end
 
-// Поставить радио у старосты
+// Поставить радио: снаружи, у построенного здания (f2mradl.h). Места нет — радист просит место
 procedure Node020 begin
+   if (sam_table_unit < 0) then begin
+      Reply(135);
+      NOption(132, Node001, 4);
+      NLowOption(118, Node999);
+      return;
+   end
    Reply(130);
    NOption(131, Node021, 4);
    NOption(132, Node001, 4);

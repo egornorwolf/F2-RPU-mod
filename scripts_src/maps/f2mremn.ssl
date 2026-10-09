@@ -41,6 +41,7 @@ procedure map_enter_p_proc begin
    Check_Create_Car(CAR_HEX, 0)
    if (is_loading_game) then return;
    set_sfall_global(GV_REMN, 1);
+   set_sfall_global(GV_REMN_FIGHT, 0);
    call remn_put;
 end
 

@@ -8,6 +8,7 @@
 #define F2MREMN_H
 
 #define GV_REMN         "f2mremst"  // 0 встречи не было, 1 была (один раз)
+#define GV_REMN_FIGHT   "f2mremfg"  // 1 = бой на карте встречи начался: враждебные остатки идут на героя сами
 #define GV_REMN_JOIN    "f2mremjn"  // сколько бойцов из остатков идут в лагерь: встанут у ворот при входе
 
 #define REMN_DAYS       (60)

@@ -53,8 +53,10 @@ end
 
 procedure critter_p_proc begin
    if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_ALLY or lair_done) then return;
+   // Тревога: главарь идет на героя сам, видит он его или нет (бой после диалога «за запасами» тоже отсюда:
+   // attack() сразу после end_dialogue бой не начинает, как и у ворот, f2mboss.ssl)
    if (get_sfall_global_int(GV_LAIR_ALARM)) then begin
-      if (not combat_is_initialized and obj_can_see_obj(self_obj, dude_obj)) then attack(dude_obj);
+      if (not combat_is_initialized) then attack(dude_obj);
       return;
    end
    if (not talked and not combat_is_initialized and tile_distance_objs(self_obj, dude_obj) <= 4) then begin
@@ -137,6 +139,7 @@ procedure Node020 begin
    if (has_skill(dude_obj, SKILL_SPEECH) < LAIR_SPEECH_FREE) then begin
       item_caps_adjust(dude_obj, -LAIR_BRIBE);
       item_caps_adjust(self_obj, LAIR_BRIBE);
+      set_sfall_global(GV_LAIR_BRIBE, 1);
       Reply(141);
    end else
       Reply(140);

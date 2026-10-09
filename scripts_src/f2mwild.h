@@ -17,6 +17,7 @@
 #define wild_msg(n)     message_str(SCRIPT_F2MRAT, n)
 
 procedure wild_is(variable c);
+procedure wild_alive_but(variable except);
 procedure wild_alive;
 procedure wild_spawn;
 procedure wild_win;
@@ -24,6 +25,15 @@ procedure wild_tick;
 
 procedure wild_is(variable c) begin
    return obj_pid(c) == PID_CENTAUR or obj_pid(c) == PID_FLOATER;
+end
+
+// Живые звери стаи, кроме except (тот, кто сейчас умирает: в destroy_p_proc он еще может считаться живым)
+procedure wild_alive_but(variable except) begin
+   variable c, n := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (c != except and wild_is(c) and not is_critter_dead(c)) then n += 1;
+   end
+   return n;
 end
 
 procedure wild_alive begin
@@ -63,6 +73,7 @@ procedure wild_tick begin
    if (not set_founded or get_sfall_global_int(GV_SET_ABANDON) != ABANDON_NO) then return;
    if (get_sfall_global_int(GV_WILD) == 1) then begin
       if (wild_alive == 0) then call wild_win;
+      else if (combat_is_initialized) then return;   // идет бой: итог после него
       else if (bld_hour >= get_sfall_global_int(GV_WILD_HOUR) or cur_map_index != MAP_F2MOD_CAMP) then begin
          set_sfall_global(GV_WILD, 3);
          foreach (c in list_as_array(LIST_CRITTERS)) begin

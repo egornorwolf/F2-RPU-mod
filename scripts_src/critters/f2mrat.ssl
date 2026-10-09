@@ -26,6 +26,7 @@ procedure look_at_p_proc;
 procedure description_p_proc;
 procedure use_p_proc;
 procedure use_obj_on_p_proc;
+procedure use_skill_on_p_proc;
 
 #define is_hole         (obj_pid(self_obj) == PID_RAT_HOLE)
 
@@ -49,25 +50,32 @@ procedure use_p_proc begin
    display_msg(mstr(102));
 end
 
-// Взрывчатка в нору: крысы уходят, урожай почти цел
+// Нору закрывают (Егор 2026-10-09): взрывчатка в нору, кувалда или монтировка, Ремонт 60 (rats_seal в f2mfarm.h).
+// Граната, брошенная к норе, ловится хуком взрыва в gl_f2mod.ssl
 procedure use_obj_on_p_proc begin
    variable it;
    if (not is_hole) then return;
    it := obj_pid(obj_being_used_with);
-   if (it != PID_DYNAMITE and it != PID_FRAG_GRENADE and it != PID_MOLOTOV_COCKTAIL) then return;
-   script_overrides;
-   if (get_sfall_global_int(GV_RATS) != 1) then begin
-      display_msg(mstr(102));
-      return;
+   if (it == PID_DYNAMITE or it == PID_FRAG_GRENADE or it == PID_MOLOTOV_COCKTAIL) then begin
+      script_overrides;
+      if (get_sfall_global_int(GV_RATS) != 1) then begin
+         display_msg(mstr(102));
+         return;
+      end
+      rm_obj_from_inven(dude_obj, obj_being_used_with);
+      destroy_object(obj_being_used_with);
+      call rats_seal(1);
+   end else if (it == PID_SLEDGEHAMMER or it == PID_SUPER_SLEDGE or it == PID_CROWBAR) then begin
+      script_overrides;
+      call rats_seal(3);
    end
-   rm_obj_from_inven(dude_obj, obj_being_used_with);
-   destroy_object(obj_being_used_with);
-   gfade_out(1);
-   game_time_advance(ONE_GAME_HOUR);
-   call rats_win(RATS_BLAST_XP);
-   call farm_loss(RATS_LOSS_BLAST);
-   gfade_in(1);
-   display_msg(mstr(103));
+end
+
+procedure use_skill_on_p_proc begin
+   if (not is_hole or action_being_used != SKILL_REPAIR) then return;
+   script_overrides;
+   if (has_skill(dude_obj, SKILL_REPAIR) >= RATS_SEAL_REPAIR) then call rats_seal(2);
+   else display_msg(farm_msg(210));
 end
 
 procedure critter_p_proc begin
@@ -79,6 +87,6 @@ end
 procedure destroy_p_proc begin
    if (is_hole) then return;
    if (wild_is(self_obj)) then begin
-      if (wild_alive <= 1) then call wild_win;
-   end else if (rats_alive <= 1) then call rats_win(RATS_XP);
+      if (wild_alive_but(self_obj) == 0) then call wild_win;   // было «<= 1»: победа приходила, пока последний зверь жив
+   end else if (rats_alive_but(self_obj) == 0) then call rats_win(RATS_XP);
 end

@@ -100,7 +100,32 @@ for o in objs:
     if f & (HIDDEN | NOBLOCK): continue
     blk |= ring(o['tile'], 1) if f & MULTIHEX else {o['tile']}
 
-START = T(100, 100)
+# Пустота пещеры (плитки cav4*: черная скала без пола) непроходима: в 0.8.3-0.9.5 герой спускался туда и видел
+# черный экран (Егор 2026-10-09). Пол — только плитки cav1*-cav3*
+_tl = mapparse.dat('art\\tiles\\tiles.lst').decode('cp1251').split('\n')
+_fl = mapparse.parse(os.path.join(ROOT, 'mod/data/maps/f2mcell.map'))['tiles'][0]
+def floor(t):
+    x, y = xy(t)
+    n = _tl[_fl[(y // 2) * 100 + x // 2] & 0xffff].strip().lower()
+    return n.startswith('cav') and not n.startswith('cav4')
+_void = {t for t in range(40000) if not floor(t)}
+blk |= {t for t in range(40000) if ring(t, 1) & _void}   # и клетка, и соседи на полу: не у края пустоты
+# Старт — в самом большом зале пещеры, ближе всего к середине карты
+def _comp(a):
+    cs = {a}; cq = [a]
+    while cq:
+        t = cq.pop()
+        for r in range(6):
+            n = tdir(t, r, 1)
+            if 0 <= n < 40000 and n not in cs and n not in blk: cs.add(n); cq.append(n)
+    return cs
+_left = {t for t in range(40000) if t not in blk and 20 < t % 200 < 180 and 20 < t // 200 < 180}
+_big = set()
+while _left:
+    _c = _comp(next(iter(_left))); _left -= _c
+    if len(_c) > len(_big): _big = _c
+def _d2(t): return (t % 200 - 100) ** 2 + (t // 200 - 100) ** 2
+START = min(_big, key=_d2)
 seen = {START}; q = [START]
 while q:
     t = q.pop()
@@ -114,7 +139,7 @@ print('доступно клеток', len(FREE))
 used = set()
 def snap(x, y, keep=1):
     t0 = T(x, y)
-    for d in range(0, 14):
+    for d in range(0, 30):
         for t in sorted(ring(t0, d) - (ring(t0, d - 1) if d else set())):
             if t in FREE and not (ring(t, keep) & used):
                 used.add(t); return t
@@ -122,7 +147,7 @@ def snap(x, y, keep=1):
 
 # name: (x, y, комментарий)
 P = [
-    ('HERO',    100, 100, 'герой спускается сюда, у лестницы наверх'),
+    ('HERO',    xy(START)[0], xy(START)[1], 'герой спускается сюда, у лестницы наверх'),
     ('LADDER',   99,  99, 'лестница наверх, в карьер'),
     ('GUARD0',   95,  95, 'охранник у прохода'),
     ('GUARD1',  105, 103, 'охранник у запасов'),

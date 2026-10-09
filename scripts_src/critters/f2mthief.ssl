@@ -58,6 +58,10 @@ end
 // и уходит в темноту (с Восприятием 7 герой успевает его разглядеть и узнать, кто это).
 procedure critter_p_proc begin
    variable d;
+   if (fight == 2) then begin
+      if (not combat_is_initialized) then attack(dude_obj);
+      return;
+   end
    if (combat_is_initialized or local_var(LVAR_CAUGHT)) then return;
    d := tile_distance_objs(self_obj, dude_obj);
    if (d > 8) then return;
@@ -92,7 +96,7 @@ procedure talk_p_proc begin
    gSay_End;
    end_dialogue;
    if (fight) then begin
-      fight := 0;
+      fight := 2;   // бой начнет critter_p_proc: attack() сразу после диалога бой не начинает
       attack(dude_obj);
    end else if (leave) then begin
       if (leave == 1) then display_msg(mstr(203));
