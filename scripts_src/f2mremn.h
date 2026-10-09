@@ -1,5 +1,6 @@
 // Остатки банды (квест 1.4б, Егор 2026-10-09; карточка «Остатки банды» в docs/npc-cards.md).
-// Логово взяли взрывом погреба: через 60 дней первая случайная встреча в пустыне — вожак и 4 бойца, уже как дикари.
+// Банда ушла из карьера живой (взрыв погреба, откуп или мир) — хотя бы вожак и один боец: через 60 дней
+// первая случайная встреча в пустыне — вожак и до 4 бойцов, уже как дикари.
 // Вожак (Кейн, если был жив при взрыве) не идет к герою ни за что; бойцов можно уговорить (Красноречие 60),
 // тогда с вожаком бой один на один, а бойцы приходят в лагерь ополченцами.
 // Подключать после define.h, command.h, sfall.h, f2mod.h, f2mcv.h, f2mset.h (в нем f2mbld.h), f2mraid.h и f2mlair.h.
@@ -7,7 +8,8 @@
 #define F2MREMN_H
 
 #define GV_REMN         "f2mremst"  // 0 встречи не было, 1 была (один раз)
-#define GV_REMN_JOIN    "f2mremjn"  // сколько бойцов из остатков идут в лагерь: встанут у ворот при входе
+#define GV_REMN_JOIN    "f2mremjn"  // сколько бойцов из остатков идут в лагерь: встанут у ворот при входе, если есть место
+#define GV_REMN_WAIT    "f2mremwt"  // 1 = герою уже сказали, что бойцы ждут места у поста
 
 #define REMN_DAYS       (60)
 #define REMN_MEN        (4)
@@ -29,23 +31,40 @@
 procedure remn_due;
 procedure remn_arrive;
 
-// Пора ли встрече: логово взорвано и прошло 60 дней (из обработчика случайных встреч)
+// Пора ли встрече: банда ушла живой и прошло 60 дней (из обработчика случайных встреч)
 procedure remn_due begin
-   if (get_sfall_global_int(GV_REMN) or get_sfall_global_int(GV_LAIR_HOW) != LAIR_HOW_BLAST) then return 0;
-   // сохранения до 0.9.3: час взрыва не записан, отсчет с этой минуты
+   variable how;
+   how := get_sfall_global_int(GV_LAIR_HOW);
+   if (get_sfall_global_int(GV_REMN) or (how != LAIR_HOW_BLAST and how != LAIR_HOW_PEACE)) then return 0;
+   // сохранения до 0.9.3: ни час ухода, ни число ушедших не записаны — отсчет с этой минуты, вожак и 4 бойца
    if (not get_sfall_global_int(GV_LAIR_FIN)) then begin
       set_sfall_global(GV_LAIR_FIN, bld_hour);
+      if (not get_sfall_global_int(GV_REMN_MEN)) then set_sfall_global(GV_REMN_MEN, REMN_MEN + 1);
       return 0;
    end
+   if (get_sfall_global_int(GV_REMN_MEN) < 2) then return 0;
    return bld_hour >= get_sfall_global_int(GV_LAIR_FIN) + REMN_DAYS * 24;
 end
 
-// Карта лагеря: уговоренные бойцы пришли и встали у южных ворот ополченцами (едят как жители)
+// Карта лагеря: уговоренные бойцы пришли и встали у южных ворот ополченцами (едят как жители).
+// Живут у поста охраны: кому не хватило места, ждут, пока оно освободится (казарма выше уровнем или гибель ополченца).
+// Ополченцы как все: когда у Рика появится снаряжение охраны (guards.md 3а), их переоденут в броню моделью героя
 procedure remn_arrive begin
-   variable n, i := 0, obj;
+   variable n, rest, i := 0, obj;
    n := get_sfall_global_int(GV_REMN_JOIN);
    if (n <= 0) then return;
-   set_sfall_global(GV_REMN_JOIN, 0);
+   rest := 0;
+   if (n > milit_free) then begin
+      rest := n - milit_free;
+      n := milit_free;
+   end
+   set_sfall_global(GV_REMN_JOIN, rest);
+   if (n <= 0) then begin
+      if (get_sfall_global_int(GV_REMN_WAIT) == 0) then display_msg(remn_msg(303));
+      set_sfall_global(GV_REMN_WAIT, 1);
+      return;
+   end
+   set_sfall_global(GV_REMN_WAIT, 0);
    while (i < n) do begin
       obj := cv_put(PID_MILITIA_MALE, SCRIPT_F2MCMIL, tile_num_in_direction(RAID_GATE_IN, (i + 3) % 6, 3));
       if (i % 2) then art_change_fid_num(obj, REMN_ART_PRMB);
@@ -57,6 +76,7 @@ procedure remn_arrive begin
    end
    set_sfall_global(GV_SET_MILIT, get_sfall_global_int(GV_SET_MILIT) + n);
    display_msg(remn_msg(300) + n + remn_msg(301));
+   if (rest) then display_msg(remn_msg(303));
 end
 
 #endif

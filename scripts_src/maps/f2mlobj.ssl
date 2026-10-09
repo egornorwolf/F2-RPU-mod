@@ -100,6 +100,19 @@ end
 procedure use_obj_on_p_proc begin
    variable it;
    it := obj_pid(obj_being_used_with);
+   // Завал над взорванным погребом: раскопать лопатой самому (Егор 2026-10-09: путь вниз только после расчистки)
+   if (it == PID_SHOVEL and not is_hole and not is_ladder and not is_stack and not is_water
+       and cur_map_index != MAP_F2MOD_CELL and get_sfall_global_int(GV_LAIR_CELLAR) == 2 and not combat_is_initialized) then begin
+      script_overrides;
+      if (cell_open) then return;
+      gfade_out(1);
+      game_time_advance(CELL_DIG_HOURS * ONE_GAME_HOUR);
+      set_sfall_global(GV_CELL_OPEN, bld_hour + 1);
+      gfade_in(1);
+      display_msg(mstr(257));
+      call lair_cellar_face;   // камни (этот объект) убирает последним делом
+      return;
+   end
    if (lair_done or combat_is_initialized) then return;
    if (is_water and it == PID_HYPO_POISON) then begin
       script_overrides;

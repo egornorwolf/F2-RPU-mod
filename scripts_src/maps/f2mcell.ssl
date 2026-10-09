@@ -26,6 +26,8 @@ procedure cell_put;
 procedure cell_guard(variable tile, variable i);
 procedure cell_clear;
 procedure cell_ruin;
+procedure cell_looted(variable c);
+procedure cell_rot;
 
 procedure start begin
 end
@@ -36,11 +38,21 @@ procedure map_enter_p_proc begin
    override_map_start_hex(cv_free_tile(CELL_HERO), 0, 2);
    if (not get_sfall_global_int(GV_CELL_PUT)) then call cell_put;
    if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_BLAST and not get_sfall_global_int(GV_CELL_RUIN)) then call cell_ruin;
+   call cell_rot;
    if (lair_done) then call cell_clear;
 end
 
 procedure map_exit_p_proc begin
+   variable c;
    if (not lair_done) then set_sfall_global(GV_CELL_GANG, lair_gang_alive(0));
+   // Обобранные трупы пропадут через неделю (Егор 2026-10-09): отсчет с первого ухода после обыска
+   if (get_sfall_global_int(GV_CELL_LOOT)) then return;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and is_critter_dead(c) and cell_looted(c)) then begin
+         set_sfall_global(GV_CELL_LOOT, bld_hour + 1);
+         return;
+      end
+   end
 end
 
 // Первый спуск: лестница наверх, запасы банды, динамит и двое охранников (карта сохраняется, ставим один раз)
@@ -101,10 +113,10 @@ procedure cell_clear begin
    set_sfall_global(GV_CELL_GANG, 0);
 end
 
-// Погреб после взрыва (Егор 2026-10-09): охрана погибла, штабель с запасами под обвалом,
-// ящики с едой, водой и динамитом раздавлены. Уцелел только ящик с крышками и стимуляторами (CELL_BOX2)
+// Погреб после взрыва (Егор 2026-10-09): охрана погибла, штабель с запасами под обвалом.
+// Трупы и ящики с тем, что в них было, остаются: спуститься можно только после расчистки (cell_open в f2mlair.h)
 procedure cell_ruin begin
-   variable c, obj, i := 0, tile;
+   variable c, obj, i := 0;
    set_sfall_global(GV_CELL_RUIN, 1);
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (is_gang(c) and not is_critter_dead(c)) then begin
@@ -113,17 +125,23 @@ procedure cell_ruin begin
          i += 1;
       end
    end
-   i := 0;
    obj := tile_contains_pid_obj(CELL_STACK, 0, PID_CELL_STACK);
    if (obj) then destroy_object(obj);
    create_object_sid(PID_LAIR_CELLAR, CELL_STACK, 0, SCRIPT_F2MLOBJ);
-   while (i < 3) do begin
-      if (i == 0) then tile := CELL_BOX0;
-      else if (i == 1) then tile := CELL_BOX1;
-      else tile := CELL_DYN;
-      obj := tile_contains_pid_obj(tile, 0, PID_CONTAINER_WOOD_CRATE);
-      if (obj) then destroy_object(obj);
-      i += 1;
-   end
    set_sfall_global(GV_CELL_GANG, 0);
+end
+
+// Труп обобран: оружия при нем нет (его забрал герой)
+procedure cell_looted(variable c) begin
+   return not obj_carrying_pid_obj(c, PID_10MM_SMG) and not obj_carrying_pid_obj(c, PID_SAWED_OFF_SHOTGUN);
+end
+
+// Неделя после обыска прошла: обобранные трупы убираем, необобранные лежат
+procedure cell_rot begin
+   variable c, t;
+   t := get_sfall_global_int(GV_CELL_LOOT);
+   if (not t or bld_hour + 1 < t + 7 * 24) then return;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and is_critter_dead(c) and cell_looted(c)) then destroy_object(c);
+   end
 end

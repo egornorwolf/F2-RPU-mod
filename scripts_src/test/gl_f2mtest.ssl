@@ -176,12 +176,13 @@ procedure keypress_handler begin
          display_msg("F2mod: ночной вор ходит у хижин.");
       end
    end else if (key == DIK_D) then begin
-      // TEST: логово взято взрывом погреба 60 дней назад: следующая случайная встреча — остатки банды (1.4б).
+      // TEST: логово взято взрывом погреба 60 дней назад, ушли вожак и 4 бойца: следующая случайная встреча — остатки банды (1.4б).
       // Ctrl+Shift+D — вожак Кейн, Ctrl+D — вожак из бойцов
       set_sfall_global("f2mlairs", 2);
       set_sfall_global("f2mlairh", 4);
       set_sfall_global("f2mlairc", 2);
       set_sfall_global("f2mremst", 0);
+      set_sfall_global("f2mremnn", 5);   // ушли вожак и 4 бойца
       set_sfall_global("f2mremkn", (key_pressed(DIK_LSHIFT) or key_pressed(DIK_RSHIFT)));
       if (bld_hour > 60 * 24) then set_sfall_global("f2mlairf", bld_hour - 60 * 24);
       else set_sfall_global("f2mlairf", 1);

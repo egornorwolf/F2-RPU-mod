@@ -22,7 +22,9 @@
 #define GV_CELL_BACK    "f2mcellb"  // 1 = герой поднимается из погреба: поставить его у лаза
 #define GV_CELL_CHARGE  "f2mcellc"  // 1 = заряд заложен в запасы, рванет, когда герой выберется наверх
 #define GV_CELL_RUIN    "f2mcellx"  // 1 = последствия взрыва в погребе уже показаны (охрана мертва, запасы под завалом)
-#define GV_REMN_KANE    "f2mremkn"  // 1 = Кейн был жив при взрыве погреба: он вожак остатков банды (1.4б)
+#define GV_REMN_KANE    "f2mremkn"  // 1 = Кейн ушел из карьера живым: он вожак остатков банды (1.4б)
+#define GV_REMN_MEN     "f2mremnn"  // сколько бойцов банды ушло из карьера живыми (с вожаком)
+#define GV_CELL_LOOT    "f2mcellt"  // час, когда герой впервые ушел из погреба, обобрав трупы (через неделю они пропадут)
 #define GV_LAIR_FIN     "f2mlairf"  // час, когда логово взято (через два месяца после взрыва — остатки банды)
 
 #define LAIR_KNOWN      (1)
@@ -63,6 +65,8 @@
 #define lair_done       (get_sfall_global_int(GV_LAIR) >= LAIR_DONE)
 #define lair_kane_dead  (get_sfall_global_int(GV_BOSS_NOTE) != 0)   // убит у ворот и обыскан (героем или Риком)
 #define base_level      (bld_level(U_BASE))
+// Взорванный погреб открыт снова (Егор 2026-10-09): Хэнк расчистил (срок вышел), герой раскопал лопатой или построена база
+#define cell_open       ((get_sfall_global_int(GV_CELL_OPEN) and bld_hour + 1 >= get_sfall_global_int(GV_CELL_OPEN)) or base_level >= 1)
 #define base_cap(lv)    ((lv >= 1) * (4 + 2 * (lv)))                // гарнизон 6 / 8 / 10
 
 procedure lair_reveal(variable msg);
@@ -150,14 +154,14 @@ procedure lair_finish(variable how) begin
 end
 
 // Что лежит на месте лаза в погреб: пока лаз не нашли (и после взрыва) — куча камней,
-// найденный лаз — дыра с лестницей вниз (как люк в доме героя). После взрыва завал расчищают,
-// когда на месте логова начали строить военную базу (Егор 2026-10-09). Зовут карта логова и глобальный скрипт
+// найденный лаз — дыра с лестницей вниз (как люк в доме героя). После взрыва лаз завален, пока его не расчистят
+// (cell_open: Хэнк, лопата героя или военная база, Егор 2026-10-09). Зовут карта логова и глобальный скрипт
 procedure lair_cellar_face begin
    variable rocks, hole, c;
    rocks := tile_contains_pid_obj(LAIR_CELLAR, 0, PID_LAIR_CELLAR);
    hole := tile_contains_pid_obj(LAIR_CELLAR, 0, PID_CELL_HOLE);
    c := get_sfall_global_int(GV_LAIR_CELLAR);
-   if (c == 1 or (c == 2 and base_level >= 1)) then begin
+   if (c == 1 or (c == 2 and cell_open)) then begin
       if (rocks) then destroy_object(rocks);
       if (not hole) then create_object_sid(PID_CELL_HOLE, LAIR_CELLAR, 0, SCRIPT_F2MLOBJ);
    end else begin
@@ -180,7 +184,17 @@ end
 
 // Банда уходит из карьера (мир или взрыв): живые исчезают, трупы остаются. keep — тот, чей скрипт сейчас работает
 procedure lair_gang_leave(variable keep) begin
-   variable c;
+   variable c, n := 0, kane := 0;
+   // Кто ушел живым (Егор 2026-10-09): через пару месяцев они встретятся в пустыне (1.4б, f2mremn.h)
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not is_critter_dead(c)) then begin
+         n += 1;
+         if ((obj_art_fid(c) bwand 0xFFF) == GANG_ART_BOSS) then kane := 1;
+      end
+   end
+   if (get_sfall_global_int(GV_LAIR_CELLAR) != 2) then n += get_sfall_global_int(GV_CELL_GANG);   // сторожа погреба уходят с бандой
+   set_sfall_global(GV_REMN_MEN, n);
+   set_sfall_global(GV_REMN_KANE, kane);
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (c != keep and is_gang(c) and not is_critter_dead(c)) then destroy_object(c);
    end

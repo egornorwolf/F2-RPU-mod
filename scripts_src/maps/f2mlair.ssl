@@ -57,11 +57,6 @@ procedure map_enter_p_proc begin
       set_sfall_global(GV_LAIR_CELLAR, 2);
       gfade_out(1);
       game_time_advance(ONE_GAME_HOUR);
-      // Кейн ушел живым: через пару месяцев он вожак остатков банды в пустыне (1.4б)
-      foreach (obj in list_as_array(LIST_CRITTERS)) begin
-         if (is_gang(obj) and not is_critter_dead(obj) and (obj_art_fid(obj) bwand 0xFFF) == GANG_ART_BOSS) then
-            set_sfall_global(GV_REMN_KANE, 1);
-      end
       call lair_gang_leave(0);
       call lair_cellar_face;
       call lair_finish(LAIR_HOW_BLAST);

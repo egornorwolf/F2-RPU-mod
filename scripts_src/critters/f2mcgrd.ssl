@@ -39,12 +39,17 @@ procedure Node011;
 procedure Node012;
 procedure Node013;
 procedure militia_pay(variable who);
-procedure militia_put;
+procedure militia_put(variable n);
 procedure defense_text;
 procedure Node999;
 
 variable warned;
 variable go_militia;
+
+// Сколько ополченцев можно нанять: четверо, но не больше свободных мест у поста (там уже могут жить бывшие налетчики, 1.4б)
+#define hire_n          ((milit_free < MILITIA_COUNT) * milit_free + (milit_free >= MILITIA_COUNT) * MILITIA_COUNT)
+#define hire_price      (MILITIA_PRICE * hire_n / MILITIA_COUNT)
+#define can_hire        (not get_sfall_global_int(GV_MIL_HIRED) and milit_free > 0)
 
 // Ополчение (1.3): трое наемников (Mercenary, модель hmlthr) и наемница (Nomad, hflthr) — модели героя, анимации всего оружия
 
@@ -119,20 +124,21 @@ procedure talk_p_proc begin
    end_dialogue;
    // Ополчение приходит к вечеру: экран гаснет, 6 часов, четверо у южных ворот
    if (go_militia) then begin
-      go_militia := 0;
       gfade_out(1);
       game_time_advance(6 * ONE_GAME_HOUR);
-      call militia_put;
+      call militia_put(go_militia);
       gfade_in(1);
-      display_msg(mstr(188));
+      if (go_militia == MILITIA_COUNT) then display_msg(mstr(188));
+      else display_msg(mstr(194) + go_militia + mstr(195));
+      go_militia := 0;
    end
 end
 
-procedure militia_put begin
+procedure militia_put(variable n) begin
    variable i := 0, obj;
    set_sfall_global(GV_MIL_HIRED, 1);
-   set_sfall_global(GV_SET_MILIT, get_sfall_global_int(GV_SET_MILIT) + MILITIA_COUNT);   // к бойцам из остатков банды (1.4б), если они уже пришли
-   while (i < MILITIA_COUNT) do begin
+   set_sfall_global(GV_SET_MILIT, get_sfall_global_int(GV_SET_MILIT) + n);   // к бойцам из остатков банды (1.4б), если они уже пришли
+   while (i < n) do begin
       if (i == MILITIA_COUNT - 1) then
          obj := cv_put(PID_MILITIA_FEMALE, SCRIPT_F2MCMIL, tile_num_in_direction(RAID_GATE_IN, i, 2));
       else
@@ -156,7 +162,7 @@ procedure Node001 begin
    else
       Reply(130);
    NOption(133, Node002, 4);
-   if (not get_sfall_global_int(GV_MIL_HIRED)) then NOption(136, Node010, 4);
+   if (can_hire) then NOption(136, Node010, 4);
    NOption(134, Node999, 4);
    NLowOption(135, Node999);
 end
@@ -175,13 +181,13 @@ procedure defense_text begin
       t := mstr(143);
    else
       t := mstr(144);
-   if (not get_sfall_global_int(GV_MIL_HIRED)) then t := t + " " + mstr(146);
+   if (can_hire) then t := t + " " + mstr(146);
    return t;
 end
 
 procedure Node002 begin
    Reply(defense_text);
-   if (not get_sfall_global_int(GV_MIL_HIRED)) then NOption(136, Node010, 4);
+   if (can_hire) then NOption(136, Node010, 4);
    NOption(141, Node001, 4);
    NOption(134, Node999, 4);
    NLowOption(135, Node999);
@@ -199,7 +205,7 @@ procedure Node003 begin
    else if (m) then Reply(156);
    else if (f) then Reply(158);
    else Reply(150);
-   if (not get_sfall_global_int(GV_MIL_HIRED)) then NOption(151, Node010, 4);
+   if (can_hire) then NOption(151, Node010, 4);
    if (not get_sfall_global_int(GV_FENCE)) then NOption(152, Node004, 4);
    NOption(154, Node005, 4);
    NLowOption(135, Node999);
@@ -223,17 +229,22 @@ end
 procedure Node010 begin
    variable c;
    c := pay_cash_now;
-   Reply(180);
-   if (can_pay_hero(MILITIA_PRICE)) then NOption(181, Node011, 4);
-   if (can_pay_cash(MILITIA_PRICE)) then NOption(mstr(182) + c + mstr(185), Node012, 4);
-   if (can_pay_split(MILITIA_PRICE)) then NOption(mstr(183) + c + mstr(184) + (MILITIA_PRICE - c) + mstr(189), Node013, 4);
+   if (hire_n == MILITIA_COUNT) then begin
+      Reply(180);
+      if (can_pay_hero(hire_price)) then NOption(181, Node011, 4);
+   end else begin
+      Reply(mstr(190) + hire_n + mstr(191) + hire_price + mstr(192));
+      if (can_pay_hero(hire_price)) then NOption(mstr(193) + hire_price + mstr(189), Node011, 4);
+   end
+   if (can_pay_cash(hire_price)) then NOption(mstr(182) + c + mstr(185), Node012, 4);
+   if (can_pay_split(hire_price)) then NOption(mstr(183) + c + mstr(184) + (hire_price - c) + mstr(189), Node013, 4);
    NOption(186, Node001, 4);
    NLowOption(135, Node999);
 end
 
 procedure militia_pay(variable who) begin
-   call pay_do(MILITIA_PRICE, who);
-   go_militia := 1;
+   go_militia := hire_n;
+   call pay_do(hire_price, who);
    Reply(187);
    NOption(141, Node999, 4);
    NLowOption(135, Node999);

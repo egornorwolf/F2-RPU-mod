@@ -1,4 +1,4 @@
-// Остатки банды (квест 1.4б, карточка в docs/npc-cards.md): вожак (Кейн, если выжил) и 4 бойца, уже дикари.
+// Остатки банды (квест 1.4б, карточка в docs/npc-cards.md): вожак (Кейн, если выжил) и до 4 бойцов, уже дикари.
 // Вожак заговаривает сам. Добить — бой со всеми. Позвать в поселение — вожак отказывается,
 // бойцов уговаривает Красноречие 60: они переходят к герою, вожак дерется один. Не уговорил — бой со всеми.
 // Можно и просто уйти.
@@ -36,6 +36,7 @@ procedure Node060;
 procedure Node999;
 
 #define is_kane         (get_sfall_global_int(GV_REMN_KANE))
+#define is_blast        (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_BLAST)   // иначе ушли из карьера миром
 #define self_hostile    (has_trait(TRAIT_OBJECT, self_obj, OBJECT_TEAM_NUM) != TEAM_PLAYER)
 
 variable talked;
@@ -108,8 +109,13 @@ procedure fight_lead begin
 end
 
 procedure Node001 begin
-   if (is_kane) then Reply(110);
-   else Reply(111);
+   if (is_blast) then begin
+      if (is_kane) then Reply(110);
+      else Reply(111);
+   end else begin
+      if (is_kane) then Reply(116);
+      else Reply(117);
+   end
    NOption(112, Node010, 4);   // добить
    NOption(113, Node020, 4);   // позвать в поселение
    NOption(114, Node060, 4);   // мимо
@@ -125,8 +131,10 @@ end
 
 // Позвать в поселение: вожак отказывается, герой говорит с бойцами
 procedure Node020 begin
-   if (is_kane) then Reply(130);
-   else Reply(133);
+   if (is_kane and is_blast) then Reply(130);
+   else if (is_blast) then Reply(133);
+   else if (is_kane) then Reply(135);
+   else Reply(136);
    NOption(131, Node030, 4);
    NOption(132, Node060, 4);
    NLowOption(134, Node030);

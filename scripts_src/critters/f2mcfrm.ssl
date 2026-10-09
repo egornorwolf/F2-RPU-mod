@@ -63,6 +63,11 @@ procedure timed_event_p_proc;
 procedure fence_pay(variable who);
 procedure do_fence;
 procedure Node999;
+procedure Node140;
+procedure cell_pay(variable who);
+procedure Node141;
+procedure Node142;
+procedure Node143;
 procedure Node060;
 procedure Node061;
 procedure Node062;
@@ -307,6 +312,9 @@ procedure Node001 begin
    NOption(400, Node060, 4);
    NOption(114, Node030, 4);
    if (get_sfall_global_int(GV_RAID_DEAD) and not get_sfall_global_int(GV_RAID_BURY)) then NOption(300, Node050, 4);
+   // Погреб в карьере взорван (1.4): расчистить, пока там не строят базу
+   if (get_sfall_global_int("f2mlairc") == 2 and not get_sfall_global_int(GV_CELL_OPEN) and bld_level(U_BASE_UNIT) < 1) then
+      NOption(800, Node140, 4);
    NOption(115, Node999, 4);
    NLowOption(116, Node010);
    NLowOption(117, Node999);
@@ -515,6 +523,39 @@ end
 
 procedure Node056 begin
    go_bury := 3;
+end
+
+// Расчистка взорванного погреба в карьере (Егор 2026-10-09): кто платит — герой, касса или вскладчину
+procedure Node140 begin
+   variable c;
+   c := pay_cash_now;
+   Reply(801);
+   if (can_pay_hero(CELL_CLEAR_PRICE)) then NOption(802, Node141, 4);
+   if (can_pay_cash(CELL_CLEAR_PRICE)) then NOption(mstr(212) + c + mstr(215), Node142, 4);
+   if (can_pay_split(CELL_CLEAR_PRICE)) then NOption(mstr(213) + c + mstr(214) + (CELL_CLEAR_PRICE - c) + mstr(219), Node143, 4);
+   NOption(218, Node001, 4);
+   NLowOption(117, Node999);
+end
+
+// Хэнк с людьми уходит в карьер: через сутки лаз открыт (cell_open в f2mlair.h)
+procedure cell_pay(variable who) begin
+   call pay_do(CELL_CLEAR_PRICE, who);
+   set_sfall_global(GV_CELL_OPEN, bld_hour + CELL_CLEAR_HOURS + 1);
+   Reply(803);
+   NOption(166, Node999, 4);
+   NLowOption(154, Node999);
+end
+
+procedure Node141 begin
+   call cell_pay(PAY_HERO);
+end
+
+procedure Node142 begin
+   call cell_pay(PAY_CASH);
+end
+
+procedure Node143 begin
+   call cell_pay(PAY_SPLIT);
 end
 
 procedure Node999 begin
