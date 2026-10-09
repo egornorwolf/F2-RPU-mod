@@ -64,6 +64,8 @@ procedure bld_job_of(variable u);
 procedure bld_job_free;
 procedure bld_job_start(variable u, variable lv, variable hours);
 procedure bld_job_left(variable j);
+procedure bld_helpers;
+procedure bld_help_hours(variable h);
 procedure bld_commit;
 procedure bld_water;
 procedure bld_food;
@@ -253,6 +255,22 @@ procedure bld_morale begin
    if (n) then m := s / n;
    if (bld_level(U_BAR) >= 1) then m += 5;
    return m;
+end
+
+// Спутники рядом с героем (Егор 2026-10-09): работают с ним и ускоряют стройку и раскопки
+procedure bld_helpers begin
+   variable c, n := 0;
+   foreach (c in party_member_list(0)) begin
+      if (c != dude_obj and obj_type(c) == 1 and not is_critter_dead(c)) then n += 1;
+   end
+   return n;
+end
+
+// Работа героя своими руками: срок делится на героя и его спутников, не меньше часа
+procedure bld_help_hours(variable h) begin
+   h := h / (1 + bld_helpers);
+   if (h < 1) then h := 1;
+   return h;
 end
 
 #endif

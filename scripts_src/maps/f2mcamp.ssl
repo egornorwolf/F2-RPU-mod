@@ -51,6 +51,7 @@ procedure camp_peace;
 procedure grave_fix;
 procedure sam_enter;
 procedure farm_enter;
+procedure shovel_put;
 
 
 
@@ -93,6 +94,7 @@ procedure map_enter_p_proc begin
    call sam_enter;
    call farm_enter;
    call remn_arrive;
+   call shovel_put;
    set_sfall_global(GV_SET_SYNC, 0);
    // Следы набега, угнанный фургон, главарь у ворот (1.3а)
    if (get_sfall_global_int(GV_RAID_DECOR)) then call raid_decor;
@@ -111,6 +113,13 @@ procedure map_enter_p_proc begin
       call boss_put;
       display_msg("У южных ворот стоит главарь налетчиков. Его люди ждут на краю карты.");
    end
+end
+
+// Лопата (Shovel) всегда лежит у северного частокола (Егор 2026-10-09): ею раскапывают завал погреба в карьере.
+// Унес и потерял — при следующем входе в лагерь на месте новая
+procedure shovel_put begin
+   if (tile_contains_pid_obj(CAMP_SHOVEL, 0, PID_SHOVEL) or obj_carrying_pid_obj(dude_obj, PID_SHOVEL)) then return;
+   create_object(PID_SHOVEL, CAMP_SHOVEL, 0);
 end
 
 // Радист (0.7.1): живет у старосты, стол с радио; новости о его приходе

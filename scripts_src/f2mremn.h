@@ -8,8 +8,7 @@
 #define F2MREMN_H
 
 #define GV_REMN         "f2mremst"  // 0 встречи не было, 1 была (один раз)
-#define GV_REMN_JOIN    "f2mremjn"  // сколько бойцов из остатков идут в лагерь: встанут у ворот при входе, если есть место
-#define GV_REMN_WAIT    "f2mremwt"  // 1 = герою уже сказали, что бойцы ждут места у поста
+#define GV_REMN_JOIN    "f2mremjn"  // сколько бойцов из остатков идут в лагерь: встанут у ворот при входе
 
 #define REMN_DAYS       (60)
 #define REMN_MEN        (4)
@@ -47,24 +46,13 @@ procedure remn_due begin
 end
 
 // Карта лагеря: уговоренные бойцы пришли и встали у южных ворот ополченцами (едят как жители).
-// Живут у поста охраны: кому не хватило места, ждут, пока оно освободится (казарма выше уровнем или гибель ополченца).
-// Ополченцы как все: когда у Рика появится снаряжение охраны (guards.md 3а), их переоденут в броню моделью героя
+// Места у поста их не держат (Егор 2026-10-09: спят посменно, штрафов за места у охраны нет).
+// Ополченцы как все: снаряжение охраны у Рика их переоденет в броню моделью героя
 procedure remn_arrive begin
-   variable n, rest, i := 0, obj;
+   variable n, i := 0, obj;
    n := get_sfall_global_int(GV_REMN_JOIN);
    if (n <= 0) then return;
-   rest := 0;
-   if (n > milit_free) then begin
-      rest := n - milit_free;
-      n := milit_free;
-   end
-   set_sfall_global(GV_REMN_JOIN, rest);
-   if (n <= 0) then begin
-      if (get_sfall_global_int(GV_REMN_WAIT) == 0) then display_msg(remn_msg(303));
-      set_sfall_global(GV_REMN_WAIT, 1);
-      return;
-   end
-   set_sfall_global(GV_REMN_WAIT, 0);
+   set_sfall_global(GV_REMN_JOIN, 0);
    while (i < n) do begin
       obj := cv_put(PID_MILITIA_MALE, SCRIPT_F2MCMIL, tile_num_in_direction(RAID_GATE_IN, (i + 3) % 6, 3));
       if (i % 2) then art_change_fid_num(obj, REMN_ART_PRMB);
@@ -76,7 +64,6 @@ procedure remn_arrive begin
    end
    set_sfall_global(GV_SET_MILIT, get_sfall_global_int(GV_SET_MILIT) + n);
    display_msg(remn_msg(300) + n + remn_msg(301));
-   if (rest) then display_msg(remn_msg(303));
 end
 
 #endif

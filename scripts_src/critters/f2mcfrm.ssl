@@ -278,7 +278,8 @@ procedure do_build begin
    variable k;
    k := kind_of(go_build);
    gfade_out(1);
-   game_time_advance(kind_hours(k) * ONE_GAME_HOUR);
+   if (helped) then game_time_advance(bld_help_hours(kind_hours(k)) * ONE_GAME_HOUR);
+   else game_time_advance(kind_hours(k) * ONE_GAME_HOUR);
    call camp_set_built(go_build);
    call lay_slot(go_build);
    call camp_spread(0);
@@ -578,7 +579,8 @@ procedure do_l1 begin
    u := go_l1;
    go_l1 := -1;
    gfade_out(1);
-   game_time_advance(bld_hours(u, 1) * ONE_GAME_HOUR);
+   if (helped) then game_time_advance(bld_help_hours(bld_hours(u, 1)) * ONE_GAME_HOUR);
+   else game_time_advance(bld_hours(u, 1) * ONE_GAME_HOUR);
    call bld_set_level(u, 1);
    call bld_commit;
    call bld_apply;
@@ -858,7 +860,9 @@ procedure bld_pay(variable who) begin
          i += 1;
       end
       j := bld_job_start(BLD_BATCH + mask - 1, 2, BLD_BATCH_HOURS);
-   end else
+   end else if (helped) then
+      j := bld_job_start(sel_u, sel_lv, bld_help_hours(bld_hours(sel_u, sel_lv)));   // спутники работают с героем
+   else
       j := bld_job_start(sel_u, sel_lv, bld_hours(sel_u, sel_lv));
    sel_lv := j;
    if (helped) then begin

@@ -106,7 +106,7 @@ procedure use_obj_on_p_proc begin
       script_overrides;
       if (cell_open) then return;
       gfade_out(1);
-      game_time_advance(CELL_DIG_HOURS * ONE_GAME_HOUR);
+      game_time_advance(bld_help_hours(CELL_DIG_HOURS) * ONE_GAME_HOUR);   // спутники копают вместе с героем
       set_sfall_global(GV_CELL_OPEN, bld_hour + 1);
       gfade_in(1);
       display_msg(mstr(257));

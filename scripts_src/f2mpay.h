@@ -17,7 +17,8 @@
 #define GV_CELL_OPEN        "f2mcello"  // час (+1), с которого погреб снова открыт
 #define CELL_CLEAR_PRICE    (300)
 #define CELL_CLEAR_HOURS    (24)    // Хэнк с людьми: сутки
-#define CELL_DIG_HOURS      (8)     // герой с лопатой (Shovel): 8 часов
+#define CELL_DIG_HOURS      (8)     // герой с лопатой (Shovel): 8 часов, спутники ускоряют (bld_help_hours)
+#define CAMP_SHOVEL         (6949)  // x 149, y 34: лопата у северного частокола, дальний от ворот конец лагеря (клетка свободна на всех уровнях зданий)
 
 // Набег 1.3 и главарь 1.3а (f2mraid.h)
 #define RAID_OUT_NONE       (1)     // ничего не сделано: Рик с одним охранником
