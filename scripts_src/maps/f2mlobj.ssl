@@ -47,7 +47,11 @@ procedure look_at_p_proc begin
       else display_msg(mstr(249));
    end
    else if (is_hole) then display_msg(mstr(241));
-   else if (get_sfall_global_int(GV_LAIR_CELLAR) == 2) then display_msg(mstr(243));
+   else if (cur_map_index == MAP_F2MOD_CELL) then display_msg(mstr(256));
+   else if (get_sfall_global_int(GV_LAIR_CELLAR) == 2) then begin
+      display_msg(mstr(243));
+      display_msg(mstr(254));
+   end
    else display_msg(mstr(240));
 end
 
@@ -64,6 +68,9 @@ procedure use_p_proc begin
       if (get_sfall_global_int(GV_CELL_CHARGE)) then display_msg(mstr(252));
       else display_msg(mstr(242));
    end
+   // Погреб взорван (Егор 2026-10-09): лаз откроется, когда тут начнут строить базу
+   else if (get_sfall_global_int(GV_LAIR_CELLAR) == 2 and cur_map_index != MAP_F2MOD_CELL) then
+      float_msg(dude_obj, mstr(255), FLOAT_MSG_YELLOW);
    else call look_at_p_proc;
 end
 

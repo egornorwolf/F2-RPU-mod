@@ -19,6 +19,7 @@
 #define MAP_F2MOD_TOWN      (178)   // [Map 178]: карта песочницы f2mtown
 #define AREA_F2MOD_LAIR     (63)    // [Area 63]: карьер в горах (логово налетчиков, потом военная база)
 #define MAP_F2MOD_LAIR      (180)   // [Map 180]: карта карьера f2mlair (копия mountn5)
+#define MAP_F2MOD_REMN      (182)   // [Map 182]: встреча с остатками банды f2mremn (копия desert2), через 60 дней после взрыва погреба
 #define MAP_F2MOD_CELL      (181)   // [Map 181]: погреб под логовом f2mcell (копия пещеры CAVE7), спуск по лестнице
 
 // Номера скриптов = номер строки в scripts.lst
@@ -47,6 +48,8 @@
 #define SCRIPT_F2MFARM      (1581)  // старший фермер Дэйв Хольц (2.2, 2.3)
 #define SCRIPT_F2MRAT       (1582)  // крысы на огородах, нора и стая тварей у забора (2.2, 2.17)
 #define SCRIPT_F2MTHIEF     (1583)  // ночной вор Томми Ларк (2.6)
+#define SCRIPT_F2MREMN      (1584)  // карта встречи с остатками банды (1.4б)
+#define SCRIPT_F2MREMC      (1585)  // остатки банды: вожак и бойцы (1.4б)
 #define SCRIPT_ECBRAHMN     (631)   // брамин случайной встречи из RPU (не меняем)
 #define SCRIPT_ECRAIDER     (256)   // налетчик случайной встречи из RPU
 #define SCRIPT_ECSCORP      (616)   // скорпион случайной встречи из RPU

@@ -21,6 +21,9 @@
 #define GV_LAIR_GANG    "f2mlairn"  // живых бандитов наверху, в карьере
 #define GV_CELL_BACK    "f2mcellb"  // 1 = герой поднимается из погреба: поставить его у лаза
 #define GV_CELL_CHARGE  "f2mcellc"  // 1 = заряд заложен в запасы, рванет, когда герой выберется наверх
+#define GV_CELL_RUIN    "f2mcellx"  // 1 = последствия взрыва в погребе уже показаны (охрана мертва, запасы под завалом)
+#define GV_REMN_KANE    "f2mremkn"  // 1 = Кейн был жив при взрыве погреба: он вожак остатков банды (1.4б)
+#define GV_LAIR_FIN     "f2mlairf"  // час, когда логово взято (через два месяца после взрыва — остатки банды)
 
 #define LAIR_KNOWN      (1)
 #define LAIR_DONE       (2)
@@ -130,6 +133,7 @@ procedure lair_finish(variable how) begin
    if (lair_done) then return;
    set_sfall_global(GV_LAIR, LAIR_DONE);
    set_sfall_global(GV_LAIR_HOW, how);
+   set_sfall_global(GV_LAIR_FIN, bld_hour);
    set_sfall_global(GV_LAIR_ALARM, 0);
    set_sfall_global(GV_LAIR_GANG, 0);
    set_sfall_global(GV_CELL_GANG, 0);
@@ -146,12 +150,14 @@ procedure lair_finish(variable how) begin
 end
 
 // Что лежит на месте лаза в погреб: пока лаз не нашли (и после взрыва) — куча камней,
-// найденный лаз — дыра с лестницей вниз (как люк в доме героя). Зовут карта логова и глобальный скрипт
+// найденный лаз — дыра с лестницей вниз (как люк в доме героя). После взрыва завал расчищают,
+// когда на месте логова начали строить военную базу (Егор 2026-10-09). Зовут карта логова и глобальный скрипт
 procedure lair_cellar_face begin
-   variable rocks, hole;
+   variable rocks, hole, c;
    rocks := tile_contains_pid_obj(LAIR_CELLAR, 0, PID_LAIR_CELLAR);
    hole := tile_contains_pid_obj(LAIR_CELLAR, 0, PID_CELL_HOLE);
-   if (get_sfall_global_int(GV_LAIR_CELLAR) == 1) then begin
+   c := get_sfall_global_int(GV_LAIR_CELLAR);
+   if (c == 1 or (c == 2 and base_level >= 1)) then begin
       if (rocks) then destroy_object(rocks);
       if (not hole) then create_object_sid(PID_CELL_HOLE, LAIR_CELLAR, 0, SCRIPT_F2MLOBJ);
    end else begin

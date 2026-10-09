@@ -2,7 +2,7 @@
 // Ctrl+1..7 — СПЕЦИАЛ +1, Ctrl+Shift+1..7 — СПЕЦИАЛ -1,
 // Ctrl+K — +10 очков навыков, Ctrl+N — все навыки 300%, Ctrl+B — переносимый вес +100,
 // Ctrl+E — открыть «Лагерь у скал» на карте мира, Ctrl+T — открыть песочницу стройки, Ctrl+R — сбросить встречу с караваном, Ctrl+O — +1 перк, Ctrl+U — +1 уровень,
-// Ctrl+J — открыть карьер (логово, 1.4), Ctrl+F — фермер и крысы на огородах (2.2), Ctrl+P — пропавший брамин (2.3), Ctrl+V — стая тварей у забора (2.17), Ctrl+C — ночной вор (2.6), Ctrl+H — лечение, Ctrl+I — сундук с броней, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
+// Ctrl+J — открыть карьер (логово, 1.4), Ctrl+F — фермер и крысы на огородах (2.2), Ctrl+P — пропавший брамин (2.3), Ctrl+V — стая тварей у забора (2.17), Ctrl+C — ночной вор (2.6), Ctrl+D — остатки банды (1.4б, с Shift вожак Кейн), Ctrl+H — лечение, Ctrl+I — сундук с броней, оружием, патронами и стимпаками, Ctrl+M — +5000 крышек, Ctrl+G — справка.
 // Alt+1 — +1 час, Alt+2 — +1 день, Alt+3 — +1 неделя, Alt+4 — +1 месяц игрового времени, Alt+0 — показать время и состояние (Егор, 2026-10-06: хоткеи для проверки поселения, docs/test-mode.md).
 #include "sfall.h"
 #include "dik.h"
@@ -76,7 +76,7 @@ procedure keypress_handler begin
    if (key != DIK_1 and key != DIK_2 and key != DIK_3 and key != DIK_4 and key != DIK_5
        and key != DIK_6 and key != DIK_7 and key != DIK_K and key != DIK_N and key != DIK_B and key != DIK_E and key != DIK_R and key != DIK_O and key != DIK_U
        and key != DIK_H and key != DIK_I and key != DIK_M and key != DIK_G and key != DIK_T and key != DIK_J
-       and key != DIK_F and key != DIK_P and key != DIK_V and key != DIK_C) then return;
+       and key != DIK_F and key != DIK_P and key != DIK_V and key != DIK_C and key != DIK_D) then return;
    // Глушим букву, чтобы игра не открыла инвентарь или настройки
    set_sfall_return(DIK_UNLABELED);
    if (not pressed) then return;
@@ -175,6 +175,18 @@ procedure keypress_handler begin
          call thief_put;
          display_msg("F2mod: ночной вор ходит у хижин.");
       end
+   end else if (key == DIK_D) then begin
+      // TEST: логово взято взрывом погреба 60 дней назад: следующая случайная встреча — остатки банды (1.4б).
+      // Ctrl+Shift+D — вожак Кейн, Ctrl+D — вожак из бойцов
+      set_sfall_global("f2mlairs", 2);
+      set_sfall_global("f2mlairh", 4);
+      set_sfall_global("f2mlairc", 2);
+      set_sfall_global("f2mremst", 0);
+      set_sfall_global("f2mremkn", (key_pressed(DIK_LSHIFT) or key_pressed(DIK_RSHIFT)));
+      if (bld_hour > 60 * 24) then set_sfall_global("f2mlairf", bld_hour - 60 * 24);
+      else set_sfall_global("f2mlairf", 1);
+      mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_LAIR, MARK_STATE_KNOWN);
+      display_msg("F2mod: погреб логова взорван 60 дней назад. Выйди на карту мира: первая случайная встреча будет с остатками банды.");
    end else if (key == DIK_T) then begin
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_TOWN, MARK_STATE_KNOWN);
       display_msg("F2mod: на карте мира открыта Песочница стройки (рядом со Скалистым приютом).");
@@ -249,6 +261,6 @@ end
 procedure show_help begin
    display_msg("Ctrl+1..7: СПЕЦИАЛ +1 (С,В,Вн,П,И,Л,У). Ctrl+Shift+1..7: -1.");
    display_msg("Ctrl+K: +10 навыков. Ctrl+N: все навыки 300%. Ctrl+B: вес +100. Ctrl+O: +1 перк. Ctrl+U: +1 уровень.");
-   display_msg("Ctrl+E: открыть Скалистый приют. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек. Ctrl+J: открыть карьер. Ctrl+F: фермер и крысы на огородах. Ctrl+P: пропавший брамин. Ctrl+V: стая у забора. Ctrl+C: ночной вор.");
+   display_msg("Ctrl+E: открыть Скалистый приют. Ctrl+T: открыть Песочницу стройки. Ctrl+R: сбросить караван. Ctrl+H: лечение. Ctrl+I: сундук. Ctrl+M: +5000 крышек. Ctrl+J: открыть карьер. Ctrl+F: фермер и крысы на огородах. Ctrl+P: пропавший брамин. Ctrl+V: стая у забора. Ctrl+C: ночной вор. Ctrl+D: остатки банды (Ctrl+Shift+D: с Кейном).");
    display_msg("Alt+1: +1 час. Alt+2: +1 день. Alt+3: +1 неделя. Alt+4: +1 месяц. Alt+0: время и состояние.");
 end

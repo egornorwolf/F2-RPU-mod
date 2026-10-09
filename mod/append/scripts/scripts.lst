@@ -24,3 +24,5 @@ f2mcell.int    ; F2mod raiders cellar map                        # local_vars=0
 f2mfarm.int    ; F2mod senior farmer Dave Holtz                 # local_vars=1
 f2mrat.int     ; F2mod garden rats and their hole                # local_vars=0
 f2mthief.int   ; F2mod night thief Tommy Lark                    # local_vars=1
+f2mremn.int    ; F2mod gang remnants encounter map              # local_vars=0
+f2mremc.int    ; F2mod gang remnants (savages)                  # local_vars=0

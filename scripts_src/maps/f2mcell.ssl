@@ -25,6 +25,7 @@ procedure map_exit_p_proc;
 procedure cell_put;
 procedure cell_guard(variable tile, variable i);
 procedure cell_clear;
+procedure cell_ruin;
 
 procedure start begin
 end
@@ -34,6 +35,7 @@ procedure map_enter_p_proc begin
    if (is_loading_game) then return;
    override_map_start_hex(cv_free_tile(CELL_HERO), 0, 2);
    if (not get_sfall_global_int(GV_CELL_PUT)) then call cell_put;
+   if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_BLAST and not get_sfall_global_int(GV_CELL_RUIN)) then call cell_ruin;
    if (lair_done) then call cell_clear;
 end
 
@@ -95,6 +97,33 @@ procedure cell_clear begin
             critter_add_trait(c, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
          else destroy_object(c);
       end
+   end
+   set_sfall_global(GV_CELL_GANG, 0);
+end
+
+// Погреб после взрыва (Егор 2026-10-09): охрана погибла, штабель с запасами под обвалом,
+// ящики с едой, водой и динамитом раздавлены. Уцелел только ящик с крышками и стимуляторами (CELL_BOX2)
+procedure cell_ruin begin
+   variable c, obj, i := 0, tile;
+   set_sfall_global(GV_CELL_RUIN, 1);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (is_gang(c) and not is_critter_dead(c)) then begin
+         if (i % 2 == 0) then kill_critter(c, ANIM_fall_back_blood_sf);
+         else kill_critter(c, ANIM_fall_front_sf);
+         i += 1;
+      end
+   end
+   i := 0;
+   obj := tile_contains_pid_obj(CELL_STACK, 0, PID_CELL_STACK);
+   if (obj) then destroy_object(obj);
+   create_object_sid(PID_LAIR_CELLAR, CELL_STACK, 0, SCRIPT_F2MLOBJ);
+   while (i < 3) do begin
+      if (i == 0) then tile := CELL_BOX0;
+      else if (i == 1) then tile := CELL_BOX1;
+      else tile := CELL_DYN;
+      obj := tile_contains_pid_obj(tile, 0, PID_CONTAINER_WOOD_CRATE);
+      if (obj) then destroy_object(obj);
+      i += 1;
    end
    set_sfall_global(GV_CELL_GANG, 0);
 end

@@ -11,6 +11,7 @@
 #define GV_RATS         "f2mratst"  // 0 тихо, 1 крысы на огородах, 2 отбиты, 3 упущены
 #define GV_RATS_WEEK    "f2mratwk"  // неделя, в которую крысы уже приходили (+1)
 #define GV_RATS_HOUR    "f2mrathr"  // до этого часа надо разобраться (утро)
+#define GV_RATS_AGAIN   "f2mratag"  // проспали крыс: с этого часа (+1) они вернутся в первую же ночь, когда герой в лагере
 #define GV_BRAH         "f2mbrast"  // брамин: 0 тихо, 1 пропал, 2 нашли, 3 не нашли
 #define GV_BRAH_WEEK    "f2mbrawk"  // неделя, в которую брамин уже пропадал (+1)
 
@@ -34,6 +35,7 @@
 #define BRAH_SPEECH     (40)
 #define BRAH_XP         (150)
 #define BRAH_LOSS       (10)        // % еды за неделю, если брамина так и не нашли
+#define BRAH_MORALE     (4)         // дух: минус, если брамина решили не искать (Егор 2026-10-09)
 
 #define farm_here       (get_sfall_global_int(GV_FARM) == 1)
 #define farm_msg(n)     message_str(SCRIPT_F2MFARM, n)
@@ -100,6 +102,7 @@ end
 procedure rats_spawn begin
    variable i := 0, t;
    set_sfall_global(GV_RATS, 1);
+   set_sfall_global(GV_RATS_AGAIN, 0);
    set_sfall_global(GV_RATS_HOUR, bld_hour + RATS_HOURS);
    t := rats_hole;
    if (not tile_contains_pid_obj(t, 0, PID_RAT_HOLE)) then create_object_sid(PID_RAT_HOLE, t, 0, SCRIPT_F2MRAT);
@@ -143,6 +146,8 @@ procedure farm_tick begin
          else begin
             n := farm_loss(RATS_LOSS_NONE);
             set_sfall_global(GV_SET_MORALE, get_sfall_global_int(GV_SET_MORALE) - RATS_MORALE);
+            // проспали (Егор 2026-10-09): крысы вернутся следующей ночью, когда герой будет в лагере
+            set_sfall_global(GV_RATS_AGAIN, bld_hour + RATS_HOURS + 1);
          end
          foreach (n in list_as_array(LIST_CRITTERS)) begin
             if (obj_pid(n) == PID_RAT_PEST and not is_critter_dead(n)) then destroy_object(n);
@@ -151,7 +156,8 @@ procedure farm_tick begin
       end
    end else if (farm_here and bld_shown(U_GARDEN) >= 1 and cur_map_index == MAP_F2MOD_CAMP
                 and camp_night and not combat_is_initialized and (get_game_mode bwand 0x3FFFFD) == 0
-                and get_sfall_global_int(GV_RATS_WEEK) != set_weeks_now + 1 and random(1, 100) <= 20) then begin
+                and ((get_sfall_global_int(GV_RATS_AGAIN) and bld_hour + 1 >= get_sfall_global_int(GV_RATS_AGAIN))
+                     or (get_sfall_global_int(GV_RATS_WEEK) != set_weeks_now + 1 and random(1, 100) <= 20))) then begin
       set_sfall_global(GV_RATS_WEEK, set_weeks_now + 1);
       call rats_spawn;
    end

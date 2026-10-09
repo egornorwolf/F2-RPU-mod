@@ -32,6 +32,7 @@ make("desert2", "f2mcrvn", "f2mcrvn.int")
 make("desert3", "f2mesct", "f2mesct.int")
 make("desert2", "f2mesc2", "f2mesct.int")  # 2-й участок дороги
 make("desert1", "f2mesc3", "f2mesct.int")  # 3-й участок дороги
+make("desert2", "f2mremn", "f2mremn.int")  # остатки банды (1.4б)
 
 # Карьер (логово налетчиков, 1.4): копия горной карты mountn5 из RPU (палатки у скалы). Герой входит с юго-востока,
 # за деревьями (LAIR_HERO из f2mlairl.h, точки пишет tools/layout/lair_emit.py), лицом к лагерю

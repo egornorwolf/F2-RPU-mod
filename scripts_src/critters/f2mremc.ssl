@@ -1,0 +1,160 @@
+// Остатки банды (квест 1.4б, карточка в docs/npc-cards.md): вожак (Кейн, если выжил) и 4 бойца, уже дикари.
+// Вожак заговаривает сам. Добить — бой со всеми. Позвать в поселение — вожак отказывается,
+// бойцов уговаривает Красноречие 60: они переходят к герою, вожак дерется один. Не уговорил — бой со всеми.
+// Можно и просто уйти.
+#define SCRIPT_REALNAME "f2mremc"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MREMC
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mtlay.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+#include "f2mlair.h"
+#include "f2mremn.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure fight_all;
+procedure fight_lead;
+procedure Node001;
+procedure Node010;
+procedure Node020;
+procedure Node030;
+procedure Node040;
+procedure Node050;
+procedure Node060;
+procedure Node999;
+
+#define is_kane         (get_sfall_global_int(GV_REMN_KANE))
+#define self_hostile    (has_trait(TRAIT_OBJECT, self_obj, OBJECT_TEAM_NUM) != TEAM_PLAYER)
+
+variable talked;
+variable fight;     // 1 бой со всеми, 2 бойцы ушли к герою, бой с вожаком
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   if (not remn_lead(self_obj)) then display_msg(mstr(102));
+   else if (is_kane) then display_msg(mstr(100));
+   else display_msg(mstr(101));
+end
+
+procedure description_p_proc begin
+   call look_at_p_proc;
+end
+
+// Вожак заговаривает сам, когда герой подошел
+procedure critter_p_proc begin
+   if (combat_is_initialized or not remn_lead(self_obj) or talked or not self_hostile) then return;
+   if (tile_distance_objs(self_obj, dude_obj) <= 8) then begin
+      talked := 1;
+      dialogue_system_enter;
+   end
+end
+
+procedure talk_p_proc begin
+   if (not remn_lead(self_obj)) then begin
+      if (self_hostile) then floater(175);
+      else floater(176);
+      return;
+   end
+   talked := 1;
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+   if (fight == 1) then call fight_all;
+   else if (fight == 2) then call fight_lead;
+   fight := 0;
+end
+
+// Бой со всеми: каждый из остатков идет на героя
+procedure fight_all begin
+   variable c;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (remn_is(c) and not is_critter_dead(c)) then set_object_data(c, OBJ_DATA_WHO_HIT_ME, dude_obj);
+   end
+   attack(dude_obj);
+end
+
+// Бойцы уговорены: переходят на сторону героя и бьют вожака, вожак дерется один
+procedure fight_lead begin
+   variable c, i := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (c != self_obj and remn_is(c) and not is_critter_dead(c)) then begin
+         critter_add_trait(c, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
+         set_object_data(c, OBJ_DATA_WHO_HIT_ME, self_obj);
+         float_msg(c, mstr(170 + i % 3), FLOAT_MSG_YELLOW);
+         i += 1;
+      end
+   end
+   give_exp_points(REMN_XP);
+   display_msg(mstr(180) + REMN_XP + mstr(181));
+   set_object_data(self_obj, OBJ_DATA_WHO_HIT_ME, dude_obj);
+   attack(dude_obj);
+end
+
+procedure Node001 begin
+   if (is_kane) then Reply(110);
+   else Reply(111);
+   NOption(112, Node010, 4);   // добить
+   NOption(113, Node020, 4);   // позвать в поселение
+   NOption(114, Node060, 4);   // мимо
+   NLowOption(115, Node020);
+end
+
+// Добить
+procedure Node010 begin
+   Reply(120);
+   NOption(121, Node999, 4);
+   fight := 1;
+end
+
+// Позвать в поселение: вожак отказывается, герой говорит с бойцами
+procedure Node020 begin
+   if (is_kane) then Reply(130);
+   else Reply(133);
+   NOption(131, Node030, 4);
+   NOption(132, Node060, 4);
+   NLowOption(134, Node030);
+end
+
+// Красноречие 60: бойцы соглашаются, иначе бой со всеми
+procedure Node030 begin
+   if (has_skill(dude_obj, SKILL_SPEECH) >= REMN_SPEECH) then call Node040;
+   else call Node050;
+end
+
+procedure Node040 begin
+   Reply(140);
+   NOption(141, Node999, 4);
+   fight := 2;
+end
+
+procedure Node050 begin
+   Reply(150);
+   NOption(141, Node999, 4);
+   fight := 1;
+end
+
+// Мимо: вожак пропускает
+procedure Node060 begin
+   Reply(160);
+   NOption(161, Node999, 4);
+end
+
+procedure Node999 begin
+end

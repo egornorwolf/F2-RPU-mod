@@ -26,6 +26,8 @@
 #include "f2mgore.h"
 #include "f2msam.h"
 #include "f2mfarm.h"
+#include "f2mlair.h"
+#include "f2mremn.h"
 
 
 procedure start;
@@ -90,6 +92,7 @@ procedure map_enter_p_proc begin
    call bld_fire_light;
    call sam_enter;
    call farm_enter;
+   call remn_arrive;
    set_sfall_global(GV_SET_SYNC, 0);
    // Следы набега, угнанный фургон, главарь у ворот (1.3а)
    if (get_sfall_global_int(GV_RAID_DECOR)) then call raid_decor;

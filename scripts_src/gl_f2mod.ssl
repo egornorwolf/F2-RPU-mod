@@ -33,8 +33,9 @@
 #include "f2mwild.h"
 #include "f2mspots.h"
 #include "f2mthief.h"
+#include "f2mremn.h"
 
-#define F2MOD_VERSION "0.9.2"
+#define F2MOD_VERSION "0.9.3"
 
 procedure start;
 procedure encounter_handler;
@@ -174,6 +175,12 @@ procedure encounter_handler begin
    map_id := get_sfall_arg;
    special := get_sfall_arg;
    if (event != 0 or special) then return;
+   // Остатки банды (1.4б): через 60 дней после взрыва погреба, один раз
+   if (remn_due) then begin
+      set_sfall_return(MAP_F2MOD_REMN);
+      set_sfall_return(1);
+      return;
+   end
    if (get_pc_stat(PCSTAT_level) < CARAVAN_MIN_LEVEL) then return;
    if (get_sfall_global_int(GV_CARAVAN) != CARAVAN_NONE) then return;
    set_sfall_return(MAP_F2MOD_CARAVAN);

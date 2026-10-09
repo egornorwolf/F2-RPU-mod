@@ -131,7 +131,7 @@ end
 procedure militia_put begin
    variable i := 0, obj;
    set_sfall_global(GV_MIL_HIRED, 1);
-   set_sfall_global(GV_SET_MILIT, MILITIA_COUNT);
+   set_sfall_global(GV_SET_MILIT, get_sfall_global_int(GV_SET_MILIT) + MILITIA_COUNT);   // к бойцам из остатков банды (1.4б), если они уже пришли
    while (i < MILITIA_COUNT) do begin
       if (i == MILITIA_COUNT - 1) then
          obj := cv_put(PID_MILITIA_FEMALE, SCRIPT_F2MCMIL, tile_num_in_direction(RAID_GATE_IN, i, 2));

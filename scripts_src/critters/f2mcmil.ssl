@@ -32,7 +32,10 @@ end
 
 procedure look_at_p_proc begin
    script_overrides;
-   if (get_critter_stat(self_obj, STAT_gender) == GENDER_FEMALE) then
+   // бывшие налетчики из остатков банды (1.4б): модели дикарей
+   if ((obj_art_fid(self_obj) bwand 0xFFF) == (FID_NMWARR bwand 0xFFF) or (obj_art_fid(self_obj) bwand 0xFFF) == (FID_NMPRMB bwand 0xFFF)) then
+      display_msg(mstr(103));
+   else if (get_critter_stat(self_obj, STAT_gender) == GENDER_FEMALE) then
       display_msg(mstr(101));
    else
       display_msg(mstr(100));
@@ -40,7 +43,10 @@ end
 
 procedure description_p_proc begin
    script_overrides;
-   display_msg(mstr(102));
+   if ((obj_art_fid(self_obj) bwand 0xFFF) == (FID_NMWARR bwand 0xFFF) or (obj_art_fid(self_obj) bwand 0xFFF) == (FID_NMPRMB bwand 0xFFF)) then
+      display_msg(mstr(104));
+   else
+      display_msg(mstr(102));
 end
 
 procedure critter_p_proc begin

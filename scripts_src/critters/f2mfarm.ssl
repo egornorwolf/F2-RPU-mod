@@ -213,6 +213,8 @@ end
 // (5) Не искать
 procedure Node025 begin
    call brah_lost;
+   // бросили скотину (Егор 2026-10-09): жители недовольны
+   set_sfall_global(GV_SET_MORALE, get_sfall_global_int(GV_SET_MORALE) - BRAH_MORALE);
    Reply(157);
    NOption(159, Node999, 4);
    NLowOption(127, Node999);
