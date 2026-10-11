@@ -117,7 +117,7 @@ procedure gore_update(variable entering) begin
       set_sfall_global(GV_DOG_HOUR, h + 1);
       i := 0;
       while (i < DOG_COUNT) do begin
-         dog := create_object_sid(PID_WILD_DOG, cv_free_tile(tile_num_in_direction(tile_num(any), random(0, 5), random(2, 3))), 0, -1);
+         dog := create_object_sid(PID_WILD_DOG, cv_free_tile(tile_num_in_direction(tile_num(any), random(0, 5), random(2, 3))), 0, SCRIPT_F2MRAT);   // 0.9.7: со скриптом — нападают вблизи
          critter_add_trait(dog, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_DOG);
          anim(dog, ANIMATE_ROTATION, rotation_to_tile(tile_num(dog), tile_num(any)));
          i += 1;

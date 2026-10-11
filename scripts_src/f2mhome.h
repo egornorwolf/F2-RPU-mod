@@ -1,6 +1,6 @@
 // Жители по домам и на работу (Егор 2026-10-08): как только построены палатки или огороды, мирные не стоят
 // у костра, а расходятся: днем сначала по двое на каждом огороде, по водоносу у каждого колодца (носит воду на огород и назад),
-// потом по двое у каждой новой палатки (места 3-7); вечером до трех взрослых в баре,
+// потом по двое у каждой новой палатки (места 3-7); вечером до трех взрослых в баре; бармен и медик (0.9.7),
 // ночью (с 21:00 до 6:00) спят в палатках, у кроватей: палатки лагеря 0-2 и палатки прораба 3-7, по трое.
 // Кому места не хватило, стоят у костра. Клетки мест — f2mspots.h (tools/layout/spots_emit.py).
 // Подключать после f2mcamp.h, f2mspots.h, f2mbld.h и f2mlvl.h (места по уровням зданий, 0.7.0). camp_spread(0) — вход на карту или затемнение (людей просто ставим),
@@ -27,7 +27,7 @@ procedure camp_is_child(variable c) begin
 end
 
 procedure camp_spread(variable walk) begin
-   variable spots, n := 0, s, c, i := 0, k, t, u, bar := 0, b := 0, dnum, carry;
+   variable spots, n := 0, s, c, i := 0, k, t, u, bar := 0, b := 0, dnum, carry, tend := 0, medic := 0;
    if (combat_is_initialized or get_sfall_global_int(GV_BURY_ON) or get_sfall_global_int(GV_CARAVAN_HOSTILE)) then return;
    spots := temp_array(0, 0);
    dnum := game_time / ONE_GAME_DAY;
@@ -79,11 +79,20 @@ procedure camp_spread(variable walk) begin
          s += 1;
       end
    end
+   // Работники (Егор 2026-10-09): бармен у стойки с 6:00 до полуночи, медик у стола с 6:00 до 21:00 — первые взрослые по списку
+   if (game_time_hour >= 600 and lvl_staff(U_BAR, bld_shown(U_BAR))) then tend := 1;
+   if (not camp_night and lvl_staff(U_MED, bld_shown(U_MED))) then medic := 1;
    i := 0;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (camp_is_civ(c)) then begin
          t := 0;
-         if (bar and b < bar and not camp_is_child(c) and (i + dnum) % 2 == 0) then begin
+         if (tend == 1 and not camp_is_child(c)) then begin
+            t := lvl_staff(U_BAR, bld_shown(U_BAR));
+            tend := 2;
+         end else if (medic == 1 and not camp_is_child(c)) then begin
+            t := lvl_staff(U_MED, bld_shown(U_MED));
+            medic := 2;
+         end else if (bar and b < bar and not camp_is_child(c) and (i + dnum) % 2 == 0) then begin
             t := lvl_bar(bld_shown(U_BAR), b);
             b += 1;
          end else begin

@@ -28,6 +28,7 @@
 #include "f2mfarm.h"
 #include "f2mlair.h"
 #include "f2mremn.h"
+#include "f2msolid.h"
 
 
 procedure start;
@@ -91,6 +92,7 @@ procedure map_enter_p_proc begin
    call bld_commit;
    call bld_apply;
    call bld_fire_light;
+   call solid_sync;   // невидимые блоки у костров, бака и насоса (0.9.7)
    call sam_enter;
    call farm_enter;
    call remn_arrive;
@@ -371,6 +373,7 @@ end
 
 procedure map_update_p_proc begin
    Lighting;
+   if (not combat_is_initialized) then call solid_sync;
    // днем жители у палаток и на огородах, ночью в палатках (f2mhome.h)
    if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE and not is_loading_game) then begin
       call camp_spread(1);

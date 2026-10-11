@@ -1,6 +1,6 @@
 // Радист Сэм Мортон (0.7.1, карточка в docs/npc-cards.md, квест 1.3: «на следующий день после набега приходит радист»).
 // Приходит через сутки после первого набега, если в домах есть свободное место (палатка 2, шатер 4); нет места — ждет.
-// Ставит радио (маленький стол с пультом снаружи у построенного здания, 1 день, бесплатно; места нет — просит место), продает герою рацию за 50. С рацией в рюкзаке
+// Ставит радио (стол с пультом снаружи у палатки Теда, 1 день, бесплатно; места нет — просит место), продает герою рацию за 50. С рацией в рюкзаке
 // вдали от лагеря герой слышит, что еды или воды до конца недели не хватит (сразу после недельной проверки, за неделю).
 // Подключать после define.h, command.h, sfall.h, f2mod.h, f2mcv.h, f2mcamp.h и f2mset.h (в нем f2mbld.h).
 #ifndef F2MSAM_H
@@ -24,10 +24,14 @@
 #define SAM_BUILD_HOURS (24)
 #define SAM_HANDS_SKILL (50)        // Ремонт или Наука: собрать рацию самому, бесплатно
 #define SAM_HANDS_XP    (50)
-// Временный стол (Егор 2026-10-09): маленький стол table1 с пультом comp5 снаружи у любого построенного здания.
-// Места у каждого здания считает tools/layout/levels_emit.py (f2mradl.h). Большой стол ltable2 у старосты — до 0.9.6
-#define PID_RTABLE_S    (33554732)  // table1: маленький стол
-#define PID_RTABLE_OLD  (33554926)  // ltable2: прежний большой стол (убираем из сохранений)
+// Временный стол (Егор 2026-10-09, 2026-10-11): стол из двух половин mdesk1 (с пультом) + mdesk2, снаружи вплотную к
+// юго-западной стене палатки Теда (центр); у других зданий — запасные места. Места считает tools/layout/levels_emit.py (f2mradl.h).
+// До 0.9.7 — маленький стол table1 с пультом comp5, до 0.9.6 — большой стол ltable2 у старосты
+#define PID_RDESK1      (33554836)  // mdesk1: половина стола с пультом
+#define PID_RDESK2      (33554837)  // mdesk2: вторая половина (на клетку по направлению 2)
+#define PID_RTABLE_S    (33554732)  // table1: стол 0.9.6 (убираем из сохранений)
+#define PID_RTABLE_OLD  (33554926)  // ltable2: стол до 0.9.6 (убираем из сохранений)
+#define GV_SAM_DESK     "f2msamdk"  // 1 = стол 0.9.6 (table1 + comp5) убран
 #include "f2mradl.h"
 
 procedure sam_places;
@@ -39,6 +43,8 @@ procedure sam_tick;
 procedure sam_has_radio;
 procedure sam_table_unit;
 procedure sam_home;
+procedure sam_old_spot(variable u);
+procedure sam_desk_kill(variable t);
 
 // Мест в домах: палатка 2, шатер 4 (buildings-levels.md)
 procedure sam_places begin
@@ -96,6 +102,37 @@ procedure sam_home begin
    return BLD_SAM;
 end
 
+// Клетка стола 0.9.6 (table1 + comp5) у здания u — для сохранений 0.9.6
+procedure sam_old_spot(variable u) begin
+   if (u == 13) then return 16075;
+   if (u == 12) then return 29550;
+   if (u == 14) then return 23744;
+   if (u == 15) then return 33103;
+   if (u == 17) then return 21501;
+   if (u == 18) then return 25911;
+   if (u == 16) then return 14941;
+   if (u == 19) then return 11639;
+   if (u == 4) then return 11872;
+   if (u == 5) then return 10885;
+   if (u == 6) then return 10458;
+   if (u == 7) then return 7871;
+   if (u == 8) then return 7885;
+   if (u == 9) then return 9059;
+   if (u == 10) then return 7846;
+   if (u == 11) then return 7232;
+   if (u == 0) then return 10549;
+   if (u == 1) then return 9140;
+   return 0;
+end
+
+procedure sam_desk_kill(variable t) begin
+   variable obj;
+   obj := tile_contains_pid_obj(t, 0, PID_RDESK1);
+   if (obj) then destroy_object(obj);
+   obj := tile_contains_pid_obj(tile_num_in_direction(t, 2, 1), 0, PID_RDESK2);
+   if (obj) then destroy_object(obj);
+end
+
 // Стол с пультом (стоит, как только радист взялся за работу): снаружи, у построенного здания, не на людях.
 // Построена радиостанция — временный стол сносим
 procedure sam_radio_decor begin
@@ -107,20 +144,29 @@ procedure sam_radio_decor begin
       obj := tile_contains_pid_obj(BLD_RADIO, 0, PID_RCOMP);
       if (obj) then destroy_object(obj);
    end
+   // сохранения 0.9.6: маленький стол table1 с пультом comp5
+   if (not get_sfall_global_int(GV_SAM_DESK)) then begin
+      set_sfall_global(GV_SAM_DESK, 1);
+      u := get_sfall_global_int(GV_SAM_TABLE) - 1;
+      if (u >= 0) then begin
+         t := sam_old_spot(u);
+         obj := tile_contains_pid_obj(t, 0, PID_RTABLE_S);
+         if (obj) then destroy_object(obj);
+         obj := tile_contains_pid_obj(t, 0, PID_RCOMP);
+         if (obj) then destroy_object(obj);
+      end
+   end
    if (get_sfall_global_int(GV_SAM) < SAM_BUILDING or get_sfall_global_int(GV_SAM) == SAM_DEAD) then return;
    u := sam_table_unit;
    if (u < 0) then return;
    t := radio_spot(u);
    if (get_sfall_global_int(GV_RADIO_ROOM)) then begin
-      obj := tile_contains_pid_obj(t, 0, PID_RTABLE_S);
-      if (obj) then destroy_object(obj);
-      obj := tile_contains_pid_obj(t, 0, PID_RCOMP);
-      if (obj) then destroy_object(obj);
+      call sam_desk_kill(t);
       return;
    end
    set_sfall_global(GV_SAM_TABLE, u + 1);
-   if (not tile_contains_pid_obj(t, 0, PID_RTABLE_S)) then create_object(PID_RTABLE_S, t, 0);
-   if (not tile_contains_pid_obj(t, 0, PID_RCOMP)) then create_object(PID_RCOMP, t, 0);
+   if (not tile_contains_pid_obj(t, 0, PID_RDESK1)) then create_object(PID_RDESK1, t, 0);
+   if (not tile_contains_pid_obj(tile_num_in_direction(t, 2, 1), 0, PID_RDESK2)) then create_object(PID_RDESK2, tile_num_in_direction(t, 2, 1), 0);
 end
 
 procedure sam_has_radio begin

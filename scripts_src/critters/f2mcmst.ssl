@@ -48,6 +48,10 @@ procedure Node014;
 procedure Node015;
 procedure Node020;
 procedure ted_buildings;
+procedure ted_news;
+procedure ted_bit(variable b, variable cond);
+procedure ted_pow2(variable n);
+procedure ted_plural(variable n, variable m);
 procedure Node021;
 procedure Node022;
 procedure Node023;
@@ -424,8 +428,11 @@ procedure Node020 begin
       Reply(262);
    else if (news == 2) then
       Reply(263);
-   else
-      Reply(221);
+   else begin
+      news := ted_news;
+      if (news != "") then Reply(mstr(728) + " " + news);
+      else Reply(221);
+   end
    NOption(222, Node021, 4);
    NOption(223, Node022, 4);
    NOption(224, Node023, 4);
@@ -452,6 +459,90 @@ procedure morale_text begin
    return mstr(280);
 end
 
+// Новости (Егор 2026-10-11): про каждое событие и каждую достройку Тед хотя бы раз говорит сам, при встрече.
+// Биты сказанного — в f2mtednw (события) и f2mtedb1/f2mtedb2 (здания 1-го и 2-го уровня). Имена GV строками:
+// заголовки крыс, стаи, вора, логова и радиста этот скрипт не подключает
+#define GV_TED_NEWS     "f2mtednw"
+#define GV_TED_BLD1     "f2mtedb1"
+#define GV_TED_BLD2     "f2mtedb2"
+#define GV_TED_INIT     "f2mtedin"  // 1 = здания на момент 0.9.7 уже считаем сказанными
+variable news_txt;
+procedure ted_pow2(variable n) begin
+   variable r := 1;
+   while (n > 0) do begin
+      r := r * 2;
+      n -= 1;
+   end
+   return r;
+end
+procedure ted_bit(variable b, variable cond) begin
+   if (not cond or (get_sfall_global_int(GV_TED_NEWS) bwand ted_pow2(b))) then return;
+   set_sfall_global(GV_TED_NEWS, get_sfall_global_int(GV_TED_NEWS) bwor ted_pow2(b));
+   news_txt += mstr(700 + b) + " ";
+end
+
+procedure ted_news begin
+   variable u := 0, lv, g, h := 0;
+   news_txt := "";
+   if (not get_sfall_global_int(GV_TED_INIT)) then begin
+      set_sfall_global(GV_TED_INIT, 1);
+      while (u < U_COUNT) do begin
+         lv := bld_level(u);
+         if (lv >= 1) then set_sfall_global(GV_TED_BLD1, get_sfall_global_int(GV_TED_BLD1) bwor ted_pow2(u));
+         if (lv >= 2) then set_sfall_global(GV_TED_BLD2, get_sfall_global_int(GV_TED_BLD2) bwor ted_pow2(u));
+         u += 1;
+      end
+      u := 0;
+   end
+   // достроенное: та же строка, что в отчете «как дела» (жилье — одной строкой)
+   while (u < U_COUNT) do begin
+      lv := bld_level(u);
+      if (lv >= 1 and lv <= 2) then begin
+         if (lv == 1) then g := GV_TED_BLD1; else g := GV_TED_BLD2;
+         if (not (get_sfall_global_int(g) bwand ted_pow2(u))) then begin
+            set_sfall_global(g, get_sfall_global_int(g) bwor ted_pow2(u));
+            if (not bld_is_house(u)) then news_txt += mstr(600 + u * 5 + lv) + " ";
+            else if (not (h bwand lv)) then begin   // жилье: одна строка на уровень
+               h := h bwor lv;
+               news_txt += mstr(729 + lv) + " ";
+            end
+         end
+      end
+      u += 1;
+   end
+   g := get_sfall_global_int("f2mthfst");
+   call ted_bit(0, get_sfall_global_int("f2msamst") >= 1 and get_sfall_global_int("f2msamst") != 9);
+   call ted_bit(1, get_sfall_global_int("f2msamst") == 3);
+   call ted_bit(2, get_sfall_global_int(GV_FENCE));
+   call ted_bit(3, get_sfall_global_int("f2mfarst") == 1);
+   call ted_bit(4, get_sfall_global_int("f2mratst") == 2);
+   call ted_bit(5, get_sfall_global_int("f2mratst") == 3);
+   call ted_bit(6, get_sfall_global_int("f2mratsl"));
+   call ted_bit(7, get_sfall_global_int("f2mwilds") == 2);
+   call ted_bit(8, get_sfall_global_int("f2mwilds") == 3);
+   call ted_bit(9, g >= 1);
+   call ted_bit(10, g == 3);
+   call ted_bit(11, g == 4);
+   call ted_bit(12, g == 5);
+   call ted_bit(13, get_sfall_global_int(GV_BOSS) == BOSS_LEFT);
+   call ted_bit(14, get_sfall_global_int(GV_BOSS) == BOSS_BEATEN);
+   call ted_bit(15, get_sfall_global_int("f2mlairs") == 1);
+   call ted_bit(16, get_sfall_global_int("f2mlairs") == 2);
+   call ted_bit(17, get_sfall_global_int("f2mbrast") == 1);
+   call ted_bit(18, get_sfall_global_int("f2mbrast") == 2);
+   call ted_bit(19, get_sfall_global_int("f2mbrast") == 3);
+   call ted_bit(20, get_sfall_global_int("f2mdogon"));
+   call ted_bit(21, get_sfall_global_int(GV_MIL_HIRED));
+   return news_txt;
+end
+
+// Слово после числа: 1 палатка, 2-4 палатки, 5-20 палаток (m, m+1, m+2 в f2mcmst.msg)
+procedure ted_plural(variable n, variable m) begin
+   if (n % 10 == 1 and n % 100 != 11) then return mstr(m);
+   if (n % 10 >= 2 and n % 10 <= 4 and (n % 100 < 12 or n % 100 > 14)) then return mstr(m + 1);
+   return mstr(m + 2);
+end
+
 // Отчет старосты: числа прямо в реплике (окно сообщений во время диалога не видно)
 // Коротко про каждую постройку (Егор 2026-10-08): колодцы, огороды, жилье, склад, центр, мастерская, пост, ферма, бар, медпункт, дом героя
 procedure ted_buildings begin
@@ -463,7 +554,14 @@ procedure ted_buildings begin
          else if (lv >= 2) then big += 1;
       end else if (lv >= 1) then
          t += mstr(600 + u * 5 + lv) + " ";
-      if (u == U_HOUSE + 7) then t += mstr(590) + tents + mstr(591) + big + mstr(592) + " ";
+      // Егор 2026-10-09: без «0 палаток»; когда все палатки стали шатрами — только шатры
+      if (u == U_HOUSE + 7 and (tents or big)) then begin
+         t += mstr(590);
+         if (tents) then t += tents + " " + ted_plural(tents, 593);
+         if (tents and big) then t += mstr(591);
+         if (big) then t += big + " " + ted_plural(big, 596);
+         t += ". ";
+      end
       u += 1;
    end
    return t;

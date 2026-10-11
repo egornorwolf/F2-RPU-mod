@@ -36,6 +36,7 @@ procedure description_p_proc;
 procedure destroy_p_proc;
 
 procedure Node001;
+procedure quick_any;
 procedure Node010;
 procedure Node011;
 procedure Node015;
@@ -307,7 +308,8 @@ procedure Node001 begin
       set_local_var(LVAR_MET, 1);
       Reply(110);
    end
-   NOption(112, Node010, 4);
+   // Неактивные пункты прячем (Егор 2026-10-09): строить на коленке нечего — пункта нет
+   if (quick_any) then NOption(112, Node010, 4);
    if (get_sfall_global_int(GV_WELL_OLD) == WELL_OLD_BROKEN) then
       NOption(113, Node020, 4);
    NOption(400, Node060, 4);
@@ -319,6 +321,12 @@ procedure Node001 begin
    NOption(115, Node999, 4);
    NLowOption(116, Node010);
    NLowOption(117, Node999);
+end
+
+// Есть ли что строить на коленке (Node010)
+procedure quick_any begin
+   return not camp_built(BUILD_WELL) or free_slot(BUILD_GARDEN, BUILD_TENT - 1) >= 0 or free_slot(BUILD_TENT, BUILD_HERO - 1) >= 0
+       or not camp_built(BUILD_HERO) or not get_sfall_global_int(GV_FENCE);
 end
 
 // Что можно построить
@@ -445,8 +453,13 @@ procedure Node021 begin
    NLowOption(117, Node999);
 end
 
+// Повторный «кто ты» (Егор 2026-10-11): обидный ответ, как у всех в поселении
 procedure Node030 begin
-   Reply(180);
+   if (get_sfall_global_int("f2mwhohk")) then Reply(random(182, 184));
+   else begin
+      set_sfall_global("f2mwhohk", 1);
+      Reply(180);
+   end
    NOption(181, Node001, 4);
    NLowOption(117, Node999);
 end
@@ -652,10 +665,11 @@ end
 
 procedure Node060 begin
    Reply(mstr(401) + bld_jobs_text);
-   NOption(407, Node061, 4);
-   NOption(408, Node062, 4);
-   NOption(409, Node063, 4);
-   NOption(410, Node064, 4);
+   // разделы без доступных строек не показываем (Егор 2026-10-09)
+   if (bld_offer(U_OLDWELL) or bld_offer(U_NEWWELL) or bld_offer(U_GARDEN) or bld_offer(U_GARDEN + 1)) then NOption(407, Node061, 4);
+   if (bld_houses_free) then NOption(408, Node062, 4);
+   if (bld_offer(U_STORE) or bld_offer(U_WORKSHOP) or bld_offer(U_FARM)) then NOption(409, Node063, 4);
+   if (bld_offer(U_CENTRE) or bld_offer(U_GUARD) or bld_offer(U_BAR) or bld_offer(U_MED)) then NOption(410, Node064, 4);
    if (bld_offer(U_HERO)) then NOption(411, Node065, 4);
    if (get_sfall_global_int("f2mlairs") >= 2) then NOption(452, Node066, 4);   // логово взято (f2mlair.h): военная база
    NOption(412, Node001, 4);

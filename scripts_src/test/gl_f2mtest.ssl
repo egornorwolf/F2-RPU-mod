@@ -147,7 +147,7 @@ procedure keypress_handler begin
       end
       if (get_sfall_global_int(GV_RATS) == 1) then display_msg("F2mod: крысы на грядках уже лезут.");
       else begin
-         set_sfall_global(GV_RATS_WEEK, set_weeks_now + 1);
+         set_sfall_global(GV_RATS_SEALED, 0);   // TEST: нору снова можно рыть
          call rats_spawn;
       end
    end else if (key == DIK_P) then begin
@@ -164,7 +164,6 @@ procedure keypress_handler begin
       // TEST: стая тварей у южных ворот прямо сейчас (квест 2.17)
       if (get_sfall_global_int(GV_WILD) == 1) then display_msg("F2mod: стая уже у забора.");
       else begin
-         set_sfall_global(GV_WILD_WEEK, set_weeks_now + 1);
          call wild_spawn;
       end
    end else if (key == DIK_C) then begin

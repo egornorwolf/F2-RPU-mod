@@ -169,6 +169,14 @@
 #define is_gang(c)          (obj_pid(c) == PID_RAIDER_MALE and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_F2M_GANG)
 #define boss_fight_on       (cur_map_index == MAP_F2MOD_CAMP and get_sfall_global_int(GV_BOSS) == BOSS_FIGHT)
 
+// События в лагере (Егор 2026-10-09): одно за раз, крысы и стая не чаще раза в 7 дней (по часам, стройки пропускают дни).
+// Собаки на трупы (f2mgore.h) идут поверх любых. Имена GV строками: заголовки крыс, стаи и вора подключены не везде
+#define EVT_GAP_HOURS       (168)
+#define evt_gap_ok(gv)      (get_sfall_global_int(gv) == 0 or bld_hour + 1 >= get_sfall_global_int(gv) + EVT_GAP_HOURS)
+#define evt_busy            (get_sfall_global_int("f2mratst") == 1 or get_sfall_global_int("f2mwilds") == 1 \
+                             or get_sfall_global_int("f2mthfst") == 2 or get_sfall_global_int(GV_BOSS) == BOSS_WAIT \
+                             or get_sfall_global_int(GV_BOSS) == BOSS_FIGHT or get_sfall_global_int(GV_BURY_ON))
+
 // Отладочные сообщения в окне игры (на время тестов)
 #define F2MOD_DEBUG
 

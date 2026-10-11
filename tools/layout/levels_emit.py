@@ -265,15 +265,41 @@ for lv in LEVELS:
     # у столиков бара: клетка свободна при этом уровне бара (остальное — 2-й уровень), до нее можно дойти
     cfg = dict(CFG2); cfg[17] = lv
     wb = blocked(world(cfg)) | {GRAVE}
-    rr = flood(ENTRANCE, wb | used)
+    # двери бара (декорация-портал) проходимы: иначе внутри все «недостижимо» и места уходили за северную стену (0.9.7)
+    doors = {o[1] for o in U[17]['lv'][lv] if o[0] >> 24 == 2 and mapparse.subtype(o[0]) == 0}
+    rr = flood(ENTRANCE, (wb - doors) | used)
+    outside = flood(ENTRANCE, wb | used) if doors else set()   # с закрытыми дверями: снаружи
     c = center(U[17]['lv'][lv]); a = T(round(c[0]), round(c[1]))
     got = []
     for t in sorted(ring(a, 9), key=lambda t: (tdist(t, a), xy(t))):
-        if t in rr and t not in used and t not in got and not (ring(t, 1) & set(people(CFG2).values())):
+        if t in rr and t not in outside and t not in used and t not in got and not (ring(t, 1) & set(people(CFG2).values())):
             got.append(t)
             if len(got) == 3: break
     assert len(got) == 3, ('бар', lv, got)
     used.update(got); BAR_SPOT[lv] = got
+# ---- работники (Егор 2026-10-09): днем бармен у стойки бара и медик у медицинского стола, любые взрослые жители.
+# Клетка внутри здания (двери проходимы, с закрытыми дверями снаружи не достать), ближе всего к стойке или столу
+import render as _render
+def _frm(o): return _render.fidpath(struct.unpack_from('>i', mapparse.proto(o[0]), 8)[0]).split('\\')[-1].lower()
+STAFF_SPOT = {}
+for u, key in ((17, ('bar0',)), (18, ('medtbl', 'aybed'))):
+    for lv in LEVELS:
+        cfg = dict(CFG2); cfg[u] = lv
+        wb = blocked(world(cfg)) | {GRAVE}
+        doors = {o[1] for o in U[u]['lv'][lv] if o[0] >> 24 == 2 and mapparse.subtype(o[0]) == 0}
+        rr = flood(ENTRANCE, (wb - doors) | used)
+        outside = flood(ENTRANCE, wb | used) if doors else set()
+        anc = [o[1] for o in U[u]['lv'][lv] if _frm(o).startswith(key)]
+        assert anc, (U[u]['name'], lv)
+        a = anc[0]
+        pp2 = set(people(CFG2).values()) | set(people(CFG1).values())
+        got = None
+        for t in sorted(ring(a, 6), key=lambda t: (tdist(t, a), xy(t))):
+            if t in rr and t not in outside and t not in used and t not in blk_all and not (ring(t, 1) & pp2):
+                got = t; break
+        assert got, (U[u]['name'], lv)
+        used.add(got); STAFF_SPOT[(u, lv)] = got
+print('работники', {(U[u]['name'], lv): xy(t) for (u, lv), t in STAFF_SPOT.items()})
 print('водоносы', {k: xy(v) for k, v in WELL_SPOT.items()}, 'бар', {k: [xy(t) for t in v] for k, v in BAR_SPOT.items()})
 
 # ---- брамины в загоне (2-й уровень фермы): клетки браминов из песочницы
@@ -311,7 +337,7 @@ o = ['// Уровни зданий поселения: переход здани
      f'#define LVL_BRAHMIN1   ({BRAH2[1]})',
      '',
      'procedure lvl_step(variable u, variable lv);', 'procedure lvl_spot(variable slot, variable lv, variable k);',
-     'procedure lvl_night(variable tent, variable lv, variable k);\nprocedure lvl_well(variable w);\nprocedure lvl_bar(variable lv, variable k);']
+     'procedure lvl_night(variable tent, variable lv, variable k);\nprocedure lvl_well(variable w);\nprocedure lvl_bar(variable lv, variable k);\nprocedure lvl_staff(variable u, variable lv);']
 body = []
 for u, d in U.items():
     for lv in LEVELS:
@@ -355,6 +381,8 @@ o += ['   return 0;', 'end', '', '// Водонос у колодца w (0 ст�
 for lv in LEVELS:
     ts = BAR_SPOT[lv]
     o.append(f'   if (lv == {lv}) then begin if (k == 0) then return {ts[0]}; if (k == 1) then return {ts[1]}; return {ts[2]}; end')
+o += ['   return 0;', 'end', '', '// Днем работник: бармен (бар) или медик (медпункт) у здания u уровня lv', 'procedure lvl_staff(variable u, variable lv) begin']
+for (u, lv), t in sorted(STAFF_SPOT.items()): o.append(f'   if (u == {u} and lv == {lv}) then return {t};')
 o += ['   return 0;', 'end', '', '#endif', '']
 open(os.path.join(ROOT, 'scripts_src/f2mlvl.h'), 'w', encoding='utf-8').write('\n'.join(o))
 print('f2mlvl.h', len(o), 'строк, переходов', len(STEPS))
@@ -376,35 +404,49 @@ for i, ts in NIGHT1.items():
             assert not set(ts) & blocked(d['lv'][lv]), ('ночью', i, d['name'], lv)
 print('места 1-го уровня свободны')
 
-# ---- временный стол радиста (Егор 2026-10-09): маленький стол table1 с пультом comp5 снаружи, рядом с любым
-# построенным зданием лагеря, не на людях. Для каждого здания — клетка стола (1-3 клетки от его стен на любом уровне)
-# и место радиста рядом; клетки свободны при всех уровнях всех зданий и не отрезают людей от въезда.
-# Пишет scripts_src/f2mradl.h: radio_spot(u) и radio_sam(u), 0 — места нет
-RADIO_ORDER = [13, 12, 14, 15, 17, 18, 16, 19] + list(range(4, 12)) + [0, 1, 2, 3]
+# ---- временный стол радиста (Егор 2026-10-09, 2026-10-11): стол из двух половин mdesk1 (с пультом) + mdesk2 по направлению 2
+# (вдоль x, как на одном столе; картинка pictures-radio/radio_desk.png), снаружи у построенного здания, не на людях.
+# Центр: вплотную к юго-западной (передней левой, x = 83; только стены, без бочек) стене палатки Теда, радист перед столом со стороны костра.
+# Остальные здания — запасные: стол в 1-3 клетках от стен. Клетки свободны при всех уровнях всех зданий и не отрезают
+# людей от въезда. Пишет scripts_src/f2mradl.h: radio_spot(u) (клетка mdesk1, mdesk2 — tile_num_in_direction(.., 2, 1))
+# и radio_sam(u), 0 — места нет
+RADIO_ORDER = [13, 12, 14, 15, 17, 18, 16, 19] + list(range(4, 12))   # у колодцев нельзя: там бак и насос (0.9.7)
 spots_all = set(used) | {t for v in DAY1.values() for t in v} | {t for v in NIGHT1.values() for t in v}
 pp_all = set(people(CFG1).values()) | set(people(CFG2).values()) | spots_all
 pp_all |= {T(149, 34)}   # лопата у северного частокола (CAMP_SHOVEL)
 b1 = blocked(world(CFG1)) | {GRAVE}; b2 = blocked(world(CFG2)) | {GRAVE}
 RSPOT = {}
+def desk_ok(t):
+    d = [t, tdir(t, 2, 1)]
+    if any(q in blk_all or ring(q, 1) & pp_all or q not in reach1 or q not in reach2 for q in d): return None
+    sam = sorted((n for q in d for n in ring(q, 1) - set(d) if xy(n)[0] > xy(q)[0]
+                  and n not in blk_all and n in reach1 and n in reach2 and not ring(n, 1) & (pp_all - {n})),
+                 key=lambda n: (tdist(n, TED2), xy(n)))
+    if not sam: return None
+    r1 = flood(ENTRANCE, b1 | set(d)); r2 = flood(ENTRANCE, b2 | set(d))
+    if all((ring(q, 1) - {q}) & r1 for q in people(CFG1).values()) and all((ring(q, 1) - {q}) & r2 for q in people(CFG2).values()) \
+       and all(s in r1 and s in r2 for s in spots_all if s in reach1 and s in reach2) and sam[0] in r1 and sam[0] in r2:
+        return sam[0]
+    return None
 for u in RADIO_ORDER:
     walls = set()
     for lv in LEVELS: walls |= blocked(U[u]['lv'][lv])
     if not walls: continue
-    cand, seen_l, layer = [], set(walls), set(walls)
-    for _k in range(3):   # слои 1, 2, 3 клетки от стен здания
-        layer = {tdir(t, r, 1) for t in layer for r in range(6)} - seen_l
-        seen_l |= layer; cand += sorted(layer, key=xy)
+    if u == 13:   # вплотную: слева от обеих половин (x - 1) стена палатки
+        tent = blocked([o for o in U[13]['lv'][2] if o[0] >> 24 == 3]); wx = max(xy(t)[0] for t in tent)
+        cand = sorted((T(wx + 1, y) for y in range(70, 100) if T(wx, y) in tent and T(wx, y + 1) in tent),
+                      key=lambda t: (tdist(t, FIRE2), xy(t)))
+    else:
+        cand, seen_l, layer = [], set(walls), set(walls)
+        for _k in range(3):   # слои 1, 2, 3 клетки от стен здания
+            layer = {tdir(t, r, 1) for t in layer for r in range(6)} - seen_l
+            seen_l |= layer; cand += sorted(layer, key=xy)
     for t in cand:
-        if t in blk_all or ring(t, 1) & pp_all or t not in reach1 or t not in reach2: continue
-        sam = [n for n in sorted(ring(t, 1) - {t}) if n not in blk_all and n in reach1 and n in reach2 and not ring(n, 1) & (pp_all - {n})]
-        if not sam: continue
-        r1 = flood(ENTRANCE, b1 | {t}); r2 = flood(ENTRANCE, b2 | {t})
-        if all((ring(q, 1) - {q}) & r1 for q in people(CFG1).values()) and all((ring(q, 1) - {q}) & r2 for q in people(CFG2).values()) \
-           and all(s in r1 and s in r2 for s in spots_all if s in reach1 and s in reach2) and sam[0] in r1 and sam[0] in r2:
-            RSPOT[u] = (t, sam[0]); break
+        sam = desk_ok(t)
+        if sam: RSPOT[u] = (t, sam); break
 print('стол радиста:', {U[u]['name']: xy(v[0]) for u, v in RSPOT.items()})
 assert 13 in RSPOT
-o = ['// Сгенерировано tools/layout/levels_emit.py: временный стол радиста (table1 + comp5) у построенных зданий лагеря.',
+o = ['// Сгенерировано tools/layout/levels_emit.py: временный стол радиста (mdesk1 + mdesk2) у построенных зданий лагеря.',
      '// Не править руками. Порядок выбора здания — RADIO_ORDER в levels_emit.py (центр, склад, мастерская...).',
      '#ifndef F2MRADL_H', '#define F2MRADL_H',
      f'#define RADIO_ORDER_N  ({len(RADIO_ORDER)})',
@@ -416,3 +458,48 @@ o += ['   return 0;', 'end', 'procedure radio_sam(variable u) begin']
 for u, (t, s) in RSPOT.items(): o.append(f'   if (u == {u}) then return {s};')
 o += ['   return 0;', 'end', '#endif', '']
 open(os.path.join(ROOT, 'scripts_src/f2mradl.h'), 'w', encoding='utf-8').write('\n'.join(o))
+
+# ---- невидимые блоки у костров, бака у колодца и насоса (Егор 2026-10-09: сквозь них проходили). Прототип блока
+# 33554560 (block.frm, на наших картах больше нигде): ставит и убирает f2msolid.h по месту — блок стоит, пока стоит
+# его вещь. Клетки — под нижней частью картинки (основание), как у блоков на картах F2
+import render as _rnd
+PID_SOLID = 33554560
+SOLID_KIND = {33555632: ('firepit', 0.5), 33554763: ('watrtank', 0.35), 33555336: ('pumpnec', 0.35)}
+def footprint(pid, t):
+    name, frac = SOLID_KIND[pid]
+    a, ox, oy = _rnd.frm('art\\scenery\\' + name + '.frm')
+    bx, by = _rnd.hexxy(t); out = set()
+    for q in ring(t, 6):
+        x, y = _rnd.hexxy(q); px = a.width // 2 + x - bx - ox; py = a.height - 1 + y - by - oy
+        if 0 <= px < a.width and a.height * frac <= py < a.height and a.getpixel((px, py))[3]: out.add(q)
+    return out - {t}
+SOLID = {}   # клетка блока -> [(pid, клетка вещи)]
+for f in ('f2mlay.h', 'f2mlvl.h', 'f2mtlay.h'):
+    for m in re.finditer(r'lay_\w+\((\d+), (\d+)', open(os.path.join(ROOT, 'scripts_src', f), encoding='utf-8').read()):
+        pid, t = int(m.group(1)), int(m.group(2))
+        if pid in SOLID_KIND:
+            for q in footprint(pid, t): SOLID.setdefault(q, set()).add((pid, t))
+keep = set(people(CFG1).values()) | set(people(CFG2).values()) | spots_all | {T(149, 34)}
+keep |= {t for v in RSPOT.values() for t in (v[0], tdir(v[0], 2, 1), v[1])} | set(STAFF_SPOT.values())
+for v in BAR_SPOT.values(): keep |= set(v)
+bad = sorted(xy(q) for q in SOLID if q in keep)
+for q in [q for q in SOLID if q in keep]: del SOLID[q]
+print('блоки у костров, бака и насоса:', len(SOLID), 'клеток; не ставим на местах людей:', bad)
+SB = set(SOLID)
+for tag, cfg in [('уровень 1', CFG1), ('уровень 2', CFG2)] + [('смесь', {u: random.Random(i).choice([1, 2]) for u in U}) for i in range(20)]:
+    blk = blocked(world(cfg)) | {GRAVE} | SB
+    reach = flood(ENTRANCE, blk)
+    miss = [k for k, t in people(cfg).items() if k != 'FIRE' and not ((ring(t, 1) - {t}) & reach)]
+    assert not miss, ('блоки отрезали людей', tag, miss)
+    assert RSPOT[13][1] in reach, ('блоки отрезали радиста', tag)
+o = ['// Сгенерировано tools/layout/levels_emit.py: невидимые блоки (block.frm) у костров, бака у колодца и насоса (0.9.7).',
+     '// Блок стоит, пока на месте его вещь (уровни зданий меняются). Не править руками.',
+     '#ifndef F2MSOLID_H', '#define F2MSOLID_H', f'#define PID_SOLID      ({PID_SOLID})',
+     'procedure solid_set(variable t, variable on) begin', '   variable b;', '   b := tile_contains_pid_obj(t, 0, PID_SOLID);',
+     '   if (on and not b) then create_object(PID_SOLID, t, 0);', '   else if (not on and b) then destroy_object(b);', 'end',
+     'procedure solid_sync begin']
+for q in sorted(SOLID):
+    cond = ' or '.join(f'tile_contains_pid_obj({t}, 0, {pid})' for pid, t in sorted(SOLID[q]))
+    o.append(f'   call solid_set({q}, {cond});')
+o += ['end', '#endif', '']
+open(os.path.join(ROOT, 'scripts_src/f2msolid.h'), 'w', encoding='utf-8').write('\n'.join(o))

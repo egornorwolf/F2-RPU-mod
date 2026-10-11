@@ -37,6 +37,7 @@ procedure Node999;
 
 // LVAR 0: 1 = герой уже подошел вплотную (вор пойман и говорит)
 #define LVAR_CAUGHT     (0)
+variable noticed_roll;   // бросок «заметил героя» уже был (не сохраняется: после загрузки бросок заново)
 
 variable fight;
 variable leave;
@@ -71,9 +72,17 @@ procedure critter_p_proc begin
    end
    if (dude_is_sneaking and has_skill(dude_obj, SKILL_SNEAK) >= THIEF_SNEAK) then return;
    if (d <= 2) then return;
-   if (d <= 5 and obj_can_see_obj(self_obj, dude_obj)) then begin
-      floater(102);
-      call thief_clear;
+   // 0.9.7: один бросок, когда герой впервые подошел на 5 клеток: шанс остаться незамеченным — Скрытность
+   // (в режиме скрытности), без нее половина Скрытности; Ловкость 8+ — еще 20. Раньше убегал всегда
+   if (d <= 5 and not noticed_roll and obj_can_see_obj(self_obj, dude_obj)) then begin
+      noticed_roll := 1;
+      d := has_skill(dude_obj, SKILL_SNEAK);
+      if (not dude_is_sneaking) then d := d / 2;
+      if (get_critter_stat(dude_obj, STAT_ag) >= 8) then d += 20;
+      if (random(1, 100) > d) then begin
+         floater(102);
+         call thief_clear;
+      end
    end
 end
 

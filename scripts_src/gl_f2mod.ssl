@@ -35,7 +35,7 @@
 #include "f2mthief.h"
 #include "f2mremn.h"
 
-#define F2MOD_VERSION "0.9.6"
+#define F2MOD_VERSION "0.9.7"
 
 procedure start;
 procedure encounter_handler;
@@ -48,6 +48,7 @@ procedure boss_search;
 procedure step_toward(variable a, variable b, variable s);
 procedure sam_arrive;
 procedure farm_arrive;
+procedure shovel_tick;
 procedure lair_cellar_look;
 
 variable lair_hint;
@@ -74,6 +75,7 @@ procedure start begin
       call lair_cellar_look;
       call farm_tick;
       call farm_arrive;
+      call shovel_tick;
       call wild_tick;
       call thief_tick;
    end
@@ -88,6 +90,8 @@ procedure raid_tick begin
    end
    call boss_search;
    if (not boss_due or combat_is_initialized or (get_game_mode bwand 0x3FFFFD) != 0) then return;
+   // одно событие за раз (0.9.7): стая, крысы или вор на карте — главарь подождет
+   if (get_sfall_global_int(GV_WILD) == 1 or get_sfall_global_int(GV_RATS) == 1 or get_sfall_global_int(GV_THIEF) == THIEF_HERE) then return;
    gfade_out(1);
    call boss_put;
    gfade_in(1);
@@ -149,6 +153,17 @@ procedure farm_arrive begin
       set_sfall_global(GV_FARM_NEWS, 0);
       display_msg(farm_msg(205));
    end
+end
+
+// Лопата у северного частокола (f2mcamp shovel_put): нет на месте и у героя — кладем и при герое в лагере
+procedure shovel_tick begin
+   variable it;
+   if (cur_map_index != MAP_F2MOD_CAMP or get_sfall_global_int(GV_CARAVAN) != CARAVAN_DONE or combat_is_initialized) then return;
+   if (obj_carrying_pid_obj(dude_obj, PID_SHOVEL)) then return;
+   foreach (it in list_as_array(LIST_GROUNDITEMS)) begin
+      if (obj_pid(it) == PID_SHOVEL) then return;   // лежит где-то на карте (герой бросил) — вторую не кладем
+   end
+   create_object(PID_SHOVEL, CAMP_SHOVEL, 0);
 end
 
 procedure step_toward(variable a, variable b, variable s) begin
@@ -225,14 +240,27 @@ procedure combatdamage_handler begin
    hits[target] := (target != get_object_data(args[12], C_ATTACK_MAIN_TARGET));
 end
 
-// Взрыв в лагере (граната, динамит): рядом с норой крыс (2 клетки) — нору завалило, разберет farm_tick (f2mfarm.h).
+// Взрыв в лагере (граната, кроме ЭМИ; динамит, пластид): рядом с норой крыс (2 клетки) — нору завалило, разберет farm_tick
+// (f2mfarm.h) сразу после хука, и в бою тоже. Брошенная граната в момент хука еще в руке нападающего: ЭМИ-граната нору не берет.
 // Возврат не меняем: урон идет как обычно
 procedure explosion_handler begin
-   variable ev, tile, h;
+   variable ev, att, tile, h, r, l;
    ev := get_sfall_arg;
-   tile := get_sfall_arg;   // нападающий
+   att := get_sfall_arg;    // нападающий
    tile := get_sfall_arg;   // клетка взрыва
    if (ev != 0 or cur_map_index != MAP_F2MOD_CAMP or get_sfall_global_int(GV_RATS_BOOM)) then return;
    h := rats_hole_obj;
-   if (h and tile_distance(tile_num(h), tile) <= 2) then set_sfall_global(GV_RATS_BOOM, 1);
+   if (not h or tile_distance(tile_num(h), tile) > 2) then return;
+   h := get_sfall_arg;   // проверяемая клетка
+   h := get_sfall_arg;   // объект на ней
+   h := get_sfall_arg;   // цель
+   if (get_sfall_arg and att and obj_type(att) == 1) then begin   // бросок: какая граната в руках
+      r := critter_inven_obj(att, INVEN_TYPE_RIGHT_HAND);
+      l := critter_inven_obj(att, INVEN_TYPE_LEFT_HAND);
+      if (r) then r := obj_pid(r);
+      if (l) then l := obj_pid(l);
+      if ((r == PID_PULSE_GRENADE or l == PID_PULSE_GRENADE) and r != PID_FRAG_GRENADE and l != PID_FRAG_GRENADE
+          and r != PID_PLASMA_GRENADE and l != PID_PLASMA_GRENADE) then return;
+   end
+   set_sfall_global(GV_RATS_BOOM, 1);
 end

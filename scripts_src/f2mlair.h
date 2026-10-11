@@ -50,7 +50,7 @@
 #define LAIR_SPEECH_FREE (100)
 #define LAIR_BRIBE      (1000)
 #define LAIR_XP         (5000)
-#define LAIR_TRACK_HOURS (72)   // банда ушла от ворот: через трое суток Рик знает, где логово
+#define LAIR_TRACK_HOURS (12)   // банда ушла от ворот: через 12 часов Рик знает, где логово (Егор 2026-10-11, было трое суток)
 
 #define PID_LAIR_WATER  (33554983)  // Barrel (бочка, одна клетка)
 #define PID_LAIR_CELLAR (33555705)  // Pile of Rocks (камни над лазом в погреб, пока лаз не найден)
@@ -95,7 +95,7 @@ procedure lair_tick begin
       call lair_reveal(200);
       return;
    end
-   // Отказал Кейну у ворот: банда ушла, через трое суток охрана выследила, откуда они ходят
+   // Отказал Кейну у ворот: банда ушла, через 12 часов охрана выследила (или герой сам нашел, пройдя на северо-восток: gl_f2mwm.ssl), откуда они ходят
    b := get_sfall_global_int(GV_BOSS);
    if (b != BOSS_LEFT and b != BOSS_BEATEN) then return;
    if (not get_sfall_global_int(GV_LAIR_TRACK)) then begin

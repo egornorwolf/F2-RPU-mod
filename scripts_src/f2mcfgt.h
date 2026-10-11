@@ -8,7 +8,8 @@
 #define CFGT_BEAST_SEE      (15)
 #define cfgt_beast(c)       (cur_map_index == MAP_F2MOD_CAMP and \
                              ((get_sfall_global_int("f2mwilds") == 1 and (obj_pid(c) == PID_CENTAUR or obj_pid(c) == PID_FLOATER)) \
-                              or (get_sfall_global_int("f2mratst") == 1 and obj_pid(c) == 16777328)))
+                              or (get_sfall_global_int("f2mratst") == 1 and obj_pid(c) == 16777328) \
+                              or (combat_is_initialized and obj_pid(c) == 16777298)))   // собаки у тел: охрана бьет их, когда начался бой
 
 procedure cv_nearest_enemy;
 procedure cv_fight;

@@ -15,6 +15,7 @@ procedure lvl_spot(variable slot, variable lv, variable k);
 procedure lvl_night(variable tent, variable lv, variable k);
 procedure lvl_well(variable w);
 procedure lvl_bar(variable lv, variable k);
+procedure lvl_staff(variable u, variable lv);
 procedure lvl_s0_2;
 procedure lvl_s1_2;
 procedure lvl_s2_2;
@@ -2196,7 +2197,16 @@ end
 // Вечером в баре: место k = 0-2 у бара уровня lv
 procedure lvl_bar(variable lv, variable k) begin
    if (lv == 1) then begin if (k == 0) then return 22714; if (k == 1) then return 22715; return 22716; end
-   if (lv == 2) then begin if (k == 0) then return 20914; if (k == 1) then return 20915; return 20916; end
+   if (lv == 2) then begin if (k == 0) then return 22514; if (k == 1) then return 22515; return 22915; end
+   return 0;
+end
+
+// Днем работник: бармен (бар) или медик (медпункт) у здания u уровня lv
+procedure lvl_staff(variable u, variable lv) begin
+   if (u == 17 and lv == 1) then return 23114;
+   if (u == 17 and lv == 2) then return 21707;
+   if (u == 18 and lv == 1) then return 26517;
+   if (u == 18 and lv == 2) then return 27119;
    return 0;
 end
 

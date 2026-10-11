@@ -1,6 +1,6 @@
 // Крысы на огородах (квест 2.2), нора под забором и стая тварей у ворот (квест 2.17).
-// Крыса: ночью идет на героя и на жителей. Нора: взрывчатка (динамит, граната, коктейль Молотова)
-// закрывает вопрос без боя — крысы уходят, урожай почти цел.
+// Крыса: ночью идет на героя и на жителей. Нора остается и после крыс; закрыть ее: взрывчатка, граната (кроме ЭМИ),
+// кувалда, монтировка, Сила 8+, Ремонт 60 — крысы уходят и больше не приходят.
 #define SCRIPT_REALNAME "f2mrat"
 #include "define.h"
 #include "f2mod.h"
@@ -29,6 +29,8 @@ procedure use_obj_on_p_proc;
 procedure use_skill_on_p_proc;
 
 #define is_hole         (obj_pid(self_obj) == PID_RAT_HOLE)
+#define is_dog          (obj_pid(self_obj) == PID_WILD_DOG)   // собаки у тел (f2mgore.h, 0.9.7)
+#define DOG_BITE_DIST   (4)
 
 procedure start begin
 end
@@ -37,6 +39,7 @@ procedure look_at_p_proc begin
    script_overrides;
    if (is_hole) then display_msg(mstr(100));
    else if (wild_is(self_obj)) then display_msg(mstr(104));
+   else if (is_dog) then display_msg(mstr(105));
    else display_msg(mstr(101));
 end
 
@@ -44,30 +47,33 @@ procedure description_p_proc begin
    call look_at_p_proc;
 end
 
+// Нору руками (Егор 2026-10-11): Сила 8+ — обрушить свод, иначе подсказка, чем ее закрыть
 procedure use_p_proc begin
    if (not is_hole) then return;
    script_overrides;
-   display_msg(mstr(102));
+   if (get_critter_stat(dude_obj, STAT_st) >= RATS_SEAL_ST) then call rats_seal(4);
+   else display_msg(farm_msg(218));
 end
 
-// Нору закрывают (Егор 2026-10-09): взрывчатка в нору, кувалда или монтировка, Ремонт 60 (rats_seal в f2mfarm.h).
-// Граната, брошенная к норе, ловится хуком взрыва в gl_f2mod.ssl
+// Нору закрывают (Егор 2026-10-09, 2026-10-11): взрывчатка или граната (кроме ЭМИ) в нору, кувалда или монтировка,
+// Ремонт 60, Сила 8+ (rats_seal в f2mfarm.h). Брошенная к норе граната ловится хуком взрыва в gl_f2mod.ssl.
+// Нора остается и после крыс, пока ее не закроют
 procedure use_obj_on_p_proc begin
    variable it;
    if (not is_hole) then return;
    it := obj_pid(obj_being_used_with);
-   if (it == PID_DYNAMITE or it == PID_FRAG_GRENADE or it == PID_MOLOTOV_COCKTAIL) then begin
+   if (it == PID_DYNAMITE or it == PID_PLASTIC_EXPLOSIVES or it == PID_FRAG_GRENADE or it == PID_PLASMA_GRENADE
+       or it == PID_MOLOTOV_COCKTAIL) then begin
       script_overrides;
-      if (get_sfall_global_int(GV_RATS) != 1) then begin
-         display_msg(mstr(102));
-         return;
-      end
       rm_obj_from_inven(dude_obj, obj_being_used_with);
       destroy_object(obj_being_used_with);
       call rats_seal(1);
    end else if (it == PID_SLEDGEHAMMER or it == PID_SUPER_SLEDGE or it == PID_CROWBAR) then begin
       script_overrides;
       call rats_seal(3);
+   end else if (it == PID_PULSE_GRENADE) then begin
+      script_overrides;
+      display_msg(farm_msg(219));
    end
 end
 
@@ -80,12 +86,16 @@ end
 
 procedure critter_p_proc begin
    if (is_hole or combat_is_initialized) then return;
+   if (is_dog) then begin   // жрут тела; подошел близко — бросаются
+      if (self_can_see_dude and tile_distance_objs(self_obj, dude_obj) <= DOG_BITE_DIST) then attack(dude_obj);
+      return;
+   end
    if (self_can_see_dude and tile_distance_objs(self_obj, dude_obj) <= 10) then attack(dude_obj);
 end
 
 // Последняя тварь пала: огород отбит (2.2) или стая у забора перебита (2.17)
 procedure destroy_p_proc begin
-   if (is_hole) then return;
+   if (is_hole or is_dog) then return;
    if (wild_is(self_obj)) then begin
       if (wild_alive_but(self_obj) == 0) then call wild_win;   // было «<= 1»: победа приходила, пока последний зверь жив
    end else if (rats_alive_but(self_obj) == 0) then call rats_win(RATS_XP);

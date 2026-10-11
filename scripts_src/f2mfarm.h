@@ -9,10 +9,10 @@
 #define GV_FARM         "f2mfarst"  // 0 нет, 1 живет в лагере, 9 погиб
 #define GV_FARM_NEWS    "f2mfarnw"  // 1 = сказать герою при входе, что пришел старший фермер
 #define GV_RATS         "f2mratst"  // 0 тихо, 1 крысы на огородах, 2 отбиты, 3 упущены
-#define GV_RATS_WEEK    "f2mratwk"  // неделя, в которую крысы уже приходили (+1)
+#define GV_RATS_LAST    "f2mratlh"  // час (+1), когда крысы приходили в последний раз: следующий раз не раньше чем через EVT_GAP_HOURS
 #define GV_RATS_HOUR    "f2mrathr"  // до этого часа надо разобраться (утро)
-#define GV_RATS_AGAIN   "f2mratag"  // проспали крыс: с этого часа (+1) они вернутся в первую же ночь, когда герой в лагере
-#define GV_RATS_BOOM    "f2mratbm"  // 1 = у норы рванула граната или динамит (HOOK_ONEXPLOSION в gl_f2mod), разберет farm_tick
+#define GV_RATS_SEALED  "f2mratsl"  // 1 = нору завалили или заделали: крысы больше не приходят
+#define GV_RATS_BOOM    "f2mratbm"  // 1 = у норы рванула граната (не ЭМИ) или взрывчатка (HOOK_ONEXPLOSION в gl_f2mod), разберет farm_tick
 #define GV_BRAH         "f2mbrast"  // брамин: 0 тихо, 1 пропал, 2 нашли, 3 не нашли
 #define GV_BRAH_WEEK    "f2mbrawk"  // неделя, в которую брамин уже пропадал (+1)
 
@@ -28,7 +28,9 @@
 #define RATS_LOSS_GUARD (10)        // % урожая: отбилась охрана (двое и больше)
 #define RATS_LOSS_BLAST (5)         // % урожая: нору взорвали
 #define RATS_MORALE     (3)
-#define RATS_SEAL_REPAIR (60)       // Ремонт: заделать подкоп (иначе кувалда, монтировка, взрывчатка)         // дух: минус, если урожай потрепали
+#define RATS_SEAL_REPAIR (60)       // Ремонт: заделать подкоп (иначе кувалда, монтировка, взрывчатка, Сила 8+)
+#define RATS_SEAL_ST    (8)         // Сила: обрушить свод норы руками
+#define RATS_SEAL_XP    (50)        // нору закрыли, когда крыс нет
 #define BRAH_OUTDOOR    (50)        // Скиталец: найти по следам наверняка
 #define BRAH_CHANCE     (50)        // без навыка и с охраной — половина на половину
 #define BRAH_PAY        (50)        // пастуху
@@ -121,35 +123,36 @@ procedure rats_hole_obj begin
    return 0;
 end
 
-// Крысы отбиты, ушли или нору заделали: норы больше нет (0.9.6, Егор: «дыра без крыс»)
+// Нору убираем только когда ее закрыли (rats_seal): после крыс она остается (Егор 2026-10-11)
 procedure rats_hole_clear begin
    variable h;
    h := rats_hole_obj;
    if (h) then destroy_object(h);
 end
 
-// Нору закрыли (Егор 2026-10-09): how 0 — взрыв рядом (граната, динамит), 1 — взрывчатка в нору,
-// 2 — Ремонт 60, 3 — кувалда или монтировка. Крысы еще лезут — они уходят, урожай почти цел
+// Нору закрыли (Егор 2026-10-09, 2026-10-11): how 0 — взрыв рядом (граната, кроме ЭМИ; динамит, пластид), 1 — взрывчатка в нору,
+// 2 — Ремонт 60, 3 — кувалда или монтировка, 4 — Сила 8+. Крысы больше не приходят.
+// Нора — декорация: ее убираем и в бою, крысы на грядках дерутся дальше (существ посреди боя не трогаем).
+// Крысы лезут, а боя нет — уходят в пустошь, урожай почти цел
 procedure rats_seal(variable how) begin
-   // в бою крыс не убираем (движок падает, если существо исчезает посреди боя): разберет farm_tick после боя
-   if (combat_is_initialized) then begin
-      set_sfall_global(GV_RATS_BOOM, 1);
-      return;
-   end
-   if (get_sfall_global_int(GV_RATS) == 1) then begin
+   if (not rats_hole_obj) then return;
+   set_sfall_global(GV_RATS_SEALED, 1);
+   call rats_hole_clear;
+   if (get_sfall_global_int(GV_RATS) == 1 and combat_is_initialized) then begin
+      display_msg(farm_msg(211));
+   end else if (get_sfall_global_int(GV_RATS) == 1) then begin
       if (how) then begin
          gfade_out(1);
          game_time_advance(ONE_GAME_HOUR);
       end
       call rats_win(RATS_BLAST_XP);
       call farm_loss(RATS_LOSS_BLAST);
-      call rats_hole_clear;
       if (how) then gfade_in(1);
-      if (how >= 2) then display_msg(farm_msg(205 + how));   // 207 Ремонт, 208 кувалда или монтировка
+      if (how >= 2) then display_msg(farm_msg(205 + how));   // 207 Ремонт, 208 кувалда или монтировка, 209 Сила
       else display_msg(farm_msg(206));
    end else begin
-      call rats_hole_clear;
-      display_msg(farm_msg(209));
+      give_exp_points(RATS_SEAL_XP);
+      display_msg(farm_msg(212 + how) + RATS_SEAL_XP + farm_msg(202));
    end
 end
 
@@ -157,10 +160,10 @@ end
 procedure rats_spawn begin
    variable i := 0, t, g;
    set_sfall_global(GV_RATS, 1);
-   set_sfall_global(GV_RATS_AGAIN, 0);
+   set_sfall_global(GV_RATS_LAST, bld_hour + 1);
    set_sfall_global(GV_RATS_HOUR, bld_hour + RATS_HOURS);
    t := rats_hole;
-   if (not tile_contains_pid_obj(t, 0, PID_RAT_HOLE)) then create_object_sid(PID_RAT_HOLE, t, 0, SCRIPT_F2MRAT);
+   if (not rats_hole_obj) then create_object_sid(PID_RAT_HOLE, t, 0, SCRIPT_F2MRAT);   // нора с прошлого раза — та же
    g := tile_num_in_direction(farm_spot, 0, 2);
    while (i < FARM_RATS) do begin
       create_object_sid(PID_RAT_PEST, cv_free_tile(tile_num_in_direction(g, i % 6, 1 + i / 3)), 0, SCRIPT_F2MRAT);
@@ -180,7 +183,6 @@ procedure rats_win(variable xp) begin
    give_exp_points(xp);
    set_sfall_global(GV_SET_MORALE, get_sfall_global_int(GV_SET_MORALE) + RATS_MORALE);
    display_msg(farm_msg(201) + xp + farm_msg(202));
-   if (xp == RATS_XP) then call rats_hole_clear;   // отбились: крысы больше не лезут, нору засыпали
 end
 
 // Из глобального скрипта: приход фермера, ночные крысы и утренний итог, пропажа брамина
@@ -192,14 +194,12 @@ procedure farm_tick begin
       set_sfall_global(GV_FARM, 1);
       set_sfall_global(GV_FARM_NEWS, 1);
    end
-   // Граната или динамит рванули у норы (HOOK_ONEXPLOSION): нора завалена
-   if (get_sfall_global_int(GV_RATS_BOOM) and not combat_is_initialized) then begin
+   // Граната или взрывчатка рванули у норы (HOOK_ONEXPLOSION): нора завалена сразу, и в бою тоже (0.9.7)
+   if (get_sfall_global_int(GV_RATS_BOOM)) then begin
       set_sfall_global(GV_RATS_BOOM, 0);
-      if (cur_map_index == MAP_F2MOD_CAMP and rats_hole_obj) then call rats_seal(0);
+      if (cur_map_index == MAP_F2MOD_CAMP) then call rats_seal(0);
    end
-   // Нора осталась без крыс (сохранения до 0.9.6): убираем
-   if (get_sfall_global_int(GV_RATS) != 1 and cur_map_index == MAP_F2MOD_CAMP and rats_hole_obj) then call rats_hole_clear;
-   // 2.2 Крысы в огороде: ночью, не чаще раза в неделю, если герой в лагере
+   // 2.2 Крысы в огороде: ночью, если герой в лагере; не чаще раза в 7 дней (по часам) и не во время другого события
    if (get_sfall_global_int(GV_RATS) == 1) then begin
       if (rats_alive == 0) then call rats_win(RATS_XP);
       else if (combat_is_initialized) then begin end   // идет бой: итог после него
@@ -211,20 +211,15 @@ procedure farm_tick begin
          else begin
             n := farm_loss(RATS_LOSS_NONE);
             set_sfall_global(GV_SET_MORALE, get_sfall_global_int(GV_SET_MORALE) - RATS_MORALE);
-            // проспали (Егор 2026-10-09): крысы вернутся следующей ночью, когда герой будет в лагере
-            set_sfall_global(GV_RATS_AGAIN, bld_hour + RATS_HOURS + 1);
          end
          foreach (n in list_as_array(LIST_CRITTERS)) begin
             if (obj_pid(n) == PID_RAT_PEST and not is_critter_dead(n)) then destroy_object(n);
          end
-         if (cur_map_index == MAP_F2MOD_CAMP) then call rats_hole_clear;
          display_msg(farm_msg(203));
       end
-   end else if (farm_here and bld_shown(U_GARDEN) >= 1 and cur_map_index == MAP_F2MOD_CAMP
-                and camp_night and not combat_is_initialized and (get_game_mode bwand 0x3FFFFD) == 0
-                and ((get_sfall_global_int(GV_RATS_AGAIN) and bld_hour + 1 >= get_sfall_global_int(GV_RATS_AGAIN))
-                     or (get_sfall_global_int(GV_RATS_WEEK) != set_weeks_now + 1 and random(1, 100) <= 20))) then begin
-      set_sfall_global(GV_RATS_WEEK, set_weeks_now + 1);
+   end else if (farm_here and bld_shown(U_GARDEN) >= 1 and cur_map_index == MAP_F2MOD_CAMP and not get_sfall_global_int(GV_RATS_SEALED)
+                and camp_night and not combat_is_initialized and (get_game_mode bwand 0x3FFFFD) == 0 and not evt_busy
+                and evt_gap_ok(GV_RATS_LAST) and random(1, 100) <= 20) then begin
       call rats_spawn;
    end
    // 2.3 Пропавший брамин: утром, не чаще раза в неделю, если брамины в лагере есть

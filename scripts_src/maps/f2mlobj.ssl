@@ -74,16 +74,15 @@ procedure use_p_proc begin
    else call look_at_p_proc;
 end
 
-// Вниз по лестнице: погреб — отдельная карта (f2mcell)
+// Вниз по лестнице: погреб — отдельная карта (f2mcell). Без затемнения: gfade_out перед load_map оставлял
+// экран черным на новой карте (0.8.3-0.9.6, Егор: видна только подсветка предметов)
 procedure cell_down begin
-   gfade_out(1);
    load_map(MAP_F2MOD_CELL, 0);
 end
 
 // Наверх, в карьер: карта логова поставит героя у лаза (GV_CELL_BACK)
 procedure cell_up begin
    set_sfall_global(GV_CELL_BACK, 1);
-   gfade_out(1);
    load_map(MAP_F2MOD_LAIR, 0);
 end
 

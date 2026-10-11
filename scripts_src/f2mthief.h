@@ -46,12 +46,12 @@ procedure thief_obj begin
    return 0;
 end
 
-// Ходит у жилья: берем место у одной из палаток
+// Шарит в жилье: место у кроватей первого дома 2-го уровня (до 0.9.7 брал место чужого дома: номер дома + 3)
 procedure thief_spot begin
    variable s := 0, u;
    while (s < 8) do begin
       u := bld_house_unit(s);
-      if (bld_shown(u) >= 2) then return lvl_spot(s + 3, bld_shown(u), 1);
+      if (bld_shown(u) >= 2) then return lvl_night(s, bld_shown(u), 2);
       s += 1;
    end
    return tile_num_in_direction(camp_fire, 3, 4);
@@ -106,9 +106,11 @@ procedure thief_tick begin
       if (thief_obj) then call thief_clear;
       return;
    end
+   // Ночью выходит в первый же спокойный миг (0.9.7: было 35% за проверку, а при быстрой стройке ночи проходили
+   // в диалоге Хэнка и во сне, и вор не появлялся вовсе); не во время другого события
    if (camp_night) then begin
       if (get_sfall_global_int(GV_THIEF) == THIEF_STEALS and (get_game_mode bwand 0x3FFFFD) == 0
-          and bld_hour >= get_sfall_global_int(GV_THIEF_HOUR) and random(1, 100) <= 35) then
+          and bld_hour >= get_sfall_global_int(GV_THIEF_HOUR) and not evt_busy) then
          call thief_put;
    end else if (get_sfall_global_int(GV_THIEF) == THIEF_HERE) then
       call thief_clear;

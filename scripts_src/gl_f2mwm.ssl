@@ -1,0 +1,28 @@
+// Глобальный скрипт F2mod на карте мира (0.9.7, Егор 2026-10-09): банда ушла от ворот на северо-восток
+// (Кейн ушел или убит, или герой прочитал следы у старосты) — герой, пройдя в ту сторону по карте мира,
+// сам находит карьер (логово налетчиков). Тип 2: работает только на карте мира. Остальное — gl_f2mod.ssl
+#define SCRIPT_REALNAME "gl_f2mwm"
+#include "sfall.h"
+#include "define.h"
+#include "command.h"
+#include "f2mod.h"
+
+#define LAIR_FIND_DIST  (25)   // пикселей карты мира от карьера (лагерь в 36)
+
+procedure start begin
+   variable b, dx, dy;
+   if (game_loaded) then begin
+      set_global_script_type(2);
+      set_global_script_repeat(30);
+      return;
+   end
+   if (get_sfall_global_int("f2mlairs")) then return;   // логово уже известно или взято
+   b := get_sfall_global_int(GV_BOSS);
+   if (get_sfall_global_int(GV_RAID_TRACK) != 1 and b != BOSS_LEFT and b != BOSS_BEATEN) then return;
+   dx := get_world_map_x_pos - 830;   // LAIR_WM_X, LAIR_WM_Y в f2mlair.h
+   dy := get_world_map_y_pos - 700;
+   if (dx * dx + dy * dy > LAIR_FIND_DIST * LAIR_FIND_DIST) then return;
+   set_sfall_global("f2mlairs", 1);
+   mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_LAIR, MARK_STATE_KNOWN);
+   display_msg(message_str(SCRIPT_F2MLAIR, 203));
+end

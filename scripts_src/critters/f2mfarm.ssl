@@ -121,8 +121,13 @@ procedure Node001 begin
 end
 
 // Кто ты и откуда
+// Повторный «кто ты» (Егор 2026-10-11): обидный ответ, как у всех в поселении
 procedure Node010 begin
-   Reply(130);
+   if (get_sfall_global_int("f2mwhodv")) then Reply(random(132, 134));
+   else begin
+      set_sfall_global("f2mwhodv", 1);
+      Reply(130);
+   end
    NOption(131, Node001, 4);
    NLowOption(127, Node999);
 end
