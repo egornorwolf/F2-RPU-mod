@@ -130,8 +130,10 @@ procedure sam_enter begin
    variable st, nw;
    st := get_sfall_global_int(GV_SAM);
    nw := get_sfall_global_int(GV_SAM_NEWS);
-   if (st >= SAM_HERE and st <= SAM_RADIO) then call sam_put;
+   // сначала стол: он же убирает старый стол без палатки и меняет место радиста (sam_home)
    call sam_radio_decor;
+   st := get_sfall_global_int(GV_SAM);
+   if (st >= SAM_HERE and st <= SAM_RADIO) then call sam_put;
    if (nw == 1) then display_msg(message_str(SCRIPT_F2MRADIO, 304));
    else if (nw == 2) then display_msg(message_str(SCRIPT_F2MRADIO, 305));
    if (nw == 1 or (nw == 2 and st != SAM_NONE)) then set_sfall_global(GV_SAM_NEWS, 0);

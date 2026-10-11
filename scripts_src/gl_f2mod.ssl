@@ -35,7 +35,7 @@
 #include "f2mthief.h"
 #include "f2mremn.h"
 
-#define F2MOD_VERSION "0.9.7"
+#define F2MOD_VERSION "0.9.8"
 
 procedure start;
 procedure encounter_handler;

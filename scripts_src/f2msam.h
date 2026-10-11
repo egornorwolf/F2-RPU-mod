@@ -1,6 +1,6 @@
 // Радист Сэм Мортон (0.7.1, карточка в docs/npc-cards.md, квест 1.3: «на следующий день после набега приходит радист»).
 // Приходит через сутки после первого набега, если в домах есть свободное место (палатка 2, шатер 4); нет места — ждет.
-// Ставит радио (стол с пультом снаружи у палатки Теда, 1 день, бесплатно; места нет — просит место), продает герою рацию за 50. С рацией в рюкзаке
+// Ставит радио (стол с пультом снаружи у палатки Теда, 1 день, бесплатно; палатки нет — просит палатку), продает герою рацию за 50. С рацией в рюкзаке
 // вдали от лагеря герой слышит, что еды или воды до конца недели не хватит (сразу после недельной проверки, за неделю).
 // Подключать после define.h, command.h, sfall.h, f2mod.h, f2mcv.h, f2mcamp.h и f2mset.h (в нем f2mbld.h).
 #ifndef F2MSAM_H
@@ -25,7 +25,8 @@
 #define SAM_HANDS_SKILL (50)        // Ремонт или Наука: собрать рацию самому, бесплатно
 #define SAM_HANDS_XP    (50)
 // Временный стол (Егор 2026-10-09, 2026-10-11): стол из двух половин mdesk1 (с пультом) + mdesk2, снаружи вплотную к
-// юго-западной стене палатки Теда (центр); у других зданий — запасные места. Места считает tools/layout/levels_emit.py (f2mradl.h).
+// юго-западной стене палатки Теда (центр 2-го уровня и выше), других мест нет (Егор 2026-10-11). Места у других зданий в
+// f2mradl.h (tools/layout/levels_emit.py) нужны только чтобы убрать старые столы из сохранений.
 // До 0.9.7 — маленький стол table1 с пультом comp5, до 0.9.6 — большой стол ltable2 у старосты
 #define PID_RDESK1      (33554836)  // mdesk1: половина стола с пультом
 #define PID_RDESK2      (33554837)  // mdesk2: вторая половина (на клетку по направлению 2)
@@ -82,15 +83,10 @@ procedure sam_put begin
    anim(obj, ANIMATE_ROTATION, 2);
 end
 
-// Здание, у которого встанет стол: стол уже стоит — там же; иначе первое построенное по порядку из f2mradl.h. -1 — места нет
+// Здание, у которого встанет стол (Егор 2026-10-11): только палатка или шатер старосты (центр 2-го уровня и выше),
+// стол к ее юго-западной стенке. Палатки нет — -1: радист ставить не берется и просит палатку (реплика 135)
 procedure sam_table_unit begin
-   variable i := 0, u;
-   if (get_sfall_global_int(GV_SAM_TABLE)) then return get_sfall_global_int(GV_SAM_TABLE) - 1;
-   while (i < RADIO_ORDER_N) do begin
-      u := radio_unit(i);
-      if (bld_shown(u) >= 1 and radio_spot(u)) then return u;
-      i += 1;
-   end
+   if (bld_shown(U_CENTRE) >= 2 and radio_spot(U_CENTRE)) then return U_CENTRE;
    return -1;
 end
 
@@ -155,6 +151,16 @@ procedure sam_radio_decor begin
          obj := tile_contains_pid_obj(t, 0, PID_RCOMP);
          if (obj) then destroy_object(obj);
       end
+   end
+   // сохранения 0.9.7 и раньше: стол стоит без палатки старосты (у костра) или у другого здания — убираем.
+   // Радист еще ставил радио — снова ждет и просит палатку; радио уже работало — работает, стол встанет с палаткой
+   u := get_sfall_global_int(GV_SAM_TABLE) - 1;
+   if (u >= 0 and u != sam_table_unit) then begin
+      if (radio_spot(u)) then call sam_desk_kill(radio_spot(u));
+      set_sfall_global(GV_SAM_TABLE, 0);
+      if (get_sfall_global_int(GV_SAM) == SAM_BUILDING) then set_sfall_global(GV_SAM, SAM_HERE);
+      obj := sam_obj;
+      if (obj) then move_to(obj, BLD_SAM, 0);
    end
    if (get_sfall_global_int(GV_SAM) < SAM_BUILDING or get_sfall_global_int(GV_SAM) == SAM_DEAD) then return;
    u := sam_table_unit;

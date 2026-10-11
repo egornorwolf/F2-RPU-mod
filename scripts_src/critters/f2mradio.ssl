@@ -139,7 +139,7 @@ procedure Node010 begin
    NLowOption(118, Node999);
 end
 
-// Поставить радио: снаружи, у построенного здания (f2mradl.h). Места нет — радист просит место
+// Поставить радио: снаружи, у палатки старосты (f2mradl.h). Палатки нет — радист просит палатку
 procedure Node020 begin
    if (sam_table_unit < 0) then begin
       Reply(135);
