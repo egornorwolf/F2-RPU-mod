@@ -123,6 +123,7 @@ end
 procedure timed_event_p_proc begin
    if (fixed_param != 1 or get_sfall_global_int(GV_BOSS) != BOSS_WAIT) then return;
    set_sfall_global(GV_BOSS, BOSS_LEFT);
+   set_sfall_global(GV_BOSS_LEFT_H, game_time / ONE_GAME_HOUR + 1);   // через неделю повторный налет (f2mraid.h)
    gfade_out(1);
    call gang_remove_but(self_obj);
    set_obj_visibility(self_obj, 1);

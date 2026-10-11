@@ -37,7 +37,10 @@ end
 
 procedure look_at_p_proc begin
    script_overrides;
-   if (is_hole) then display_msg(mstr(100));
+   if (is_hole) then begin   // и как ее закрыть (Егор 2026-10-11)
+      display_msg(mstr(100));
+      display_msg(farm_msg(220));
+   end
    else if (wild_is(self_obj)) then display_msg(mstr(104));
    else if (is_dog) then display_msg(mstr(105));
    else display_msg(mstr(101));
@@ -91,6 +94,9 @@ procedure critter_p_proc begin
       return;
    end
    if (self_can_see_dude and tile_distance_objs(self_obj, dude_obj) <= 10) then attack(dude_obj);
+   // Крысы не стоят у норы, а шарят по грядкам (Егор 2026-10-11: их не было видно)
+   else if (obj_pid(self_obj) == PID_RAT_PEST and not anim_busy(self_obj) and random(1, 6) == 1) then
+      animate_move_obj_to_tile(self_obj, tile_num_in_direction(farm_spot, random(0, 5), random(0, 3)), 0);
 end
 
 // Последняя тварь пала: огород отбит (2.2) или стая у забора перебита (2.17)

@@ -37,12 +37,17 @@ procedure Node023;
 procedure Node024;
 procedure Node025;
 procedure Node030;
+procedure Node040;
 procedure Node999;
 
 // LVAR 0: 1 = уже знакомы
 #define LVAR_MET        (0)
+// Нора крыс открыта, а герой про нее еще не слышал от Дэйва: Дэйв зовет его (Егор 2026-10-11)
+#define GV_HOLE_TOLD    "f2mholtd"  // 1 = Дэйв рассказал про нору
+#define hole_task       (rats_hole_obj and not get_sfall_global_int(GV_RATS_SEALED) and not get_sfall_global_int(GV_HOLE_TOLD))
 
 variable greeted;
+variable called;   // когда последний раз звал героя (game_time)
 
 procedure start begin
 end
@@ -66,6 +71,13 @@ procedure critter_p_proc begin
    end
    if (tile_distance(tile_num(self_obj), farm_spot) > 3 and not anim_busy(self_obj)) then
       animate_move_obj_to_tile(self_obj, farm_spot, 0);
+   // Нора открыта: зовет героя, пока не расскажет (раз в 20 секунд, когда видит его)
+   if (hole_task and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 15
+       and (not called or game_time >= called + game_ticks(20))) then begin
+      called := game_time;
+      floater(111);
+      return;
+   end
    if (not greeted and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
       greeted := 1;
       floater(random(102, 104));
@@ -114,6 +126,7 @@ procedure Node001 begin
    else
       Reply(121);
    NOption(123, Node010, 4);
+   if (hole_task) then NOption(172, Node040, 4);
    if (get_sfall_global_int(GV_BRAH) == 1) then NOption(124, Node020, 4);
    NOption(125, Node030, 4);
    NOption(126, Node999, 4);
@@ -230,6 +243,14 @@ procedure Node030 begin
    if (bld_shown(U_GARDEN) >= 1 or bld_shown(U_GARDEN + 1) >= 1) then Reply(random(160, 163));
    else Reply(164);
    NOption(131, Node001, 4);
+   NLowOption(127, Node999);
+end
+
+// 2.2 Нора под забором: задание герою, как ее закрыть (пути те же, что в подсказке 220)
+procedure Node040 begin
+   set_sfall_global(GV_HOLE_TOLD, 1);
+   Reply(170);
+   NOption(171, Node999, 4);
    NLowOption(127, Node999);
 end
 

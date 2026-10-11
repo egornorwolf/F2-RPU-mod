@@ -137,11 +137,11 @@ FREE = seen
 print('доступно клеток', len(FREE))
 
 used = set()
-def snap(x, y, keep=1):
+def snap(x, y, keep=1, open_=0):
     t0 = T(x, y)
     for d in range(0, 30):
         for t in sorted(ring(t0, d) - (ring(t0, d - 1) if d else set())):
-            if t in FREE and not (ring(t, keep) & used):
+            if t in FREE and not (ring(t, keep) & used) and (not open_ or ring(t, open_) <= FREE):
                 used.add(t); return t
     sys.exit(f'нет места у {x},{y}')
 
@@ -159,7 +159,9 @@ P = [
 ]
 OUT = {}
 for n, x, y, c in P:
-    OUT[n] = (snap(x, y), c)
+    # Лестница — на открытом полу, все соседи проходимы (0.9.9, Егор: справа «вы не можете туда попасть»,
+    # у стены пещеры к ней подходили только слева)
+    OUT[n] = (snap(x, y, open_=1 if n == 'LADDER' else 0), c)
 
 blk2 = blk | {OUT[k][0] for k in ('LADDER', 'STACK', 'BOX0', 'BOX1', 'BOX2', 'DYN')}
 def reach(a, b, blkx):

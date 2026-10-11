@@ -315,8 +315,9 @@ procedure Node001 begin
    NOption(400, Node060, 4);
    NOption(114, Node030, 4);
    if (get_sfall_global_int(GV_RAID_DEAD) and not get_sfall_global_int(GV_RAID_BURY)) then NOption(300, Node050, 4);
-   // Погреб в карьере взорван (1.4): расчистить, пока там не строят базу
-   if (get_sfall_global_int("f2mlairc") == 2 and not get_sfall_global_int(GV_CELL_OPEN) and bld_level(U_BASE_UNIT) < 1) then
+   // Погреб в карьере взорван зарядом героя (1.4): расчистить, пока там не строят базу.
+   // 0.9.9: только после настоящего взрыва (f2mcellc = 2), а не по тестовой клавише остатков банды
+   if (get_sfall_global_int("f2mlairc") == 2 and get_sfall_global_int("f2mcellc") == 2 and not get_sfall_global_int(GV_CELL_OPEN) and bld_level(U_BASE_UNIT) < 1) then
       NOption(800, Node140, 4);
    NOption(115, Node999, 4);
    NLowOption(116, Node010);

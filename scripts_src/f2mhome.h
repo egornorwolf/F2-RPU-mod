@@ -27,7 +27,7 @@ procedure camp_is_child(variable c) begin
 end
 
 procedure camp_spread(variable walk) begin
-   variable spots, n := 0, s, c, i := 0, k, t, u, bar := 0, b := 0, dnum, carry, tend := 0, medic := 0;
+   variable spots, n := 0, s, c, i := 0, k, t, u, bar := 0, b := 0, dnum, carry, tend := 0, medic := 0, victim := 0;
    if (combat_is_initialized or get_sfall_global_int(GV_BURY_ON) or get_sfall_global_int(GV_CARAVAN_HOSTILE)) then return;
    spots := temp_array(0, 0);
    dnum := game_time / ONE_GAME_DAY;
@@ -86,7 +86,11 @@ procedure camp_spread(variable walk) begin
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (camp_is_civ(c)) then begin
          t := 0;
-         if (tend == 1 and not camp_is_child(c)) then begin
+         // хозяйка украденного медальона (2.6) ждет героя у его дома днем и ночью, пока не вернет медальон
+         if (not victim and thief_victim_on and not camp_is_child(c) and get_critter_stat(c, STAT_gender) == GENDER_FEMALE) then begin
+            t := THIEF_VICTIM_SPOT;
+            victim := 1;
+         end else if (tend == 1 and not camp_is_child(c)) then begin
             t := lvl_staff(U_BAR, bld_shown(U_BAR));
             tend := 2;
          end else if (medic == 1 and not camp_is_child(c)) then begin

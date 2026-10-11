@@ -173,6 +173,8 @@ end
 // Заряд под запасами банды: фитиль шипит, рванет, когда герой выберется наверх (карта логова, f2mlair.ssl)
 procedure set_charge begin
    set_sfall_global(GV_CELL_CHARGE, 1);
+   set_outline(self_obj, 0);   // подсветка штабеля (gl_f2mod cell_tick) больше не нужна
+   tile_refresh_display;
    display_msg(mstr(246));
    float_msg(dude_obj, mstr(253), FLOAT_MSG_YELLOW);
 end

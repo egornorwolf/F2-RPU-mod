@@ -29,13 +29,14 @@
 #include "f2msam.h"
 #include "f2mlair.h"
 #include "f2mlairl.h"
+#include "f2mcelll.h"
 #include "f2mfarm.h"
 #include "f2mwild.h"
 #include "f2mspots.h"
 #include "f2mthief.h"
 #include "f2mremn.h"
 
-#define F2MOD_VERSION "0.9.8"
+#define F2MOD_VERSION "0.9.9"
 
 procedure start;
 procedure encounter_handler;
@@ -50,8 +51,12 @@ procedure sam_arrive;
 procedure farm_arrive;
 procedure shovel_tick;
 procedure lair_cellar_look;
+procedure cell_tick;
+procedure base_title;
 
 variable lair_hint;
+variable cell_hint;
+variable base_titled;   // название военной базы на карте мира уже поставлено (sfall его не сохраняет)   // подсказки в погребе за этот спуск: 1 у штабеля, 2 с динамитом
 
 procedure start begin
    variable st;
@@ -62,6 +67,7 @@ procedure start begin
       register_hook_proc(HOOK_COMBATDAMAGE, combatdamage_handler);
       register_hook_proc(HOOK_ONEXPLOSION, explosion_handler);
       set_global_script_repeat(60);
+      base_titled := 0;
       display_msg("Мод поселения F2mod " + F2MOD_VERSION + " загружен.");
    end else begin
       call keep_escort_wm_pos;
@@ -73,6 +79,8 @@ procedure start begin
       call sam_arrive;
       call lair_tick;
       call lair_cellar_look;
+      call cell_tick;
+      call base_title;
       call farm_tick;
       call farm_arrive;
       call shovel_tick;
@@ -89,6 +97,14 @@ procedure raid_tick begin
       return;
    end
    call boss_search;
+   // Повторный налет (0.9.9): ждет героя в лагере, одно событие за раз
+   if (raid2_due and not combat_is_initialized and (get_game_mode bwand 0x3FFFFD) == 0 and not evt_busy) then begin
+      gfade_out(1);
+      call raid2_put;
+      gfade_in(1);
+      display_msg(message_str(SCRIPT_F2MRDR, 140));
+      return;
+   end
    if (not boss_due or combat_is_initialized or (get_game_mode bwand 0x3FFFFD) != 0) then return;
    // одно событие за раз (0.9.7): стая, крысы или вор на карте — главарь подождет
    if (get_sfall_global_int(GV_WILD) == 1 or get_sfall_global_int(GV_RATS) == 1 or get_sfall_global_int(GV_THIEF) == THIEF_HERE) then return;
@@ -129,6 +145,43 @@ procedure lair_cellar_look begin
    end else return;
    lair_hint := 1;
    float_msg(dude_obj, lair_msg(224), FLOAT_MSG_YELLOW);
+end
+
+// Погреб логова (0.9.9, Егор: непонятно, куда ставить динамит, лестница не всегда работает).
+// Штабель с запасами подсвечен, пока заряда нет; рядом с ним и с двумя шашками в рюкзаке — подсказка героя.
+// Лезть наверх движок ведет героя на клетку к юго-востоку от лестницы: спутника с нее убираем
+procedure cell_tick begin
+   variable c, t, st;
+   if (cur_map_index != MAP_F2MOD_CELL) then begin
+      cell_hint := 0;
+      return;
+   end
+   if (combat_is_initialized or (get_game_mode bwand 0x3FFFFD) != 0) then return;
+   t := tile_num_in_direction(CELL_LADDER, 2, 1);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (c != dude_obj and obj_in_party(c) and tile_num(c) == t and not anim_busy(c)) then move_to(c, cv_free_tile(CELL_HERO), 0);
+   end
+   if (lair_done or get_sfall_global_int(GV_CELL_CHARGE)) then return;
+   st := tile_contains_pid_obj(CELL_STACK, 0, PID_CELL_STACK);
+   if (not st) then return;
+   if (not get_outline(st)) then begin
+      set_outline(st, OUTLINE_YELLOW);
+      tile_refresh_display;
+   end
+   if (cell_hint < 2 and obj_is_carrying_obj_pid(dude_obj, PID_DYNAMITE) >= LAIR_DYN_COUNT) then begin
+      cell_hint := 2;
+      float_msg(dude_obj, lair_msg(227), FLOAT_MSG_YELLOW);
+   end else if (cell_hint == 0 and tile_distance_objs(dude_obj, st) <= 6) then begin
+      cell_hint := 1;
+      float_msg(dude_obj, lair_msg(226), FLOAT_MSG_YELLOW);
+   end
+end
+
+// Карьер после стройки базы на карте мира — «Военная база» (0.9.9, Егор: название не менялось)
+procedure base_title begin
+   if (base_titled or not lair_done or base_level < 1) then return;
+   base_titled := 1;
+   set_town_title(AREA_F2MOD_LAIR, "Военная база");
 end
 
 // Радист пришел, пока герой в лагере: ждем, пока закрыты окна и нет боя, экран гаснет, Сэм у старосты
@@ -228,6 +281,7 @@ procedure combatdamage_handler begin
    attacker := args[1];
    if (not target or not attacker) then return;
    if (has_trait(TRAIT_OBJECT, target, OBJECT_TEAM_NUM) != TEAM_CARAVAN) then return;
+   if (cur_map_index == MAP_F2MOD_CAMP) then set_sfall_global("f2mhealf", 1);   // житель ранен: клиника лечит после боя (f2mheal.h)
    if (not is_dude_side(attacker)) then return;
    hits := load_array(ARR_CARAVAN_HITS);
    if (not hits) then begin
@@ -262,5 +316,5 @@ procedure explosion_handler begin
       if ((r == PID_PULSE_GRENADE or l == PID_PULSE_GRENADE) and r != PID_FRAG_GRENADE and l != PID_FRAG_GRENADE
           and r != PID_PLASMA_GRENADE and l != PID_PLASMA_GRENADE) then return;
    end
-   set_sfall_global(GV_RATS_BOOM, 1);
+   set_sfall_global(GV_RATS_BOOM, get_uptime + 1);   // время взрыва (мс): нору убираем, когда отыграет анимация
 end

@@ -12,7 +12,7 @@
 #define GV_RATS_LAST    "f2mratlh"  // час (+1), когда крысы приходили в последний раз: следующий раз не раньше чем через EVT_GAP_HOURS
 #define GV_RATS_HOUR    "f2mrathr"  // до этого часа надо разобраться (утро)
 #define GV_RATS_SEALED  "f2mratsl"  // 1 = нору завалили или заделали: крысы больше не приходят
-#define GV_RATS_BOOM    "f2mratbm"  // 1 = у норы рванула граната (не ЭМИ) или взрывчатка (HOOK_ONEXPLOSION в gl_f2mod), разберет farm_tick
+#define GV_RATS_BOOM    "f2mratbm"  // время (get_uptime + 1) взрыва у норы: рванула граната (не ЭМИ) или взрывчатка (HOOK_ONEXPLOSION в gl_f2mod), разберет farm_tick
 #define GV_BRAH         "f2mbrast"  // брамин: 0 тихо, 1 пропал, 2 нашли, 3 не нашли
 #define GV_BRAH_WEEK    "f2mbrawk"  // неделя, в которую брамин уже пропадал (+1)
 
@@ -183,6 +183,7 @@ procedure rats_win(variable xp) begin
    give_exp_points(xp);
    set_sfall_global(GV_SET_MORALE, get_sfall_global_int(GV_SET_MORALE) + RATS_MORALE);
    display_msg(farm_msg(201) + xp + farm_msg(202));
+   if (rats_hole_obj and not get_sfall_global_int(GV_RATS_SEALED)) then display_msg(farm_msg(220));   // подсказка (Егор 2026-10-11)
 end
 
 // Из глобального скрипта: приход фермера, ночные крысы и утренний итог, пропажа брамина
@@ -195,7 +196,10 @@ procedure farm_tick begin
       set_sfall_global(GV_FARM_NEWS, 1);
    end
    // Граната или взрывчатка рванули у норы (HOOK_ONEXPLOSION): нора завалена сразу, и в бою тоже (0.9.7)
-   if (get_sfall_global_int(GV_RATS_BOOM)) then begin
+   // Хук срабатывает до анимации взрыва (Егор 2026-10-11: нора пропадала в момент броска): ждем полторы секунды.
+   // После загрузки в новом запуске игры счетчик меньше записанного — тогда сразу
+   n := get_sfall_global_int(GV_RATS_BOOM);
+   if (n and (get_uptime >= n + 1500 or get_uptime + 1 < n)) then begin
       set_sfall_global(GV_RATS_BOOM, 0);
       if (cur_map_index == MAP_F2MOD_CAMP) then call rats_seal(0);
    end
@@ -216,6 +220,7 @@ procedure farm_tick begin
             if (obj_pid(n) == PID_RAT_PEST and not is_critter_dead(n)) then destroy_object(n);
          end
          display_msg(farm_msg(203));
+         if (rats_hole_obj) then display_msg(farm_msg(220));
       end
    end else if (farm_here and bld_shown(U_GARDEN) >= 1 and cur_map_index == MAP_F2MOD_CAMP and not get_sfall_global_int(GV_RATS_SEALED)
                 and camp_night and not combat_is_initialized and (get_game_mode bwand 0x3FFFFD) == 0 and not evt_busy

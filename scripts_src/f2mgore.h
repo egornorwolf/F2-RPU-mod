@@ -53,6 +53,14 @@ procedure gore_update(variable entering) begin
    if (combat_is_initialized) then return;
    h := gore_now;
    all := list_as_array(LIST_ALL);
+   // TEST: собак нет (F2MOD_NO_BEASTS): пришедшие в старых сохранениях уходят
+   if (F2MOD_NO_BEASTS and gore_dogs > 0) then begin
+      set_sfall_global(GV_SET_LEAVING, 1);
+      foreach (c in all) begin
+         if (obj_pid(c) == PID_WILD_DOG and not is_critter_dead(c)) then destroy_object(c);
+      end
+      set_sfall_global(GV_SET_LEAVING, 0);
+   end
    // кровь и кости (в сохранениях до 0.6.6 кровь уже лежит без отметки: отсчет с этого входа)
    t := get_sfall_global_int(GV_GORE_HOUR);
    if (not t) then begin
@@ -95,7 +103,7 @@ procedure gore_update(variable entering) begin
    end
    if (h + 1 < t) then return;
    // стаю перебили: тела лежат до следующей
-   if (get_sfall_global_int(GV_DOG_ON) and gore_dogs == 0 and h + 1 < t + DOG_EAT_HOURS) then begin
+   if (not F2MOD_NO_BEASTS and get_sfall_global_int(GV_DOG_ON) and gore_dogs == 0 and h + 1 < t + DOG_EAT_HOURS) then begin
       set_sfall_global(GV_DOG_ON, 0);
       set_sfall_global(GV_DOG_HOUR, h + 1 + DOG_WAIT_HOURS);
       return;
@@ -116,13 +124,14 @@ procedure gore_update(variable entering) begin
       set_sfall_global(GV_DOG_ON, 1);
       set_sfall_global(GV_DOG_HOUR, h + 1);
       i := 0;
+      if (F2MOD_NO_BEASTS) then i := DOG_COUNT;   // TEST: собак нет, тела «съедаются» по часам, как при стае
       while (i < DOG_COUNT) do begin
          dog := create_object_sid(PID_WILD_DOG, cv_free_tile(tile_num_in_direction(tile_num(any), random(0, 5), random(2, 3))), 0, SCRIPT_F2MRAT);   // 0.9.7: со скриптом — нападают вблизи
          critter_add_trait(dog, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_DOG);
          anim(dog, ANIMATE_ROTATION, rotation_to_tile(tile_num(dog), tile_num(any)));
          i += 1;
       end
-      display_msg("К телам у лагеря пришли дикие собаки.");
+      if (not F2MOD_NO_BEASTS) then display_msg("К телам у лагеря пришли дикие собаки.");
    end
 end
 

@@ -35,6 +35,8 @@ procedure thief_spot;
 procedure thief_put;
 procedure thief_clear;
 procedure thief_tick;
+procedure thief_work_spot;
+procedure thief_put_worker;
 
 procedure thief_obj begin
    variable c;
@@ -72,6 +74,21 @@ procedure thief_put begin
    set_sfall_global(GV_THIEF_SEEN, 0);
 end
 
+// Оставленный отрабатывать (Егор 2026-10-11: остается в лагере обычным рабочим): днем у огородов, ночью у костра
+procedure thief_work_spot begin
+   if (not camp_night and bld_shown(U_GARDEN) >= 1) then return tile_num_in_direction(lvl_spot(1, bld_shown(U_GARDEN), 0), 3, 2);
+   return tile_num_in_direction(camp_fire, 4, 3);
+end
+
+// Рабочий на карте (в сохранениях 0.9.2-0.9.8 он уходил с карты — возвращаем)
+procedure thief_put_worker begin
+   variable obj;
+   if (thief_obj) then return;
+   obj := create_object_sid(PID_THIEF, cv_free_tile(thief_work_spot), 0, SCRIPT_F2MTHIEF);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_CARAVAN);
+   art_change_fid_num(obj, GANG_ART_JACKET);
+end
+
 // Утро или герой ушел: вор растворился до следующей ночи
 procedure thief_clear begin
    variable c;
@@ -86,6 +103,8 @@ end
 // Из глобального скрипта: жалобы, ночные выходы вора и недельная убыль кассы
 procedure thief_tick begin
    variable cash;
+   if (get_sfall_global_int(GV_THIEF) == THIEF_WORKS and cur_map_index == MAP_F2MOD_CAMP and not combat_is_initialized) then
+      call thief_put_worker;
    if (not set_founded or thief_done or get_sfall_global_int(GV_SET_ABANDON) != ABANDON_NO) then return;
    // Кражи начинаются, когда жилье доросло до 2-го уровня
    if (get_sfall_global_int(GV_THIEF) == THIEF_NONE) then begin

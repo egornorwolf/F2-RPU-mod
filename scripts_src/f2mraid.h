@@ -30,6 +30,8 @@ procedure boss_put;
 procedure gang_alive(variable except);
 procedure gang_remove;
 procedure gang_remove_but(variable keep);
+procedure raid2_due;
+procedure raid2_put;
 
 procedure raid_hours_since_found begin
    return game_time / ONE_GAME_HOUR - get_sfall_global_int(GV_CAMP_DAY);
@@ -209,6 +211,32 @@ procedure gang_remove_but(variable keep) begin
    variable c;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (c != keep and is_gang(c) and not is_critter_dead(c)) then destroy_object(c);
+   end
+end
+
+// Повторный налет: через 7 дней после отказа Кейну, пока логово не взято. Без Кейна, 5 бойцов.
+// Сохранения до 0.9.9 (часа отказа нет): отсчет с первой проверки
+#define RAID2_HOURS         (7 * 24)
+#define RAID2_SIZE          (5)
+procedure raid2_due begin
+   variable h;
+   if (get_sfall_global_int(GV_BOSS) != BOSS_LEFT or get_sfall_global_int(GV_RAID2) or get_sfall_global_int("f2mlairs") >= 2) then return 0;
+   h := get_sfall_global_int(GV_BOSS_LEFT_H);
+   if (not h) then begin
+      set_sfall_global(GV_BOSS_LEFT_H, game_time / ONE_GAME_HOUR + 1);
+      return 0;
+   end
+   return game_time / ONE_GAME_HOUR + 1 >= h + RAID2_HOURS;
+end
+
+// Пятеро у южных ворот, сразу в бой
+procedure raid2_put begin
+   variable i := 0, obj;
+   set_sfall_global(GV_RAID2, RAID2_ON);
+   while (i < RAID2_SIZE) do begin
+      obj := gang_raider(RAID_GATE_OUT + (i % 3) * 2 - 2 + (i / 3) * 200, i + 1);
+      anim(obj, ANIMATE_ROTATION, 1);
+      i += 1;
    end
 end
 

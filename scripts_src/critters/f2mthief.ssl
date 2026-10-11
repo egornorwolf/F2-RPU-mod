@@ -1,6 +1,7 @@
 // Ночной вор Томми Ларк (квест 2.6, docs/npc-cards.md): ходит ночью между хижинами, когда жилье доросло
 // до 2-го уровня. Замечает героя сам, если тот не крадется, и уходит в темноту. Пойманный говорит.
-// Решение героя: убить, прогнать или оставить работать (Красноречие 50) — тогда он возвращает украденное.
+// Решение героя: убить, прогнать или оставить работать (Красноречие 50) — тогда он возвращает украденное
+// и остается в лагере рабочим.
 #define SCRIPT_REALNAME "f2mthief"
 #include "define.h"
 #include "f2mod.h"
@@ -55,15 +56,23 @@ procedure description_p_proc begin
    display_msg(mstr(101));
 end
 
-// Герой крадется с навыком 50 — вор не замечает его до последнего. Иначе замечает за несколько клеток
-// и уходит в темноту (с Восприятием 7 герой успевает его разглядеть и узнать, кто это).
+// Герой крадется с навыком 50 — вор не замечает его до последнего. Подошел открыто (без режима скрытности) ближе 6 клеток —
+// вор замечает и уходит в темноту до следующей ночи (Егор 2026-10-11: раньше был бросок, и он оставался).
+// Крадется со Скрытностью ниже 50 — один бросок на Скрытность. С Восприятием 7 герой успевает его разглядеть.
+// Наткнулся вплотную (2 клетки) — пойман. Оставленный отрабатывать — обычный рабочий лагеря
 procedure critter_p_proc begin
    variable d;
    if (fight == 2) then begin
       if (not combat_is_initialized) then attack(dude_obj);
       return;
    end
-   if (combat_is_initialized or local_var(LVAR_CAUGHT)) then return;
+   if (combat_is_initialized) then return;
+   if (get_sfall_global_int(GV_THIEF) == THIEF_WORKS) then begin
+      d := thief_work_spot;
+      if (tile_distance(tile_num(self_obj), d) > 2 and not anim_busy(self_obj)) then animate_move_obj_to_tile(self_obj, d, 0);
+      return;
+   end
+   if (local_var(LVAR_CAUGHT)) then return;
    d := tile_distance_objs(self_obj, dude_obj);
    if (d > 8) then return;
    if (get_critter_stat(dude_obj, STAT_pe) >= THIEF_PE and not get_sfall_global_int(GV_THIEF_SEEN)) then begin
@@ -71,20 +80,19 @@ procedure critter_p_proc begin
       display_msg(mstr(201));
    end
    if (dude_is_sneaking and has_skill(dude_obj, SKILL_SNEAK) >= THIEF_SNEAK) then return;
-   if (d <= 2) then return;
-   // 0.9.7: один бросок, когда герой впервые подошел на 5 клеток: шанс остаться незамеченным — Скрытность
-   // (в режиме скрытности), без нее половина Скрытности; Ловкость 8+ — еще 20. Раньше убегал всегда
-   if (d <= 5 and not noticed_roll and obj_can_see_obj(self_obj, dude_obj)) then begin
+   if (d <= 2 or d > 6) then return;
+   if (not dude_is_sneaking) then begin
+      floater(102);
+      call thief_clear;
+   end else if (not noticed_roll) then begin
       noticed_roll := 1;
-      d := has_skill(dude_obj, SKILL_SNEAK);
-      if (not dude_is_sneaking) then d := d / 2;
-      if (get_critter_stat(dude_obj, STAT_ag) >= 8) then d += 20;
-      if (random(1, 100) > d) then begin
+      if (random(1, 100) > has_skill(dude_obj, SKILL_SNEAK)) then begin
          floater(102);
          call thief_clear;
       end
    end
 end
+
 
 procedure damage_p_proc begin
    if (is_dude_side(source_obj)) then floater(103);
@@ -98,6 +106,10 @@ procedure destroy_p_proc begin
 end
 
 procedure talk_p_proc begin
+   if (get_sfall_global_int(GV_THIEF) == THIEF_WORKS) then begin
+      floater(random(130, 132));
+      return;
+   end
    set_local_var(LVAR_CAUGHT, 1);
    start_gdialog(NAME, self_obj, 4, -1, -1);
    gSay_Start;
@@ -108,10 +120,14 @@ procedure talk_p_proc begin
       fight := 2;   // бой начнет critter_p_proc: attack() сразу после диалога бой не начинает
       attack(dude_obj);
    end else if (leave) then begin
-      if (leave == 1) then display_msg(mstr(203));
-      else display_msg(mstr(204));
-      leave := 0;
-      destroy_object(self_obj);
+      if (leave == 1) then begin
+         display_msg(mstr(203));
+         leave := 0;
+         destroy_object(self_obj);
+      end else begin
+         display_msg(mstr(204));
+         leave := 0;
+      end
    end
 end
 
@@ -148,7 +164,7 @@ end
 procedure Node020 begin
    call thief_give;
    set_sfall_global(GV_THIEF, THIEF_WORKS);
-   leave := 2;
+   leave := 2;   // остается в лагере рабочим (Егор 2026-10-11)
    set_sfall_global(GV_SET_CASH, get_sfall_global_int(GV_SET_CASH) + THIEF_CAPS);
    Reply(121);
    NOption(123, Node999, 4);

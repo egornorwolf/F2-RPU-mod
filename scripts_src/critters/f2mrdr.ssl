@@ -1,4 +1,5 @@
 // Боец Кейна у ворот лагеря (1.3а). Стоит на краю карты, пока главарь говорит; в бою идет на героя.
+// Повторный налет (0.9.9): пятеро без Кейна у южных ворот, сразу в бой.
 #define SCRIPT_REALNAME "f2mrdr"
 #include "define.h"
 #include "f2mod.h"
@@ -34,11 +35,12 @@ end
 
 procedure description_p_proc begin
    script_overrides;
-   display_msg(mstr(101));
+   if (get_sfall_global_int(GV_RAID2) == RAID2_ON) then display_msg(mstr(102));
+   else display_msg(mstr(101));
 end
 
 procedure critter_p_proc begin
-   if (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT) then begin
+   if (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT or get_sfall_global_int(GV_RAID2) == RAID2_ON) then begin
       if (not combat_is_initialized) then attack(dude_obj);
       return;
    end
@@ -49,7 +51,7 @@ procedure critter_p_proc begin
 end
 
 procedure combat_p_proc begin
-   if (fixed_param == COMBAT_SUBTYPE_TURN and get_sfall_global_int(GV_BOSS) == BOSS_FIGHT
+   if (fixed_param == COMBAT_SUBTYPE_TURN and (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT or get_sfall_global_int(GV_RAID2) == RAID2_ON)
        and not get_object_data(self_obj, OBJ_DATA_WHO_HIT_ME)) then
       set_object_data(self_obj, OBJ_DATA_WHO_HIT_ME, dude_obj);
 end
@@ -71,6 +73,11 @@ end
 
 procedure destroy_p_proc begin
    if (get_sfall_global_int(GV_SET_LEAVING)) then return;   // тело убирают (собаки съели, f2mgore.h): это не смерть
+   if (get_sfall_global_int(GV_RAID2) == RAID2_ON and gang_alive(self_obj) == 0) then begin
+      set_sfall_global(GV_RAID2, RAID2_DONE);
+      display_msg(mstr(131));
+      return;
+   end
    if (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT and gang_alive(self_obj) == 0) then begin
       set_sfall_global(GV_BOSS, BOSS_BEATEN);
       display_msg(mstr(130));

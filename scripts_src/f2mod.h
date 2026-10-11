@@ -167,15 +167,29 @@
 #define camp_fine_wound     if (not get_sfall_global_int(GV_CARAVAN_HOSTILE) and not is_critter_dead(self_obj)) then camp_fine_add(CAMP_FINE_HIT)
 #define TEAM_F2M_GANG       (TEAM_RND_RAIDERS)
 #define is_gang(c)          (obj_pid(c) == PID_RAIDER_MALE and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_F2M_GANG)
-#define boss_fight_on       (cur_map_index == MAP_F2MOD_CAMP and get_sfall_global_int(GV_BOSS) == BOSS_FIGHT)
+// Повторный налет (Егор 2026-10-11): через 7 дней после отказа Кейну, если логово не взято, — 5 налетчиков без Кейна
+#define GV_RAID2            "f2mraid2"  // 0 не было, 1 бой у ворот, 2 отбит
+#define GV_BOSS_LEFT_H      "f2mbleft"  // час (+1), когда герой отказал Кейну и банда ушла
+#define RAID2_ON            (1)
+#define RAID2_DONE          (2)
+#define boss_fight_on       (cur_map_index == MAP_F2MOD_CAMP and (get_sfall_global_int(GV_BOSS) == BOSS_FIGHT or get_sfall_global_int(GV_RAID2) == RAID2_ON))
 
 // События в лагере (Егор 2026-10-09): одно за раз, крысы и стая не чаще раза в 7 дней (по часам, стройки пропускают дни).
 // Собаки на трупы (f2mgore.h) идут поверх любых. Имена GV строками: заголовки крыс, стаи и вора подключены не везде
 #define EVT_GAP_HOURS       (168)
+// Ночной вор (2.6): у женщины украли медальон. Пока он не вернулся к ней, она стоит у дома героя (Егор 2026-10-11).
+// Клетка снаружи у дома героя, свободная на всех его уровнях (бывшее место стола радиста, levels_emit.py)
+#define THIEF_VICTIM_SPOT   (11639)
+#define GV_LOCKET_BACK      "f2mlockt"  // 1 = медальон отдан хозяйке
+#define thief_victim_on     (get_sfall_global_int("f2mthfst") >= 1 and not get_sfall_global_int(GV_LOCKET_BACK))
+#define WILD_GAP_HOURS      (720)   // стая мутантов у забора — раз в месяц (Егор 2026-10-11)
+// TEST: на время тестов собак у тел и стаи мутантов нет (Егор 2026-10-11). В релизе поставить 0
+#define F2MOD_NO_BEASTS     (1)
 #define evt_gap_ok(gv)      (get_sfall_global_int(gv) == 0 or bld_hour + 1 >= get_sfall_global_int(gv) + EVT_GAP_HOURS)
 #define evt_busy            (get_sfall_global_int("f2mratst") == 1 or get_sfall_global_int("f2mwilds") == 1 \
                              or get_sfall_global_int("f2mthfst") == 2 or get_sfall_global_int(GV_BOSS) == BOSS_WAIT \
-                             or get_sfall_global_int(GV_BOSS) == BOSS_FIGHT or get_sfall_global_int(GV_BURY_ON))
+                             or get_sfall_global_int(GV_BOSS) == BOSS_FIGHT or get_sfall_global_int(GV_BURY_ON) \
+                             or get_sfall_global_int(GV_RAID2) == RAID2_ON)
 
 // Отладочные сообщения в окне игры (на время тестов)
 #define F2MOD_DEBUG

@@ -6,7 +6,7 @@
 #define F2MWILD_H
 
 #define GV_WILD         "f2mwilds"  // 0 тихо, 1 стая у забора, 2 отбита героем, 3 отбита охраной (забор чинили)
-#define GV_WILD_LAST    "f2mwildl"  // час (+1), когда стая приходила в последний раз: следующая не раньше чем через EVT_GAP_HOURS
+#define GV_WILD_LAST    "f2mwildl"  // час (+1), когда стая приходила в последний раз: следующая не раньше чем через WILD_GAP_HOURS
 #define GV_WILD_HOUR    "f2mwildh"  // до этого часа герой еще может выйти сам
 
 #define WILD_COUNT      (4)
@@ -87,10 +87,11 @@ procedure wild_tick begin
       end
       return;
    end
-   // Стая приходит днем, когда вокруг лагеря есть забор; не чаще раза в 7 дней (по часам) и не во время другого события
-   if (get_sfall_global_int(GV_FENCE) and cur_map_index == MAP_F2MOD_CAMP and not camp_night
-       and not combat_is_initialized and (get_game_mode bwand 0x3FFFFD) == 0
-       and not evt_busy and evt_gap_ok(GV_WILD_LAST) and random(1, 100) <= 10) then begin
+   // Стая приходит днем, когда вокруг лагеря есть забор; не чаще раза в месяц (по часам) и не во время другого события
+   if (not F2MOD_NO_BEASTS and get_sfall_global_int(GV_FENCE) and cur_map_index == MAP_F2MOD_CAMP and not camp_night
+       and not combat_is_initialized and (get_game_mode bwand 0x3FFFFD) == 0 and not evt_busy
+       and (get_sfall_global_int(GV_WILD_LAST) == 0 or bld_hour + 1 >= get_sfall_global_int(GV_WILD_LAST) + WILD_GAP_HOURS)
+       and random(1, 100) <= 10) then begin
       call wild_spawn;
    end
 end

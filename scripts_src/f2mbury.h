@@ -18,18 +18,21 @@ procedure bury_start(variable speech);
 procedure bury_step(variable step);
 procedure bury_resident(variable c);
 procedure bury_speaker(variable pid, variable avoid);
+procedure bury_say(variable c, variable text, variable color);
 
 // Где кто стоял до похорон. После загрузки сохранения посреди похорон массива нет: люди остаются у могилы
 variable bury_was;
 
 procedure bury_resident(variable c) begin
-   // все живые на карте лагеря и отряд героя (Егор 2026-10-08), кроме самого героя, браминов, банды
+   // все живые на карте лагеря и отряд героя (Егор 2026-10-08), кроме самого героя, браминов, зверей, банды
    // и ополчения (наемники Рика на похороны не идут, стоят на посту)
    // (команду жителей движок может поменять, поэтому по команде не отбираем)
    variable p;
    p := obj_pid(c);
    return c != dude_obj and not is_critter_dead(c) and p != PID_BRAHMIN and p != PID_RAIDER_MALE
-      and p != PID_MILITIA_MALE and p != PID_MILITIA_FEMALE;
+      and p != PID_MILITIA_MALE and p != PID_MILITIA_FEMALE
+      // звери к могиле не идут (Егор 2026-10-11): собаки у тел, крысы с огородов, твари стаи
+      and p != PID_WILD_DOG and p != PID_PIG_RAT and p != PID_CENTAUR and p != PID_FLOATER;
 end
 
 // Кто ответит: житель с этим PID (0 — любой, кроме Теда, Хэнка и avoid)
@@ -51,6 +54,16 @@ procedure bury_speaker(variable pid, variable avoid) begin
       end
    end
    return 0;
+end
+
+// Реплика у могилы (Егор 2026-10-11: все реплики висели одновременно): прежние надписи над всеми убираем,
+// следующая — сразу, как погаснет эта. Движок держит надпись 3,5 с + 1,4 с на строку (строка ~30 букв при ширине 200),
+// плюс полсекунды. Возвращает паузу в тиках (10 в секунду)
+procedure bury_say(variable c, variable text, variable color) begin
+   variable o;
+   foreach (o in list_as_array(LIST_CRITTERS)) float_msg(o, "", FLOAT_MSG_NORMAL);
+   float_msg(c, text, color);
+   return 40 + 14 * ((strlen(text) + 29) / 30);
 end
 
 procedure bury_start(variable speech) begin
@@ -117,8 +130,7 @@ procedure bury_start(variable speech) begin
    end
    tile_set_center(BURY_GRAVE);
    gfade_in(1);
-   float_msg(dude_obj, BURY_MSG(319 + speech), FLOAT_MSG_YELLOW);
-   add_timer_event(self_obj, game_ticks(4), BURY_TIMER + 1);
+   add_timer_event(self_obj, bury_say(dude_obj, BURY_MSG(319 + speech), FLOAT_MSG_YELLOW), BURY_TIMER + 1);
 end
 
 // Ответы: Тед, кто-то из жителей, Хэнк (нет его — еще один житель); потом все расходятся
@@ -133,10 +145,12 @@ procedure bury_step(variable step) begin
       else if (step == 3) then c := bury_speaker(PID_HANK, 0);
       else c := 0;
       if (not c) then c := bury_speaker(0, 0);
-      if (c) then float_msg(c, BURY_MSG(330 + (set - 1) * 3 + step - 1), FLOAT_MSG_NORMAL);
-      add_timer_event(self_obj, game_ticks(4), BURY_TIMER + step + 1);
+      t := 10;
+      if (c) then t := bury_say(c, BURY_MSG(330 + (set - 1) * 3 + step - 1), FLOAT_MSG_NORMAL);
+      add_timer_event(self_obj, t, BURY_TIMER + step + 1);
       return;
    end
+   foreach (c in list_as_array(LIST_CRITTERS)) float_msg(c, "", FLOAT_MSG_NORMAL);
    gfade_out(1);
    set_sfall_global(GV_BURY_ON, 0);
    if (bury_was) then begin

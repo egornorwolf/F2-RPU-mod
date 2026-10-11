@@ -745,7 +745,8 @@ end
 procedure raid_options begin
    variable dead;
    dead := get_sfall_global_int(GV_RAID_DEAD);
-   if (dead) then NOption(400, Node042, 4);
+   // уже похоронили — про погибшего не спрашиваем (Егор 2026-10-11: «Кто погиб?» после похорон)
+   if (dead and not get_sfall_global_int(GV_RAID_BURY)) then NOption(400, Node042, 4);
    if (dead and not get_sfall_global_int(GV_RAID_BURY)) then NOption(401, Node043, 4);
    if (not get_sfall_global_int(GV_RAID_TRACK)) then NOption(402, Node044, 4);
    if (raid_price > 0 and not get_sfall_global_int(GV_RAID_PAID)) then NOption(403, Node045, 4);

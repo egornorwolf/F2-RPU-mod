@@ -71,6 +71,20 @@ procedure critter_p_proc begin
 end
 
 procedure talk_p_proc begin
+   variable it;
+   // хозяйка медальона у дома героя (2.6, Егор 2026-10-11): медальон у героя — отдать, нет — просит найти вора
+   if (cur_map_index == MAP_F2MOD_CAMP and thief_victim_on and not get_sfall_global_int(GV_CARAVAN_HOSTILE)
+       and tile_distance(tile_num(self_obj), THIEF_VICTIM_SPOT) <= 1 and not is_child) then begin
+      it := obj_carrying_pid_obj(dude_obj, PID_GOLD_LOCKET);
+      if (it) then begin
+         rm_obj_from_inven(dude_obj, it);
+         destroy_object(it);
+         set_sfall_global(GV_LOCKET_BACK, 1);
+         floater(301);
+      end else
+         floater(300);
+      return;
+   end
    if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then
       floater(random(150, 152));
    else if (is_child) then
