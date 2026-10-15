@@ -1,7 +1,8 @@
 // Кейн в логове (квест 1.4, npc-cards.md). Заговаривает сам, когда герой дошел до него без тревоги
 // (пропуск часового или Скрытность). Пути: мир (Красноречие 75), уход без боя (Красноречие 100 или 75 и 1000 крышек), бой.
 // После яда в бочке пороги ниже: 60 и 85 (Егор 2026-10-15). Требования видны в пунктах: «[Красноречие 75]».
-// Кейн остается жив только при договоре (мир или уход без боя); к себе его не берем: при мире он уходит один.
+// Кейн остается жив только при договоре (мир или уход без боя); в отряд его не берем. При мире (Егор 2026-10-15, тест 0.9.10)
+// он не уходит: остается командиром своих людей в карьере, а после расчистки стоит у палатки командира базы (f2mlair.ssl).
 #define SCRIPT_REALNAME "f2mkane"
 #include "define.h"
 #include "f2mod.h"
@@ -55,13 +56,21 @@ end
 
 procedure critter_p_proc begin
    if (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_ALLY or lair_done) then return;
+   // Герой у шатра (Егор 2026-10-15): сам подсказывает, что сундук у стенки и со стороны скалы до него можно дотянуться
+   if (not get_sfall_global_int(GV_KANE_HINT) and not get_sfall_global_int(GV_LAIR_ALARM) and not combat_is_initialized
+       and tile_distance(tile_num(dude_obj), LAIR_CHEST) <= 6) then begin
+      set_sfall_global(GV_KANE_HINT, 1);
+      float_msg(dude_obj, mstr(170), FLOAT_MSG_YELLOW);
+   end
    // Тревога: главарь идет на героя сам, видит он его или нет (бой после диалога «за запасами» тоже отсюда:
    // attack() сразу после end_dialogue бой не начинает, как и у ворот, f2mboss.ssl)
    if (get_sfall_global_int(GV_LAIR_ALARM)) then begin
       if (not combat_is_initialized) then attack(dude_obj);
       return;
    end
-   if (not talked and not combat_is_initialized and tile_distance_objs(self_obj, dude_obj) <= 4) then begin
+   // за стенкой шатра со стороны скалы (ряд y 85 и выше) Кейн героя не видит и не заговаривает: там крадут из сундука
+   if (not talked and not combat_is_initialized and tile_distance_objs(self_obj, dude_obj) <= 4
+       and tile_num(dude_obj) / 200 > 85) then begin
       talked := 1;
       dialogue_system_enter;
    end
@@ -173,12 +182,13 @@ end
 procedure Node999 begin
 end
 
-// Мир: банда переходит к герою и держит карьер (будущая база). Кейн жив, но под героем не ходит: уходит один
-// (Егор 2026-10-15: к себе его не берем). Остатков банды после мира нет: все его люди у нас
+// Мир: банда с Кейном переходит к герою и держит карьер (будущая база). Кейн остается командиром своих людей
+// (Егор 2026-10-15, тест 0.9.10: при мире банда не уходит и Кейн не уходит один). Троих он присылает в охрану лагеря
+// (base_guards в f2mpost.h). Остатков банды после мира нет: все его люди у нас
 procedure kane_ally begin
    variable c;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (c != self_obj and is_gang(c) and not is_critter_dead(c)) then
+      if (is_gang(c) and not is_critter_dead(c)) then
          critter_add_trait(c, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
    end
    gfade_out(1);
@@ -186,14 +196,14 @@ procedure kane_ally begin
    call lair_finish(LAIR_HOW_ALLY);
    gfade_in(1);
    display_msg(mstr(160));
-   destroy_object(self_obj);   // последним, как в kane_leave
 end
 
-// Уходят без боя: экран гаснет на час, банда собирается и уходит, тайник за Кейном остается
+// Уходят без боя: экран гаснет на час, банда собирается и уходит, сундук Кейна и склад уносят с собой
 procedure kane_leave begin
    gfade_out(1);
    game_time_advance(ONE_GAME_HOUR);
    call lair_gang_leave(self_obj);
+   call lair_boxes_empty;   // уходили спокойно и забрали все (Егор 2026-10-15)
    call lair_finish(LAIR_HOW_PEACE);
    gfade_in(1);
    display_msg(mstr(161));

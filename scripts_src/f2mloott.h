@@ -1,0 +1,47 @@
+// Сгенерировано tools/layout/levels_emit.py: вид добычи в сундуках лагеря по клетке сундука (0.9.11).
+// 1 бар, 2 палатки и шатер старосты, 3 мастерская, 4 склад, 5 медпункт. Не править руками.
+#ifndef F2MLOOTT_H
+#define F2MLOOTT_H
+procedure loot_kind(variable t) begin
+   if (t == 7438) then return 2;   // (38, 37)
+   if (t == 7451) then return 2;   // (51, 37)
+   if (t == 7476) then return 2;   // (76, 37)
+   if (t == 7479) then return 2;   // (79, 37)
+   if (t == 7494) then return 2;   // (94, 37)
+   if (t == 7653) then return 2;   // (53, 38)
+   if (t == 7693) then return 2;   // (93, 38)
+   if (t == 7837) then return 2;   // (37, 39)
+   if (t == 8041) then return 2;   // (41, 40)
+   if (t == 8049) then return 2;   // (49, 40)
+   if (t == 8081) then return 2;   // (81, 40)
+   if (t == 8089) then return 2;   // (89, 40)
+   if (t == 8289) then return 2;   // (89, 41)
+   if (t == 8449) then return 2;   // (49, 42)
+   if (t == 8464) then return 2;   // (64, 42)
+   if (t == 8489) then return 2;   // (89, 42)
+   if (t == 8663) then return 2;   // (63, 43)
+   if (t == 9048) then return 2;   // (48, 45)
+   if (t == 9241) then return 2;   // (41, 46)
+   if (t == 9281) then return 2;   // (81, 46)
+   if (t == 10678) then return 2;   // (78, 53)
+   if (t == 10879) then return 2;   // (79, 54)
+   if (t == 11064) then return 2;   // (64, 55)
+   if (t == 11066) then return 2;   // (66, 55)
+   if (t == 11091) then return 2;   // (91, 55)
+   if (t == 11267) then return 2;   // (67, 56)
+   if (t == 11275) then return 2;   // (75, 56)
+   if (t == 11687) then return 2;   // (87, 58)
+   if (t == 11690) then return 2;   // (90, 58)
+   if (t == 16278) then return 2;   // (78, 81)
+   if (t == 16677) then return 2;   // (77, 83)
+   if (t == 18081) then return 2;   // (81, 90)
+   if (t == 22107) then return 1;   // (107, 110)
+   if (t == 23514) then return 1;   // (114, 117)
+   if (t == 23549) then return 3;   // (149, 117)
+   if (t == 23550) then return 3;   // (150, 117)
+   if (t == 26317) then return 5;   // (117, 131)
+   if (t == 26916) then return 5;   // (116, 134)
+   if (t == 27958) then return 4;   // (158, 139)
+   return 0;
+end
+#endif

@@ -10,6 +10,8 @@ procedure solid_set(variable t, variable on) begin
    else if (not on and b) then destroy_object(b);
 end
 procedure solid_sync begin
+   call solid_set(8444, tile_contains_pid_obj(8445, 0, 33554654));
+   call solid_set(8484, tile_contains_pid_obj(8485, 0, 33554654));
    call solid_set(8938, tile_contains_pid_obj(9341, 0, 33554763));
    call solid_set(8939, tile_contains_pid_obj(9341, 0, 33554763));
    call solid_set(8940, tile_contains_pid_obj(9341, 0, 33554763));
@@ -57,6 +59,7 @@ procedure solid_sync begin
    call solid_set(10350, tile_contains_pid_obj(10550, 0, 33555336));
    call solid_set(10548, tile_contains_pid_obj(10550, 0, 33555336));
    call solid_set(10549, tile_contains_pid_obj(10550, 0, 33555336));
+   call solid_set(11670, tile_contains_pid_obj(11671, 0, 33554654));
    call solid_set(17084, tile_contains_pid_obj(17283, 0, 33555632));
    call solid_set(17282, tile_contains_pid_obj(17283, 0, 33555632));
    call solid_set(17284, tile_contains_pid_obj(17283, 0, 33555632));
@@ -73,5 +76,23 @@ procedure solid_sync begin
    call solid_set(23104, tile_contains_pid_obj(23105, 0, 33555632));
    call solid_set(23106, tile_contains_pid_obj(23105, 0, 33555632));
    call solid_set(23305, tile_contains_pid_obj(23105, 0, 33555632));
+   call solid_set(23516, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(23517, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(23518, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(23715, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(23716, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(23717, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(23718, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(23915, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(23919, tile_contains_pid_obj(23917, 0, 33555001));
+   call solid_set(24115, tile_contains_pid_obj(24315, 0, 33554653));
+   call solid_set(24116, tile_contains_pid_obj(24315, 0, 33554653));
+   call solid_set(24119, tile_contains_pid_obj(24319, 0, 33554653));
+   call solid_set(24120, tile_contains_pid_obj(24319, 0, 33554653));
+   call solid_set(24121, tile_contains_pid_obj(23922, 0, 33554654));
+   call solid_set(24324, tile_contains_pid_obj(24524, 0, 33554653));
+   call solid_set(24525, tile_contains_pid_obj(24524, 0, 33554653));
+   call solid_set(25918, tile_contains_pid_obj(26118, 0, 33554653));
+   call solid_set(26119, tile_contains_pid_obj(26118, 0, 33554653));
 end
 #endif

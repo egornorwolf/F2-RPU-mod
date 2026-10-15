@@ -31,7 +31,8 @@ end
 
 procedure critter_p_proc begin
    variable h;
-   if (combat_is_initialized) then return;
+   // на базе места держит скрипт карты (base_posts в f2mlair.ssl, 0.9.11): там свое место не запоминаем
+   if (combat_is_initialized or cur_map_index == MAP_F2MOD_LAIR) then return;
    if (not local_var(LVAR_HOME)) then set_local_var(LVAR_HOME, tile_num(self_obj) + 1);
    h := local_var(LVAR_HOME) - 1;
    if (tile_distance(tile_num(self_obj), h) > 4 and not anim_busy(self_obj)) then animate_move_obj_to_tile(self_obj, h, 0);

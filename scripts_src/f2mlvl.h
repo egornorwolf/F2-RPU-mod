@@ -1160,7 +1160,7 @@ procedure lvl_s11_2 begin
    call lay_x(50332270, 9637);
 end
 
-// Склад: уровень 2. Ставим 89, убираем 0
+// Склад: уровень 2. Ставим 90, убираем 0
 procedure lvl_s12_2 begin
    variable nc := 0, oc;
    call lay_ruin_clear(5);
@@ -1255,6 +1255,7 @@ procedure lvl_s12_2 begin
    call lay_o(50332270, 29759, 0);
    call lay_o(50332270, 29761, 0);
    call lay_o(50332270, 29763, 0);
+   call lay_o(180, 27958, 0);
 end
 
 // Центр: уровень 2. Ставим 57, убираем 3
@@ -1322,7 +1323,7 @@ procedure lvl_s13_2 begin
    call lay_x(33554833, 16878);
 end
 
-// Мастерская: уровень 1. Ставим 5, убираем 0
+// Мастерская: уровень 1. Ставим 6, убираем 0
 procedure lvl_s14_1 begin
    variable nc := 0, oc;
    call lay_ruin_clear(6);
@@ -1331,9 +1332,10 @@ procedure lvl_s14_1 begin
    call lay_o(33556395, 23945, 0);
    call lay_o(33554833, 24155, 0);
    call lay_o(33554437, 23556, 0);
+   call lay_o(132, 23550, 0);
 end
 
-// Мастерская: уровень 2. Ставим 23, убираем 5
+// Мастерская: уровень 2. Ставим 24, убираем 6, вещи из 1 сундуков в locker1.frm
 procedure lvl_s14_2 begin
    variable nc := 0, oc;
    call lay_o(50331786, 23148, 0);
@@ -1359,11 +1361,16 @@ procedure lvl_s14_2 begin
    call lay_o(33555376, 24149, 0);
    call lay_o(50332270, 24151, 0);
    call lay_o(33556394, 23751, 0);
+   call lay_o(132, 23549, 0);
+   nc := tile_contains_pid_obj(23549, 0, 132);
+   oc := tile_contains_pid_obj(23550, 0, 132);
+   if (oc and nc) then move_obj_inven_to_obj(oc, nc);
    call lay_x(33554926, 23751);
    call lay_x(33556394, 23347);
    call lay_x(33556395, 23945);
    call lay_x(33554833, 24155);
    call lay_x(33554437, 23556);
+   call lay_x(132, 23550);
 end
 
 // Охрана: уровень 1. Ставим 2, убираем 0
@@ -1442,7 +1449,7 @@ procedure lvl_s16_2 begin
    call lay_o(33554828, 15555, 0);
 end
 
-// Бар: уровень 1. Ставим 52, убираем 0
+// Бар: уровень 1. Ставим 53, убираем 0
 procedure lvl_s17_1 begin
    variable nc := 0, oc;
    call lay_o(50332270, 22912, 0);
@@ -1503,9 +1510,10 @@ procedure lvl_s17_1 begin
    call lay_o(33555044, 22526, 0);
    call lay_lit(3, 80);
    call lay_o(33554437, 22928, 0);
+   call lay_o(43, 23514, 0);
 end
 
-// Бар: уровень 2. Ставим 168, убираем 52
+// Бар: уровень 2. Ставим 169, убираем 53, вещи из 1 сундуков в iceches.frm
 procedure lvl_s17_2 begin
    variable nc := 0, oc;
    call lay_o(50331786, 21106, 0);
@@ -1676,6 +1684,10 @@ procedure lvl_s17_2 begin
    call lay_o(50332270, 24523, 0);
    call lay_o(33554653, 24524, 0);
    call lay_o(50332270, 24525, 0);
+   call lay_o(43, 22107, 0);
+   nc := tile_contains_pid_obj(22107, 0, 43);
+   oc := tile_contains_pid_obj(23514, 0, 43);
+   if (oc and nc) then move_obj_inven_to_obj(oc, nc);
    call lay_x(50332270, 22912);
    call lay_x(50332270, 22913);
    call lay_x(50332129, 22914);
@@ -1728,6 +1740,7 @@ procedure lvl_s17_2 begin
    call lay_x(33554797, 22703);
    call lay_x(33555044, 22526);
    call lay_x(33554437, 22928);
+   call lay_x(43, 23514);
 end
 
 // Медпункт: уровень 1. Ставим 72, убираем 0

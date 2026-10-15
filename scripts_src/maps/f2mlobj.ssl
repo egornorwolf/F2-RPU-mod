@@ -34,13 +34,25 @@ procedure cell_up;
 #define is_hole         (obj_pid(self_obj) == PID_CELL_HOLE)
 #define is_ladder       (obj_pid(self_obj) == PID_CELL_LADDER)
 #define is_stack        (obj_pid(self_obj) == PID_CELL_STACK)
+#define is_chest        (obj_pid(self_obj) == PID_CHEST)
+// Кража из сундука Кейна (Егор 2026-10-15): сундук стоит у самой стенки шатра. Со стороны скалы (северная сторона,
+// клетка у сундука в ряду y 85) с Воровством 75 его можно тихо обчистить, пока банда в карьере. Спереди, на глазах
+// у банды, — тревога. Сам герой подсказывает это в шатре (f2mkane.ssl) и при осмотре сундука
+#define CHEST_STEAL     (75)
+#define chest_guarded   (not lair_done and get_sfall_global_int(GV_LAIR_HOW) != LAIR_HOW_ALLY \
+                         and not get_sfall_global_int(GV_LAIR_ALARM) and lair_gang_alive(0) > 0)
+#define dude_cliff_side (tile_num(dude_obj) / 200 <= 85 and tile_distance(tile_num(dude_obj), LAIR_CHEST) <= 2)
 
 procedure start begin
 end
 
 procedure look_at_p_proc begin
    script_overrides;
-   if (is_water) then display_msg(mstr(230));
+   if (is_chest) then begin
+      display_msg(mstr(260));
+      if (chest_guarded) then display_msg(mstr(261));
+   end
+   else if (is_water) then display_msg(mstr(230));
    else if (is_ladder) then display_msg(mstr(248));
    else if (is_stack) then begin
       if (get_sfall_global_int(GV_CELL_CHARGE)) then display_msg(mstr(252));
@@ -60,6 +72,22 @@ procedure description_p_proc begin
 end
 
 procedure use_p_proc begin
+   if (is_chest) then begin
+      if (not chest_guarded or combat_is_initialized) then return;   // свой сундук или и так бой: открывается как обычно
+      if (dude_cliff_side) then begin
+         if (has_skill(dude_obj, SKILL_STEAL) >= CHEST_STEAL) then
+            float_msg(dude_obj, mstr(262), FLOAT_MSG_YELLOW);   // тихо открывает сам движок
+         else begin
+            script_overrides;
+            float_msg(dude_obj, mstr(263) + CHEST_STEAL + "].", FLOAT_MSG_YELLOW);
+         end
+      end else if (noticed) then begin
+         script_overrides;
+         display_msg(mstr(264));
+         call lair_alarm;
+      end
+      return;
+   end
    script_overrides;
    if (is_water) then display_msg(mstr(231));
    else if (is_hole) then call cell_down;

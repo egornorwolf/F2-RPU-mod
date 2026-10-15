@@ -8,11 +8,14 @@
 #ifndef F2MHOME_H
 #define F2MHOME_H
 
+#include "f2msort.h"
+
 #define camp_night          (game_time_hour >= 2100 or game_time_hour < 600)
 
 procedure camp_spread(variable walk);
 procedure camp_is_civ(variable c);
 procedure camp_is_child(variable c);
+procedure camp_go(variable c, variable t, variable walk);
 
 procedure camp_is_civ(variable c) begin
    variable p;
@@ -27,7 +30,7 @@ procedure camp_is_child(variable c) begin
 end
 
 procedure camp_spread(variable walk) begin
-   variable spots, n := 0, s, c, i := 0, k, t, u, bar := 0, b := 0, dnum, carry, tend := 0, medic := 0, victim := 0;
+   variable spots, n := 0, s, c, i := 0, k, t, u, bar := 0, b := 0, dnum, carry, tend := 0, medic := 0, civs, roles;
    if (combat_is_initialized or get_sfall_global_int(GV_BURY_ON) or get_sfall_global_int(GV_CARAVAN_HOSTILE)) then return;
    spots := temp_array(0, 0);
    dnum := game_time / ONE_GAME_DAY;
@@ -79,43 +82,86 @@ procedure camp_spread(variable walk) begin
          s += 1;
       end
    end
-   // Работники (Егор 2026-10-09): бармен у стойки с 6:00 до полуночи, медик у стола с 6:00 до 21:00 — первые взрослые по списку
+   // Работники (Егор 2026-10-09): бармен у стойки с 6:00 до полуночи, медик у стола с 6:00 до 21:00.
+   // Роли закреплены жестко (Егор 2026-10-15, тест 0.9.10): раньше их раздавали по порядку списка существ, а он меняется после
+   // каждого разговора — люди менялись ролями и местами и «появлялись из воздуха». Теперь жители упорядочены по id объекта
+   // (не меняется ни при разговоре, ни при загрузке): бармен — первый взрослый, медик — второй, хозяйка медальона — первая
+   // женщина среди остальных; остальные по своим местам в том же порядке. Пришел ключевой НПС (Ной в бар) — работник
+   // становится обычным жителем и идет на свою работу.
    set_sfall_global(GV_BAR_TEND, 0);
-   if (game_time_hour >= 600 and lvl_staff(U_BAR, bld_shown(U_BAR))) then tend := 1;
+   set_sfall_global(GV_MED_TEND, 0);
+   if (game_time_hour >= 600 and lvl_staff(U_BAR, bld_shown(U_BAR)) and not get_sfall_global_int(GV_NOAH_HERE)) then tend := 1;
    if (not camp_night and lvl_staff(U_MED, bld_shown(U_MED))) then medic := 1;
-   i := 0;
+   civs := temp_array(0, 0);
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (camp_is_civ(c)) then begin
-         t := 0;
-         // хозяйка украденного медальона (2.6) ждет героя у его дома днем и ночью, пока не вернет медальон
-         if (not victim and thief_victim_on and not camp_is_child(c) and get_critter_stat(c, STAT_gender) == GENDER_FEMALE) then begin
-            t := THIEF_VICTIM_SPOT;
-            victim := 1;
-         end else if (tend == 1 and not camp_is_child(c)) then begin
-            t := lvl_staff(U_BAR, bld_shown(U_BAR));
-            tend := 2;
-            set_sfall_global(GV_BAR_TEND, t);
-         end else if (medic == 1 and not camp_is_child(c)) then begin
-            t := lvl_staff(U_MED, bld_shown(U_MED));
-            medic := 2;
-         end else if (bar and b < bar and not camp_is_child(c) and (i + dnum) % 2 == 0) then begin
-            t := lvl_bar(bld_shown(U_BAR), b);
-            b += 1;
-         end else begin
-            // кому места нет — у костра, как при приходе каравана (cv_civilians)
-            if (i < n) then t := spots[i];
-            else t := tile_num_in_direction(camp_fire, (i - n) % 6, 2 + ((i - n) / 6) * 2);
-            i += 1;
-         end
-         if (tile_distance(tile_num(c), t) > 1) then begin
-            if (walk and tile_is_visible(tile_num(c))) then begin
-               if (not anim_busy(c)) then animate_move_obj_to_tile(c, t, 0);
-            end else begin
-               critter_attempt_placement(c, t, 0);
-               anim(c, ANIMATE_ROTATION, random(0, 5));
-            end
-         end
+         resize_array(civs, len_array(civs) + 1);
+         civs[len_array(civs) - 1] := c;
       end
+   end
+   call camp_sort_id(civs);
+   // роли: 1 бармен, 2 медик, 3 хозяйка медальона, 0 — по местам
+   roles := temp_array(len_array(civs), 0);
+   k := 1;
+   if (get_sfall_global_int(GV_NOAH_HERE)) then k := 2;   // с Ноем бармена из жителей нет
+   while (k <= 2) do begin
+      s := 0;
+      while (s < len_array(civs)) do begin
+         if (roles[s] == 0 and not camp_is_child(civs[s])) then begin
+            roles[s] := k;
+            s := len_array(civs);
+         end
+         s += 1;
+      end
+      k += 1;
+   end
+   if (thief_victim_on) then begin
+      s := 0;
+      while (s < len_array(civs)) do begin
+         if (roles[s] == 0 and not camp_is_child(civs[s]) and get_critter_stat(civs[s], STAT_gender) == GENDER_FEMALE) then begin
+            roles[s] := 3;
+            s := len_array(civs);
+         end
+         s += 1;
+      end
+   end
+   // сначала все, у кого нет роли или работник не на смене, — по местам в постоянном порядке
+   i := 0;
+   s := 0;
+   while (s < len_array(civs)) do begin
+      c := civs[s];
+      t := 0;
+      if (roles[s] == 3) then
+         t := THIEF_VICTIM_SPOT;
+      else if (roles[s] == 1 and tend) then begin
+         t := lvl_staff(U_BAR, bld_shown(U_BAR));
+         set_sfall_global(GV_BAR_TEND, t);
+      end else if (roles[s] == 2 and medic) then begin
+         t := lvl_staff(U_MED, bld_shown(U_MED));
+         set_sfall_global(GV_MED_TEND, t);
+      end else if (bar and b < bar and roles[s] == 0 and not camp_is_child(c) and (s + dnum) % 2 == 0) then begin
+         t := lvl_bar(bld_shown(U_BAR), b);
+         b += 1;
+      end else begin
+         // кому места нет — у костра, как при приходе каравана (cv_civilians)
+         if (i < n) then t := spots[i];
+         else t := tile_num_in_direction(camp_fire, (i - n) % 6, 2 + ((i - n) / 6) * 2);
+         i += 1;
+      end
+      call camp_go(c, t, walk);
+      s += 1;
+   end
+end
+
+// Житель идет на свое место. Видно на экране старое или новое место — идет пешком; мгновенно переставляем,
+// только если не видно ни того, ни другого (вход на карту, затемнение — walk 0)
+procedure camp_go(variable c, variable t, variable walk) begin
+   if (tile_distance(tile_num(c), t) <= 1) then return;
+   if (walk and (tile_is_visible(tile_num(c)) or tile_is_visible(t))) then begin
+      if (not anim_busy(c)) then animate_move_obj_to_tile(c, t, 0);
+   end else begin
+      critter_attempt_placement(c, t, 0);
+      anim(c, ANIMATE_ROTATION, random(0, 5));
    end
 end
 

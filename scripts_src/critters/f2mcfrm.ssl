@@ -95,6 +95,7 @@ procedure Node075;
 procedure Node076;
 procedure Node077;
 procedure Node078;
+procedure Node079;
 procedure Node080;
 procedure Node081;
 procedure Node100;
@@ -150,6 +151,10 @@ variable sel_lv;           // на какой уровень
 variable sel_price;
 variable go_l1 := -1;      // строить 1-й уровень после диалога (сразу, как палатки)
 variable go_wait;          // ждать на месте, пока бригада go_wait достроит
+variable go_base;          // герой помогает строить базу: оба уходят в карьер (Егор 2026-10-15, тест 0.9.10)
+// Кто на базе сейчас (Егор 2026-10-15, тест 0.9.10): пункт справочный, после ответа скрыт, пока там те же люди
+#define base_guard_state    (1 + (get_sfall_global_int("f2mbinvt") >= 1) + 2 * (get_sfall_global_int("f2mlairh") == 2))
+#define base_guard_ask      (get_sfall_global_int(GV_HANK_GUARD) != base_guard_state)
 
 procedure start begin
 end
@@ -241,6 +246,7 @@ procedure talk_p_proc begin
    go_bury := 0;
    go_l1 := -1;
    go_wait := 0;
+   go_base := 0;
    start_gdialog(NAME, self_obj, 4, -1, -1);
    gSay_Start;
       call Node001;
@@ -252,6 +258,13 @@ procedure talk_p_proc begin
    if (go_bury) then call bury_start(go_bury);
    if (go_l1 >= 0) then call do_l1;
    if (go_wait) then call do_wait;
+   // База своими руками: герой и Хэнк сразу уходят в карьер (черный экран — переход карты), стройка идет там при герое (f2mbcmd.ssl)
+   if (go_base) then begin
+      set_sfall_global(GV_BASE_HELP, go_base);
+      go_base := 0;
+      helped := 0;
+      load_map(MAP_F2MOD_LAIR, 0);
+   end
 end
 
 procedure timed_event_p_proc begin
@@ -760,7 +773,7 @@ end
 procedure Node066 begin
    if (not bld_level(U_BASE_UNIT) and not bld_camp_ready(BASE_CAMP_LEVEL)) then begin
       Reply(467);
-      NOption(461, Node067, 4);
+      if (base_guard_ask) then NOption(461, Node067, 4);
       NOption(419, Node060, 4);
       NLowOption(117, Node999);
       return;
@@ -769,13 +782,16 @@ procedure Node066 begin
    else if (bld_offer(U_BASE_UNIT)) then Reply(465);
    else Reply(466);
    if (bld_offer(U_BASE_UNIT)) then NOption(bld_opt(U_BASE_UNIT), Node120, 4);
-   NOption(461, Node067, 4);
+   if (base_guard_ask) then NOption(461, Node067, 4);
    NOption(463, Node068, 4);
    NLowOption(117, Node999);
 end
 
 procedure Node067 begin
-   Reply(462);
+   set_sfall_global(GV_HANK_GUARD, base_guard_state);
+   if (get_sfall_global_int("f2mlairh") == 2) then Reply(471);
+   else if (get_sfall_global_int("f2mbinvt") >= 1) then Reply(470);
+   else Reply(462);
    NOption(419, Node066, 4);
    NLowOption(117, Node999);
 end
@@ -892,6 +908,12 @@ procedure bld_pay(variable who) begin
    else
       j := bld_job_start(sel_u, sel_lv, bld_hours(sel_u, sel_lv));
    sel_lv := j;
+   if (helped and sel_u == U_BASE_UNIT) then begin
+      Reply(468);
+      NOption(469, Node079, 4);
+      NLowOption(469, Node079);
+      return;
+   end
    if (helped) then begin
       Reply(450);
       NOption(435, Node076, 4);
@@ -906,6 +928,10 @@ end
 
 procedure Node076 begin
    go_wait := sel_lv;
+end
+
+procedure Node079 begin
+   go_base := helped;
 end
 
 // 2-й уровень своими руками: цена меньше на треть, бригада с героем, ждем на месте

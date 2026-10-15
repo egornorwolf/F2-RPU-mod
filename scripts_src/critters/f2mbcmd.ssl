@@ -28,12 +28,19 @@ procedure Node010;
 procedure Node011;
 procedure Node020;
 procedure Node030;
+procedure Node040;
+procedure Node041;
+procedure hank_work;
 procedure Node999;
 procedure garr_count;
 
 #define LVAR_HOME       (0)     // место (клетка + 1)
 #define is_hank         (obj_pid(self_obj) == PID_DOCK_WORKER)
 #define GV_BCMD_MET     "f2mbcmet"
+#define GV_BCMD_WHO     "f2mbcwho"  // 1 = командир уже рассказал о себе (справочный пункт скрыт)
+
+variable asked;     // Хэнк уже позвал героя за работу
+variable go_work;
 
 procedure start begin
 end
@@ -52,6 +59,13 @@ end
 
 procedure critter_p_proc begin
    variable h;
+   // Герой пришел помогать (f2mcfrm.ssl): Хэнк сам зовет за работу
+   if (is_hank and not asked and not combat_is_initialized and get_sfall_global_int(GV_BASE_HELP)
+       and tile_distance_objs(self_obj, dude_obj) <= 8) then begin
+      asked := 1;
+      dialogue_system_enter;
+      return;
+   end
    if (combat_is_initialized or is_hank) then return;
    if (not local_var(LVAR_HOME)) then set_local_var(LVAR_HOME, tile_num(self_obj) + 1);
    h := local_var(LVAR_HOME) - 1;
@@ -64,6 +78,16 @@ end
 
 procedure talk_p_proc begin
    variable j, h;
+   if (is_hank and get_sfall_global_int(GV_BASE_HELP) and bld_job_of(U_BASE)) then begin
+      go_work := 0;
+      start_gdialog(NAME, self_obj, 4, -1, -1);
+      gSay_Start;
+         call Node040;
+      gSay_End;
+      end_dialogue;
+      if (go_work) then call hank_work;
+      return;
+   end
    if (is_hank) then begin
       j := bld_job_of(U_BASE);
       h := 0;
@@ -83,7 +107,7 @@ procedure Node001 begin
    if (get_sfall_global_int(GV_BCMD_MET)) then Reply(111);
    else Reply(110);
    set_sfall_global(GV_BCMD_MET, 1);
-   NOption(112, Node010, 4);
+   if (not get_sfall_global_int(GV_BCMD_WHO)) then NOption(112, Node010, 4);
    NOption(113, Node020, 4);
    NOption(114, Node999, 4);
    NLowOption(115, Node030);
@@ -96,6 +120,7 @@ procedure Node010 begin
 end
 
 procedure Node011 begin
+   set_sfall_global(GV_BCMD_WHO, 1);
    Reply(122);
    NOption(123, Node001, 4);
 end
@@ -123,6 +148,31 @@ procedure Node030 begin
 end
 
 procedure Node999 begin
+end
+
+// Хэнк на базе: герой пришел строить своими руками
+procedure Node040 begin
+   Reply(163);
+   NOption(164, Node041, 4);
+   NOption(165, Node999, 4);
+   NLowOption(164, Node041);
+end
+
+procedure Node041 begin
+   go_work := 1;
+end
+
+// Работают до конца: проходит срок стройки, постройки встанут, как только кончится разговор
+// (map_update карты карьера после диалога, f2mlair.ssl), Хэнк уходит в лагерь; опыт за помощь
+procedure hank_work begin
+   variable j, h;
+   j := bld_job_of(U_BASE);
+   h := get_sfall_global_int(GV_BASE_HELP);
+   set_sfall_global(GV_BASE_HELP, 0);
+   if (j) then game_time_advance(bld_job_left(j) * ONE_GAME_HOUR);
+   call bld_commit;
+   give_exp_points(BLD_HELP_XP * h);
+   display_msg(message_str(SCRIPT_F2MCFRM, 195) + (BLD_HELP_XP * h) + message_str(SCRIPT_F2MCFRM, 196));
 end
 
 // Свои бойцы на карте (без командира и Хэнка)

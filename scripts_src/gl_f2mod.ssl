@@ -36,7 +36,7 @@
 #include "f2mthief.h"
 #include "f2mremn.h"
 
-#define F2MOD_VERSION "0.9.10"
+#define F2MOD_VERSION "0.9.11"
 
 procedure start;
 procedure encounter_handler;
@@ -53,10 +53,12 @@ procedure shovel_tick;
 procedure lair_cellar_look;
 procedure cell_tick;
 procedure base_title;
+procedure camp_big;
 
 variable lair_hint;
 variable cell_hint;
 variable base_titled;   // название военной базы на карте мира уже поставлено (sfall его не сохраняет)   // подсказки в погребе за этот спуск: 1 у штабеля, 2 с динамитом
+variable camp_bigged;   // лагерь на карте мира уже большой кружок (ставим при каждой загрузке)
 
 procedure start begin
    variable st;
@@ -68,6 +70,7 @@ procedure start begin
       register_hook_proc(HOOK_ONEXPLOSION, explosion_handler);
       set_global_script_repeat(60);
       base_titled := 0;
+      camp_bigged := 0;
       display_msg("Мод поселения F2mod " + F2MOD_VERSION + " загружен.");
    end else begin
       call keep_escort_wm_pos;
@@ -81,6 +84,7 @@ procedure start begin
       call lair_cellar_look;
       call cell_tick;
       call base_title;
+      call camp_big;
       call farm_tick;
       call farm_arrive;
       call shovel_tick;
@@ -187,6 +191,15 @@ procedure base_title begin
    base_titled := 1;
    mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_BASE, MARK_STATE_KNOWN);
    mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_LAIR, MARK_STATE_INVISIBLE);
+end
+
+// Лагерь после 2-го уровня центра (Егор 2026-10-15): на карте мира большой кружок, как город. Это Area 65 (size Large)
+// на той же точке с той же картой, малый кружок (Area 61) прячем — так же, как логово и военная база
+procedure camp_big begin
+   if (camp_bigged or bld_level(U_CENTRE) < 2) then return;
+   camp_bigged := 1;
+   mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP_BIG, MARK_STATE_KNOWN);
+   mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_CAMP, MARK_STATE_INVISIBLE);
 end
 
 // Радист пришел, пока герой в лагере: ждем, пока закрыты окна и нет боя, экран гаснет, Сэм у старосты

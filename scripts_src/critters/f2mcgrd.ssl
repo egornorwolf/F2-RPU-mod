@@ -47,6 +47,8 @@ procedure Node024;
 procedure Node025;
 procedure Node026;
 procedure Node027;
+procedure Node030;
+procedure Node031;
 procedure armor_pay(variable who);
 procedure armor_raiders;
 procedure armor_count;
@@ -61,17 +63,24 @@ variable called;   // когда Рик в последний раз звал г
 
 // База в карьере построена или улучшена, а бойцов туда Рик еще не прислал (0.9.9, Егор 2026-10-11)
 #define GV_BASE_INVITE  "f2mbinvt"
-#define base_invite_due (get_sfall_global_int("f2mlairs") >= 2 and bld_level(U_BASE_UNIT) > get_sfall_global_int(GV_BASE_INVITE))
+// При людях Кейна (мир, f2mlairh = 2) база не пустая и наемников Рик не предлагает (Егор 2026-10-15, тест 0.9.10)
+#define base_invite_due (get_sfall_global_int("f2mlairs") >= 2 and bld_level(U_BASE_UNIT) > get_sfall_global_int(GV_BASE_INVITE) \
+                         and get_sfall_global_int("f2mlairh") != 2)
+
+// Разведка (Егор 2026-10-15, тест 0.9.10): лагерь стоит сутки, набега еще не было, а герой сидит в лагере. Рик зовет его
+// пройтись по окрестностям: повод уйти, без которого набег не начнется (он ждет, пока героя нет). Награда при возвращении (f2mcamp.ssl)
+#define scout_due       (is_chief and not get_sfall_global_int(GV_RAID) and not get_sfall_global_int(GV_SCOUT) \
+                         and get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE and set_founded and game_time / ONE_GAME_HOUR - get_sfall_global_int(GV_CAMP_DAY) >= RAID_HOURS)
 
 // Повторный налет отбит (Егор 2026-10-15): Рик говорит, что пора искать логово, раз за каждый налет
 #define raid2_talk_due  (get_sfall_global_int("f2mraid2") == 2 and get_sfall_global_int("f2mlairs") < 2 \
                          and get_sfall_global_int("f2mr2tld") < get_sfall_global_int("f2mr2num"))
 
-// Боевая броня бывшим налетчикам и всей охране (Егор 2026-10-15): после стройки базы, если бывшие налетчики у нас есть
-// (люди Кейна после мира или остатки банды у поста). Денег не хватает — пункт остается
+// Боевая броня всей охране (Егор 2026-10-15): после стройки базы, если на базе есть свои — люди Кейна после мира
+// или наемники Рика (или бывшие налетчики у поста). Цена одна за всех: 8000 (Егор, тест 0.9.10). Денег не хватает — пункт остается
 #define GV_ARMOR_TOLD   "f2marmtd"
-#define armor_due       (bld_level(U_BASE_UNIT) >= 1 and not armor_bought and armor_raiders)
-#define armor_total     (ARMOR_PRICE * armor_count)
+#define armor_due       (bld_level(U_BASE_UNIT) >= 1 and not armor_bought and (armor_raiders or get_sfall_global_int(GV_BASE_INVITE) >= 1))
+#define armor_total     (ARMOR_TOTAL)
 variable go_armor;
 
 // Сколько ополченцев можно нанять: четверо, но не больше свободных мест у поста (там уже могут жить бывшие налетчики, 1.4б)
@@ -114,15 +123,22 @@ procedure critter_p_proc begin
    if (not combat_is_initialized) then begin
       if (cv_fight) then return;
    end
-   // Зовет героя, как другие с делом: база ждет бойцов
+   // Зовет героя, как другие с делом: разведка или база ждет бойцов
+   if (scout_due and not combat_is_initialized and not get_sfall_global_int(GV_BURY_ON) and tile_distance_objs(self_obj, dude_obj) <= 15
+       and self_can_see_dude and (not called or get_uptime >= called + 20000 or get_uptime < called)) then begin
+      called := get_uptime;
+      floater(260);
+   end
    if (is_chief and base_invite_due and not combat_is_initialized and not get_sfall_global_int(GV_BURY_ON) and tile_distance_objs(self_obj, dude_obj) <= 15
        and self_can_see_dude and (not called or get_uptime >= called + 20000 or get_uptime < called)) then begin
       called := get_uptime;
       floater(196);
    end
    if (not warned and not in_camp and self_can_see_dude and not get_sfall_global_int(GV_BURY_ON) and tile_distance_objs(self_obj, dude_obj) < 6) then begin
-      warned := 1;
-      floater(random(102, 104));
+      if (greet_turn) then begin
+         warned := 1;
+         floater(random(102, 104));
+      end
    end
 end
 
@@ -155,6 +171,8 @@ procedure talk_p_proc begin
          call Node003;
       else if (raid2_talk_due) then
          call Node022;
+      else if (scout_due) then
+         call Node030;
       else if (base_invite_due) then
          call Node020;
       else if (armor_due and not get_sfall_global_int(GV_ARMOR_TOLD)) then
@@ -174,9 +192,10 @@ procedure talk_p_proc begin
       go_militia := 0;
    end
    if (go_armor) then begin
-      go_armor := 0;
       call armor_dress_camp;
-      display_msg(mstr(246));
+      if (go_armor == 1) then display_msg(mstr(246));
+      else display_msg(mstr(250));
+      go_armor := 0;
    end
 end
 
@@ -229,8 +248,10 @@ procedure Node020 begin
 end
 
 procedure Node021 begin
+   // первый раз с бойцами идут командир базы и наемник в погреб, а троих Рик оставляет в охране лагеря (f2mlair.ssl, f2mcell.ssl, f2mpost.h)
+   if (get_sfall_global_int(GV_BASE_INVITE)) then Reply(200);
+   else Reply(203);
    set_sfall_global(GV_BASE_INVITE, bld_level(U_BASE_UNIT));
-   Reply(200);
    NOption(141, Node999, 4);
    NLowOption(135, Node999);
 end
@@ -263,7 +284,9 @@ procedure Node024 begin
    set_sfall_global(GV_ARMOR_TOLD, 1);
    p := armor_total;
    c := pay_cash_now;
-   Reply(mstr(240) + " " + mstr(241) + armor_count + mstr(242) + ARMOR_PRICE + mstr(243) + p + mstr(244));
+   // про «горе-налетчиков» — только если они у нас есть (Егор, тест 0.9.10: на базе были наемники)
+   if (armor_raiders) then Reply(mstr(240) + " " + mstr(241) + armor_count + mstr(242) + p + mstr(244));
+   else Reply(mstr(248) + " " + mstr(241) + armor_count + mstr(242) + p + mstr(244));
    if (can_pay_hero(p)) then NOption(mstr(193) + p + mstr(189), Node025, 4);
    if (can_pay_cash(p)) then NOption(mstr(182) + c + mstr(185), Node026, 4);
    if (can_pay_split(p)) then NOption(mstr(183) + c + mstr(184) + (p - c) + mstr(189), Node027, 4);
@@ -274,8 +297,9 @@ end
 procedure armor_pay(variable who) begin
    call pay_do(armor_total, who);
    set_sfall_global(GV_BASE_ARMOR, 1);
-   go_armor := 1;
-   Reply(245);
+   go_armor := 1 + (not armor_raiders);
+   if (armor_raiders) then Reply(245);
+   else Reply(249);
    NOption(141, Node999, 4);
    NLowOption(135, Node999);
 end
@@ -290,6 +314,21 @@ end
 
 procedure Node027 begin
    call armor_pay(PAY_SPLIT);
+end
+
+// Разведка окрестностей перед набегом
+procedure Node030 begin
+   Reply(261);
+   NOption(262, Node031, 4);
+   NOption(263, Node001, 4);
+   NLowOption(265, Node031);
+end
+
+procedure Node031 begin
+   set_sfall_global(GV_SCOUT, 1);
+   Reply(264);
+   NOption(141, Node999, 4);
+   NLowOption(135, Node999);
 end
 
 // Бывшие налетчики у нас: люди Кейна после мира (гарнизон карьера) или остатки банды у поста (модели дикарей)

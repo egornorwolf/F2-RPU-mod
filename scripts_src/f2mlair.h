@@ -28,11 +28,16 @@
 #define GV_CELL_LOOT    "f2mcellt"  // час, когда герой впервые ушел из погреба, обобрав трупы (через неделю они пропадут)
 #define GV_LAIR_BRIBE   "f2mlairb"  // 1 = Кейна откупили 1000 крышек (для реплики остатков банды, 1.4б)
 #define GV_LAIR_FIN     "f2mlairf"  // час, когда логово взято (через два месяца после взрыва — остатки банды)
+#define GV_CHEST_SCR    "f2mchscr"  // 1 = у сундука Кейна есть скрипт кражи (f2mlobj.ssl), 0.9.11
+#define GV_BASE_SENT    "f2mbsent"  // охрана с базы в лагере (f2mpost.h): 0 нет, 1 люди Кейна пришли (карьер еще не убрал их у себя), 2 все сделано
+#define GV_BASE_SENT_N  "f2mbsenn"  // сколько их пришло
+#define BASE_SENT_N     (3)
+#define GV_KANE_HINT    "f2mkhint"  // 1 = герой уже подсказал про сундук со стороны скалы
 
 #define LAIR_KNOWN      (1)
 #define LAIR_DONE       (2)
 #define LAIR_HOW_FIGHT  (1)
-#define LAIR_HOW_ALLY   (2)     // мир с Кейном: его люди — гарнизон карьера и наша охрана, сам Кейн ушел один (Егор 2026-10-15)
+#define LAIR_HOW_ALLY   (2)     // мир с Кейном: его люди — гарнизон карьера, Кейн остается их командиром (Егор 2026-10-15, тест 0.9.10)
 #define LAIR_HOW_PEACE  (3)     // ушли без боя (Красноречие 100 или 75 и 1000 крышек)
 #define LAIR_HOW_BLAST  (4)     // погреб взорван, банда ушла без еды
 
@@ -76,6 +81,7 @@
 #define base_building   (bld_job_of(U_BASE) != 0)   // бригада Хэнка сейчас строит базу
 
 #define lair_msg(n)     message_str(SCRIPT_F2MLAIR, n)
+#define lair_is_kane(c) (obj_pid(c) == PID_RAIDER_MALE and (obj_art_fid(c) bwand 0xFFF) == GANG_ART_BOSS)
 #define lair_done       (get_sfall_global_int(GV_LAIR) >= LAIR_DONE)
 #define lair_kane_dead  (get_sfall_global_int(GV_BOSS_NOTE) != 0)   // убит у ворот и обыскан (героем или Риком)
 #define base_level      (bld_level(U_BASE))
@@ -92,6 +98,8 @@ procedure lair_finish(variable how);
 procedure lair_gang_leave(variable keep);
 procedure lair_cellar_face;
 procedure lair_gang_fall(variable except);
+procedure lair_boxes_empty;
+procedure lair_box_empty(variable tile, variable pid);
 
 procedure lair_reveal(variable msg) begin
    set_sfall_global(GV_LAIR, LAIR_KNOWN);
@@ -221,6 +229,23 @@ procedure lair_gang_leave(variable keep) begin
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (c != keep and is_gang(c) and not is_critter_dead(c)) then destroy_object(c);
    end
+end
+
+// Банда ушла без боя или после взрыва погреба (Егор 2026-10-15): уходили спокойно и забрали все —
+// сундук Кейна пустой, ящик склада (где яд) тоже, что бы в нем ни осталось
+procedure lair_box_empty(variable tile, variable pid) begin
+   variable box, tmp;
+   box := tile_contains_pid_obj(tile, 0, pid);
+   if (not box) then return;
+   // rm_obj_from_inven снимает по одному предмету из стопки: проще переложить все во временный ящик и убрать его
+   tmp := create_object(PID_CONTAINER_WOOD_CRATE, 0, 0);
+   move_obj_inven_to_obj(box, tmp);
+   destroy_object(tmp);
+end
+
+procedure lair_boxes_empty begin
+   call lair_box_empty(LAIR_CHEST, PID_CHEST);
+   call lair_box_empty(LAIR_STORE, PID_CONTAINER_WOOD_CRATE);
 end
 
 #endif

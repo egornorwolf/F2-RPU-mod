@@ -63,7 +63,9 @@ procedure bury_say(variable c, variable text, variable color) begin
    variable o;
    foreach (o in list_as_array(LIST_CRITTERS)) float_msg(o, "", FLOAT_MSG_NORMAL);
    float_msg(c, text, color);
-   return 40 + 14 * ((strlen(text) + 29) / 30);
+   if (c == dude_obj) then return 40 + 14 * ((strlen(text) + 29) / 30);
+   // жители быстрее (Егор 2026-10-15, тест 0.9.10): следующая реплика снимает прошлую, ждать, пока погаснет, не нужно
+   return 20 + 10 * ((strlen(text) + 29) / 30);
 end
 
 procedure bury_start(variable speech) begin

@@ -6,7 +6,8 @@
 // Потолок основных статов героя (Егор, 2026-10-05): 15 вместо 10, ставит sfall при каждой загрузке
 #define F2MOD_STAT_MAX 15
 
-#define AREA_F2MOD_CAMP     (61)    // [Area 61] в city.txt
+#define AREA_F2MOD_CAMP     (61)    // [Area 61] в city.txt; вкладка «Приют» WM_F2SHL (479, 0.9.11)
+#define AREA_F2MOD_CAMP_BIG (65)    // [Area 65]: тот же лагерь большим кружком после 2-го уровня центра (gl_f2mod.ssl)
 #define MAP_F2MOD_CAMP_OLD  (173)   // [Map 173]: прежняя временная карта лагеря (desert1), больше не используется
 #define MAP_F2MOD_CAMP      (179)   // [Map 179] в maps.txt: лагерь у скал на карте города (0.5.0)
 #define MAP_F2MOD_CARAVAN   (174)   // [Map 174] в maps.txt: встреча с караваном
@@ -17,7 +18,7 @@
 #define is_escort_map(m)    ((m) >= MAP_F2MOD_ESCORT and (m) <= MAP_F2MOD_ESCORT3)
 #define AREA_F2MOD_TOWN     (62)    // [Area 62]: песочница для обкатки стройки (только с f2mod_test.dat)
 #define MAP_F2MOD_TOWN      (178)   // [Map 178]: карта песочницы f2mtown
-#define AREA_F2MOD_LAIR     (63)    // [Area 63]: карьер в горах (логово налетчиков). Вкладка справа: надпись WM_RAID (474)
+#define AREA_F2MOD_LAIR     (63)    // [Area 63]: карьер в горах (логово налетчиков). Вкладка справа: своя надпись «Карьер» WM_F2QRY (478, 0.9.11)
 #define AREA_F2MOD_BASE     (64)    // [Area 64]: та же точка и та же карта — военная база с 1-го уровня (вкладка WM_MLTRY, 378);
                                     // логово (63) тогда прячется (gl_f2mod.ssl base_title), Егор 2026-10-15
 #define MAP_F2MOD_LAIR      (180)   // [Map 180]: карта карьера f2mlair (копия mountn5)
@@ -134,6 +135,10 @@
 #define GV_MIL_HIRED        "f2mmilhr"  // 1 = ополчение нанято у Рика
 #define GV_COMP_STAY        "f2mcomps"  // 1 = герой ушел из лагеря, оставив там спутника
 #define GV_RAID_AWAY        "f2mraway"  // 1 = герой ушел с карты лагеря (набег ждет, пока он там)
+#define GV_SCOUT            "f2mscout"  // разведка у Рика перед набегом: 1 герой согласился, 2 награда получена
+#define SCOUT_XP            (100)
+#define GV_BASE_HELP        "f2mbhelp"  // герой помогает Хэнку строить базу: опыт за помощь (уровень стройки), стройка идет при нем в карьере
+#define GV_HANK_GUARD       "f2mhgard"  // Хэнк ответил «А охрана?»: кто был на базе + 1 (пункт скрыт, пока там те же)
 #define GV_RAID             "f2mraid1"  // первый набег: 0 не было, 1 был
 #define GV_RAID_OUT         "f2mrout1"  // итог набега: RAID_OUT_* (f2mraid.h)
 #define GV_RAID_HOUR        "f2mrhour"  // когда был набег: game_time / ONE_GAME_HOUR
@@ -189,6 +194,12 @@
 #define GV_BAR_TEND         "f2mbartd"  // клетка у стойки, где сейчас стоит работник бара (0 — бар закрыт), ставит camp_spread
 #define GV_BAR_WEEK         "f2mbarwk"  // неделя последнего завоза выпивки (+1)
 #define GV_NOAH_HERE        "f2mnoahh"  // 1 = бармен Ной пришел (бар 3-го уровня): с ним торгует только он
+#define f2m_obj_id(o)       get_object_data(o, 0)   // постоянный id объекта (OBJ_DATA_ID в define_extra.h, сохраняется в карте)
+#define GV_BAR_WHO          "f2mbarwh"  // id работника бара, которому завезли товар (сменился работник — завоз ему)
+// Временный доктор (Егор 2026-10-15): житель у стола медпункта продает порошки, стимпаки и противоядия, пока нет доктора
+#define GV_MED_TEND         "f2mmedtd"  // клетка у стола медпункта, где стоит временный доктор (0 — медпункт закрыт)
+#define GV_MED_WEEK         "f2mmedwk"  // неделя последнего завоза лекарств (+1)
+#define GV_MED_WHO          "f2mmedwh"  // id временного доктора, которому завезли лекарства
 #define thief_victim_on     (get_sfall_global_int("f2mthfst") >= 1 and not get_sfall_global_int(GV_LOCKET_BACK))
 #define WILD_GAP_HOURS      (720)   // стая мутантов у забора — раз в месяц (Егор 2026-10-11)
 // TEST: на время тестов собак у тел и стаи мутантов нет (Егор 2026-10-11). В релизе поставить 0

@@ -300,6 +300,31 @@ for u, key in ((17, ('bar0',)), (18, ('medtbl', 'aybed'))):
         assert got, (U[u]['name'], lv)
         used.add(got); STAFF_SPOT[(u, lv)] = got
 print('работники', {(U[u]['name'], lv): xy(t) for (u, lv), t in STAFF_SPOT.items()})
+
+# ---- сундуки с добычей (Егор 2026-10-15, тест 0.9.10): в баре ледяной ящик (Ice Chest), в мастерской шкафчик (Locker),
+# на складе ящик (Crate). Клетка внутри здания (двери проходимы), рядом с работником или серединой здания, не на местах людей;
+# работник и места бара остаются достижимы. Добычу кладет f2mloot.h (ниже) один раз на каждый сундук
+LOOT_ADD = [(17, 1, 43, STAFF_SPOT[(17, 1)]), (17, 2, 43, STAFF_SPOT[(17, 2)]), (14, 1, 132, None), (14, 2, 132, None), (12, 2, 180, None)]
+pp2 = set(people(CFG2).values()) | set(people(CFG1).values())
+for u, lv, pid, anc in LOOT_ADD:
+    cfg = dict(CFG2); cfg[u] = lv
+    wb = blocked(world(cfg)) | {GRAVE}
+    doors = {o[1] for o in U[u]['lv'][lv] if o[0] >> 24 == 2 and mapparse.subtype(o[0]) == 0}
+    rr = flood(ENTRANCE, (wb - doors) | used)
+    outside = flood(ENTRANCE, wb | used) if doors else set()
+    if anc is None: c = center(U[u]['lv'][lv]); anc = T(round(c[0]), round(c[1]))
+    must = [t for (v, l), t in STAFF_SPOT.items() if v == u and l == lv] + (BAR_SPOT[lv] if u == 17 else [])
+    got = None
+    for t in sorted(ring(anc, 6), key=lambda t: (tdist(t, anc), xy(t))):
+        if t not in rr or t in outside or t in blk_all or t in used or ring(t, 1) & pp2 or t in must: continue
+        if any(ring(m, 1) & {t} for m in must): continue
+        r2 = flood(ENTRANCE, (wb - doors) | used | {t})
+        if not ((ring(t, 1) - {t}) & r2): continue
+        if any(not ((ring(m, 1)) & r2) for m in must): continue
+        got = t; break
+    assert got, ('нет места сундуку', U[u]['name'], lv)
+    U[u]['lv'][lv].append([pid, got, 0, []]); blk_all.add(got); used.add(got)
+    print('сундук', U[u]['name'], lv, xy(got))
 print('водоносы', {k: xy(v) for k, v in WELL_SPOT.items()}, 'бар', {k: [xy(t) for t in v] for k, v in BAR_SPOT.items()})
 
 # ---- брамины в загоне (2-й уровень фермы): клетки браминов из песочницы
@@ -387,6 +412,22 @@ o += ['   return 0;', 'end', '', '#endif', '']
 open(os.path.join(ROOT, 'scripts_src/f2mlvl.h'), 'w', encoding='utf-8').write('\n'.join(o))
 print('f2mlvl.h', len(o), 'строк, переходов', len(STEPS))
 
+# ---- добыча в сундуках лагеря (0.9.11): вид добычи по клетке сундука; дом героя не трогаем (там его вещи)
+LOOT_KIND = {17: 1, 14: 3, 12: 4, 18: 5, 13: 2}
+LOOT_KIND.update({u: 2 for u in range(4, 12)})
+lt = {}
+for u, k in LOOT_KIND.items():
+    for lv in LEVELS:
+        for q in U[u]['lv'][lv]:
+            if is_cont(q[0]): lt[q[1]] = k
+o = ['// Сгенерировано tools/layout/levels_emit.py: вид добычи в сундуках лагеря по клетке сундука (0.9.11).',
+     '// 1 бар, 2 палатки и шатер старосты, 3 мастерская, 4 склад, 5 медпункт. Не править руками.',
+     '#ifndef F2MLOOTT_H', '#define F2MLOOTT_H', 'procedure loot_kind(variable t) begin']
+for t in sorted(lt): o.append(f'   if (t == {t}) then return {lt[t]};   // {xy(t)}')
+o += ['   return 0;', 'end', '#endif', '']
+open(os.path.join(ROOT, 'scripts_src/f2mloott.h'), 'w', encoding='utf-8').write('\n'.join(o))
+print('сундуков с добычей', len(lt))
+
 # места 1-го уровня (f2mspots.h) не должны оказаться под чужим зданием 2-го уровня или под новым зданием 1-го
 own = {1: 2, 2: 3}
 for s, ts in DAY1.items():
@@ -465,6 +506,9 @@ open(os.path.join(ROOT, 'scripts_src/f2mradl.h'), 'w', encoding='utf-8').write('
 import render as _rnd
 PID_SOLID = 33554560
 SOLID_KIND = {33555632: ('firepit', 0.5), 33554763: ('watrtank', 0.35), 33555336: ('pumpnec', 0.35)}
+# 0.9.11 (Егор 2026-10-15): ящики, бочки и полки за стойкой бара под открытым небом проходились насквозь
+SOLID_KIND.update({33555001: ('bigshlf1', 0.6), 33554833: ('crate1', 0.5), 33554653: ('boxes2', 0.5),
+                   33554654: ('boxes3', 0.5), 33554437: ('brl1000', 0.5), 33554828: ('barrel2', 0.5)})
 def footprint(pid, t):
     name, frac = SOLID_KIND[pid]
     a, ox, oy = _rnd.frm('art\\scenery\\' + name + '.frm')
@@ -523,7 +567,8 @@ def south_spot(anchor, rmax=6, prefer=None):
         if walk_ok(t): taken.add(t); return t
     raise AssertionError(('нет места', xy(anchor)))
 W0, W1 = 9952, 9944
-DAVE = south_spot(tdir(W0, 2, 2), 4, prefer=True)
+# 0.9.11 (Егор 2026-10-15): правее, между насосом и баком, ближе к огородам, не под деревом
+DAVE = south_spot(T(147, 52), 3)
 THIEF_WELL = south_spot(tdir(W1, 2, 2), 4, prefer=True)
 g1 = center(U[2]['lv'][2]); THIEF_GARDEN = south_spot(T(round(g1[0]) - 3, round(g1[1]) + 4), 4)
 SAM_OUT = south_spot(tdir(FIRE2, 4, 3), 3)

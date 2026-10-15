@@ -6,7 +6,7 @@ world_pos=800,720
 start_state=Off
 size=Small
 townmap_art_idx=-1
-townmap_label_art_idx=-1
+townmap_label_art_idx=479
 entrance_0=On,-1,-1,F2mod Settlement,-1,-1,0
 
 [Area 62]
@@ -24,7 +24,7 @@ world_pos=830,700
 start_state=Off
 size=Small
 townmap_art_idx=-1
-townmap_label_art_idx=474
+townmap_label_art_idx=478
 entrance_0=On,-1,-1,F2mod Lair,-1,-1,0
 
 [Area 64]
@@ -35,3 +35,12 @@ size=Small
 townmap_art_idx=-1
 townmap_label_art_idx=378
 entrance_0=On,-1,-1,F2mod Lair,-1,-1,0
+
+[Area 65]
+area_name=F2mod Camp Big
+world_pos=800,720
+start_state=Off
+size=Large
+townmap_art_idx=-1
+townmap_label_art_idx=479
+entrance_0=On,-1,-1,F2mod Settlement,-1,-1,0

@@ -58,9 +58,12 @@ procedure critter_p_proc begin
       if (cv_fight) then return;
    end
    if (not greeted and not combat_is_initialized and self_can_see_dude and not get_sfall_global_int(GV_BURY_ON) and tile_distance_objs(self_obj, dude_obj) < 5) then begin
-      greeted := 1;
-      if (get_sfall_global_int("f2mraid2") == 2 and get_sfall_global_int("f2mlairs") < 2) then floater(greet_pick(150, 4));   // повторный налет отбит
-      else floater(greet_pick(140, 8));
+      if (greet_turn) then begin
+         greeted := 1;
+         if (get_sfall_global_int("f2mraid2") == 2 and get_sfall_global_int("f2mlairs") < 2) then floater(greet_pick(150, 8));   // повторный налет отбит
+         else floater(greet_pick(140, 8));
+      end else if (random(0, 1)) then
+         greeted := 1;   // промолчит: только что говорил другой
    end
 end
 

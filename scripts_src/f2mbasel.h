@@ -11,6 +11,7 @@
 #define BASE_SPAWNS   (12)
 
 procedure base_spawn(variable i);
+procedure base_rot(variable i);
 procedure base_clear_x(variable pid, variable tile);
 procedure base_clear_list;
 procedure base_lv1;
@@ -19,19 +20,36 @@ procedure base_lv3;
 
 // Места гарнизона (по лагерю, у построек)
 procedure base_spawn(variable i) begin
-   if (i == 0) then return 18485;   // (85, 92)
-   else if (i == 1) then return 16912;   // (112, 84)
-   else if (i == 2) then return 17268;   // (68, 86)
-   else if (i == 3) then return 19910;   // (110, 99)
-   else if (i == 4) then return 16899;   // (99, 84)
-   else if (i == 5) then return 19670;   // (70, 98)
-   else if (i == 6) then return 16879;   // (79, 84)
-   else if (i == 7) then return 16889;   // (89, 84)
-   else if (i == 8) then return 18901;   // (101, 94)
-   else if (i == 9) then return 18309;   // (109, 91)
-   else if (i == 10) then return 19478;   // (78, 97)
-   else if (i == 11) then return 17875;   // (75, 89)
-   return 18485;
+   if (i == 0) then return 20088;   // (88, 100)
+   else if (i == 1) then return 19478;   // (78, 97)
+   else if (i == 2) then return 18712;   // (112, 93)
+   else if (i == 3) then return 18068;   // (68, 90)
+   else if (i == 4) then return 20103;   // (103, 100)
+   else if (i == 5) then return 17881;   // (81, 89)
+   else if (i == 6) then return 18901;   // (101, 94)
+   else if (i == 7) then return 19910;   // (110, 99)
+   else if (i == 8) then return 17874;   // (74, 89)
+   else if (i == 9) then return 18109;   // (109, 90)
+   else if (i == 10) then return 19897;   // (97, 99)
+   else if (i == 11) then return 18868;   // (68, 94)
+   return 20088;
+end
+
+// Куда смотрит боец на месте i: на въезд в лагерь (юг)
+procedure base_rot(variable i) begin
+   if (i == 0) then return 2;
+   if (i == 1) then return 3;
+   if (i == 2) then return 2;
+   if (i == 3) then return 3;
+   if (i == 4) then return 2;
+   if (i == 5) then return 3;
+   if (i == 6) then return 2;
+   if (i == 7) then return 2;
+   if (i == 8) then return 3;
+   if (i == 9) then return 2;
+   if (i == 10) then return 2;
+   if (i == 11) then return 3;
+   return 2;
 end
 
 // Расчистка (уровень 1): 298 объектов лагеря банды. base_clear_x убирает объект (вещи из ящиков — в сундук, f2mlair.ssl)
@@ -336,7 +354,7 @@ procedure base_clear_list begin
    call base_clear_x(33554499, 19889);   // block.frm
 end
 
-// Уровень 1: армейские палатки командира и казармы, объектов 138
+// Уровень 1: армейские палатки командира и казармы, объектов 139
 procedure base_lv1 begin
    call lay_o(50332577, 17688, 0);
    call lay_o(50332575, 17690, 0);
@@ -492,6 +510,7 @@ procedure base_lv1 begin
    call lay_o(33554499, 20282, 0);
    call lay_o(33554499, 20283, 0);
    call lay_o(50332270, 20475, 0);
+   call lay_o(50332270, 19874, 0);
 end
 
 // Уровень 2: мастерская (сарай) и гараж (грузовик), объектов 41

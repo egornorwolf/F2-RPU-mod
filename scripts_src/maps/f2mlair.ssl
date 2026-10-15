@@ -12,6 +12,7 @@
 #include "sfall.h"
 #include "define_extra.h"
 #include "f2mod.h"
+#include "f2msort.h"
 #include "f2mcv.h"
 #include "f2mcamp.h"
 #include "f2mtlay.h"
@@ -38,10 +39,12 @@ procedure map_update_p_proc;
 procedure base_apply;
 procedure base_find(variable pid);
 procedure base_clear;
-procedure base_regroup;
 procedure base_people;
 procedure base_cmd_put;
 procedure base_hank;
+procedure base_posts(variable walk);
+procedure base_go(variable c, variable t, variable rot, variable walk);
+procedure base_sent_take;
 
 procedure start begin
 end
@@ -65,6 +68,12 @@ procedure map_enter_p_proc begin
    end
    call lair_cellar_face;
    call lair_shovel;
+   // Сохранения до 0.9.11: сундук Кейна стоял без скрипта — даем ему скрипт кражи один раз
+   if (not get_sfall_global_int(GV_CHEST_SCR)) then begin
+      set_sfall_global(GV_CHEST_SCR, 1);
+      obj := tile_contains_pid_obj(LAIR_CHEST, 0, PID_CHEST);
+      if (obj) then set_script(obj, SCRIPT_F2MLOBJ);
+   end
    // Заряд заложен внизу: рвет, как только герой выбрался наверх
    if (get_sfall_global_int(GV_CELL_CHARGE) == 1 and not lair_done) then begin
       set_sfall_global(GV_CELL_CHARGE, 2);
@@ -72,6 +81,7 @@ procedure map_enter_p_proc begin
       gfade_out(1);
       game_time_advance(ONE_GAME_HOUR);
       call lair_gang_leave(0);
+      call lair_boxes_empty;   // банда ушла спокойно и все забрала (Егор 2026-10-15)
       call lair_cellar_face;
       call lair_finish(LAIR_HOW_BLAST);
       call lair_shovel;
@@ -88,8 +98,11 @@ procedure map_enter_p_proc begin
          display_msg(lair_msg(222));
       end
    end else begin
+      call base_sent_take;
+      if (not base_building) then set_sfall_global(GV_BASE_HELP, 0);   // помощь Хэнку: стройка уже кончилась без героя
       call base_apply;
       call base_people;
+      call base_posts(0);
    end
 end
 
@@ -100,9 +113,12 @@ procedure map_update_p_proc begin
       gfade_out(1);
       call base_apply;
       call base_people;
+      call base_posts(0);
       gfade_in(1);
-   end else
+   end else begin
       call base_hank;
+      call base_posts(1);
+   end
 end
 
 // Постройки базы по уровню (один раз на каждый уровень; карта сохраняется)
@@ -114,7 +130,6 @@ procedure base_apply begin
       if (lv == 1) then begin
          call base_clear;
          call base_lv1;
-         call base_regroup;
       end else if (lv == 2) then
          call base_lv2;
       else
@@ -158,19 +173,63 @@ procedure base_clear begin
    end
 end
 
-// Свои в карьере до расчистки стояли по лагерю банды: бойцов гарнизона ставит заново garrison_put (у каждого
-// запомнено старое место), бывших налетчиков Кейна переводим к местам базы
-procedure base_regroup begin
-   variable c, i := 0;
+// Места своих на базе (Егор 2026-10-15, тест 0.9.10: наемники стояли на скалах, налетчики лицом в стену).
+// Каждый боец гарнизона (наемники Рика или люди Кейна) закреплен за своим местом по id объекта, места и повороты
+// лицом наружу — f2mbasel.h (base_emit.py, свободны и достижимы на всех уровнях базы). Кейн при мире — у палатки командира.
+// До расчистки (база 0) свои стоят где стояли в лагере банды. walk 1 — из map_update: видимые идут пешком
+procedure base_posts(variable walk) begin
+   variable c, arr, i;
+   if (combat_is_initialized or get_sfall_global_int(GV_BASE_SHOW) < 1) then return;
+   arr := temp_array(0, 0);
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (c != dude_obj and not is_critter_dead(c) and not obj_in_party(c)
-          and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then begin
-         if (obj_pid(c) == PID_MILITIA_MALE or obj_pid(c) == PID_MILITIA_FEMALE) then destroy_object(c);
-         else if (obj_pid(c) == PID_RAIDER_MALE) then begin
-            move_to(c, cv_free_tile(base_spawn(BASE_SPAWNS - 1 - i % BASE_SPAWNS)), 0);
-            i += 1;
+      if (c != dude_obj and not is_critter_dead(c) and not obj_in_party(c) and obj_pid(c) != PID_BASE_CMD
+          and obj_pid(c) != PID_DOCK_WORKER and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then begin
+         if (lair_is_kane(c)) then call base_go(c, BASE_CMD, 2, walk);
+         else begin
+            resize_array(arr, len_array(arr) + 1);
+            arr[len_array(arr) - 1] := c;
          end
       end
+   end
+   call camp_sort_id(arr);
+   i := 0;
+   while (i < len_array(arr)) do begin
+      if (i < BASE_SPAWNS) then call base_go(arr[i], base_spawn(i), base_rot(i), walk);
+      else call base_go(arr[i], tile_num_in_direction(base_spawn(i % BASE_SPAWNS), 0, 1), base_rot(i % BASE_SPAWNS), walk);
+      i += 1;
+   end
+end
+
+procedure base_go(variable c, variable t, variable rot, variable walk) begin
+   if (tile_distance(tile_num(c), t) > 0) then begin
+      if (walk and (tile_is_visible(tile_num(c)) or tile_is_visible(t))) then begin
+         if (not anim_busy(c)) then animate_move_obj_to_tile(c, t, 0);
+         return;
+      end
+      critter_attempt_placement(c, t, 0);
+   end
+   if (not anim_busy(c) and has_trait(TRAIT_OBJECT, c, OBJECT_CUR_ROT) != rot) then anim(c, ANIMATE_ROTATION, rot);
+end
+
+// Люди Кейна ушли в охрану лагеря (base_guards в f2mpost.h): убираем столько же из карьера (последних по id)
+procedure base_sent_take begin
+   variable c, arr, n;
+   if (get_sfall_global_int(GV_BASE_SENT) != 1) then return;
+   set_sfall_global(GV_BASE_SENT, 2);
+   arr := temp_array(0, 0);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (obj_pid(c) == PID_RAIDER_MALE and not lair_is_kane(c) and not is_critter_dead(c) and not obj_in_party(c)
+          and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then begin
+         resize_array(arr, len_array(arr) + 1);
+         arr[len_array(arr) - 1] := c;
+      end
+   end
+   call camp_sort_id(arr);
+   n := get_sfall_global_int(GV_BASE_SENT_N);
+   while (n > 0 and len_array(arr) > 1) do begin
+      destroy_object(arr[len_array(arr) - 1]);
+      resize_array(arr, len_array(arr) - 1);
+      n -= 1;
    end
 end
 
@@ -183,7 +242,7 @@ procedure base_people begin
    if (armor_bought) then begin
       foreach (c in list_as_array(LIST_CRITTERS)) begin
          if (c != dude_obj and not is_critter_dead(c) and not obj_in_party(c) and obj_pid(c) != PID_DOCK_WORKER
-             and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then call armor_dress(c);
+             and not lair_is_kane(c) and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then call armor_dress(c);
       end
    end
 end
@@ -196,10 +255,12 @@ procedure base_find(variable pid) begin
    return 0;
 end
 
-// Командир базы (npc-cards.md): ветеран в боевой броне, стоит у своей палатки; погиб — больше не приходит
+// Командир базы (npc-cards.md): ветеран в боевой броне, стоит у своей палатки; погиб — больше не приходит.
+// Приходит вместе с наемниками Рика (Егор 2026-10-15, тест 0.9.10: не сразу после расчистки); при людях Кейна командир — Кейн
 procedure base_cmd_put begin
    variable obj;
-   if (get_sfall_global_int(GV_BASE_SHOW) < 1 or get_sfall_global_int(GV_BCMD_DEAD) or base_find(PID_BASE_CMD)) then return;
+   if (get_sfall_global_int(GV_BASE_SHOW) < 1 or get_sfall_global_int(GV_BCMD_DEAD) or base_find(PID_BASE_CMD)
+       or get_sfall_global_int(GV_BASE_INVITE) < 1 or get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_ALLY) then return;
    obj := create_object_sid(PID_BASE_CMD, cv_free_tile(BASE_CMD), 0, SCRIPT_F2MBCMD);
    critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
    art_change_fid_num(obj, FID_HMCMBT bwand 0xFFF);
@@ -303,7 +364,8 @@ end
 // Тайник главаря (quests-detailed.md 1.4) и склад банды: яд для бочки и мелочь
 procedure lair_loot begin
    variable box;
-   box := create_object(PID_CHEST, LAIR_CHEST, 0);
+   box := create_object_sid(PID_CHEST, LAIR_CHEST, 0, SCRIPT_F2MLOBJ);   // кража со стороны скалы (f2mlobj.ssl)
+   set_sfall_global(GV_CHEST_SCR, 1);
    item_caps_adjust(box, 1500);
    add_mult_objs_to_inven(box, create_object(PID_STIMPAK, 0, 0), 10);
    add_mult_objs_to_inven(box, create_object(PID_10MM_AP, 0, 0), 4);

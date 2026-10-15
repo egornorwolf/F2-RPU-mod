@@ -22,6 +22,9 @@ procedure destroy_p_proc;
 procedure is_child;
 procedure use_stim;
 procedure bar_stock;
+procedure med_stock;
+procedure trade_talk(variable node);
+procedure Node020;
 procedure Node010;
 procedure Node011;
 procedure Node999;
@@ -60,6 +63,7 @@ procedure critter_p_proc begin
    variable k;
    if (not greeted and not combat_is_initialized and self_can_see_dude and not get_sfall_global_int(GV_BURY_ON)
        and tile_distance_objs(self_obj, dude_obj) < 5 and random(0, 3) == 0) then begin
+      if (not greet_turn) then return;   // только что говорил другой: по очереди, не хором
       greeted := 1;
       if (cur_map_index == MAP_F2MOD_CAMP and not is_child) then
          floater(greet_pick(200, 10));
@@ -102,15 +106,15 @@ procedure talk_p_proc begin
        and not get_sfall_global_int(GV_CARAVAN_HOSTILE) and not is_child
        and tile_distance(tile_num(self_obj), get_sfall_global_int(GV_BAR_TEND)) <= 1) then begin
       call bar_stock;
-      k := get_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS);
-      // торговать движок дает только существу с флагом «бартер» в прототипе: у жителей его нет — включаем на время разговора
-      set_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS, k bwor CFLG_BARTER);
-      start_gdialog(NAME, self_obj, 4, -1, -1);
-      gSay_Start;
-         call Node010;
-      gSay_End;
-      end_dialogue;
-      set_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS, k);
+      call trade_talk(10);
+      return;
+   end
+   // временный доктор у стола медпункта (Егор 2026-10-15): продает порошки, стимпаки и противоядия
+   if (cur_map_index == MAP_F2MOD_CAMP and get_sfall_global_int(GV_MED_TEND)
+       and not get_sfall_global_int(GV_CARAVAN_HOSTILE) and not is_child
+       and tile_distance(tile_num(self_obj), get_sfall_global_int(GV_MED_TEND)) <= 1) then begin
+      call med_stock;
+      call trade_talk(20);
       return;
    end
    if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then
@@ -182,10 +186,28 @@ end
 #define BAR_BOOZE   (3)
 #define BAR_GAMMA   (1)
 #define BAR_CAPS    (50)
+// Торговля жителя (бар или медпункт): движок дает торговать только существу с флагом «бартер» в прототипе,
+// у жителей его нет — включаем на время разговора
+procedure trade_talk(variable node) begin
+   variable k;
+   k := get_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS);
+   set_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS, k bwor CFLG_BARTER);
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      if (node == 20) then call Node020;
+      else call Node010;
+   gSay_End;
+   end_dialogue;
+   set_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS, k);
+end
+
+// Завоз раз в неделю или новому работнику (роль закреплена, но работник мог погибнуть): товар лежит у того, кто за стойкой
 procedure bar_stock begin
-   variable n;
-   if (get_sfall_global_int(GV_BAR_WEEK) == game_time / ONE_GAME_WEEK + 1) then return;
+   variable n, id;
+   id := f2m_obj_id(self_obj);
+   if (get_sfall_global_int(GV_BAR_WEEK) == game_time / ONE_GAME_WEEK + 1 and get_sfall_global_int(GV_BAR_WHO) == id) then return;
    set_sfall_global(GV_BAR_WEEK, game_time / ONE_GAME_WEEK + 1);
+   set_sfall_global(GV_BAR_WHO, id);
    n := obj_is_carrying_obj_pid(self_obj, PID_BEER);
    if (n < BAR_BEER) then add_mult_objs_to_inven(self_obj, create_object(PID_BEER, 0, 0), BAR_BEER - n);
    n := obj_is_carrying_obj_pid(self_obj, PID_BOOZE);
@@ -194,6 +216,34 @@ procedure bar_stock begin
    if (n < BAR_GAMMA) then add_mult_objs_to_inven(self_obj, create_object(PID_GAMMA_GULP_BEER, 0, 0), BAR_GAMMA - n);
    n := item_caps_total(self_obj);
    if (n < BAR_CAPS) then item_caps_adjust(self_obj, BAR_CAPS - n);
+end
+
+// Лекарства временного доктора: порошки (Healing Powder), стимпаки, противоядия (Antidote), крышки на сдачу до 50
+#define MED_POWDER  (4)
+#define MED_STIM    (2)
+#define MED_ANTI    (2)
+procedure med_stock begin
+   variable n, id;
+   id := f2m_obj_id(self_obj);
+   if (get_sfall_global_int(GV_MED_WEEK) == game_time / ONE_GAME_WEEK + 1 and get_sfall_global_int(GV_MED_WHO) == id) then return;
+   set_sfall_global(GV_MED_WEEK, game_time / ONE_GAME_WEEK + 1);
+   set_sfall_global(GV_MED_WHO, id);
+   n := obj_is_carrying_obj_pid(self_obj, PID_HEALING_POWDER);
+   if (n < MED_POWDER) then add_mult_objs_to_inven(self_obj, create_object(PID_HEALING_POWDER, 0, 0), MED_POWDER - n);
+   // свой стим жителя (LVAR_STIM_USED) не трогаем: стимпаки на продажу сверх него
+   n := obj_is_carrying_obj_pid(self_obj, PID_STIMPAK);
+   if (n < MED_STIM) then add_mult_objs_to_inven(self_obj, create_object(PID_STIMPAK, 0, 0), MED_STIM - n);
+   n := obj_is_carrying_obj_pid(self_obj, PID_ANTIDOTE);
+   if (n < MED_ANTI) then add_mult_objs_to_inven(self_obj, create_object(PID_ANTIDOTE, 0, 0), MED_ANTI - n);
+   n := item_caps_total(self_obj);
+   if (n < BAR_CAPS) then item_caps_adjust(self_obj, BAR_CAPS - n);
+end
+
+procedure Node020 begin
+   Reply(random(320, 322));
+   NOption(323, Node011, 4);
+   NOption(314, Node999, 4);
+   NLowOption(324, Node011);
 end
 
 procedure Node010 begin

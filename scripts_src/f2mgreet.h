@@ -6,7 +6,21 @@
 
 #define GV_GREET            "f2mgreet"
 
+#define GV_GREET_UP         "f2mgrtup"  // время (get_uptime), когда кто-то в лагере последним сказал приветствие
+#define GREET_GAP_MS        (3500)
+
 procedure greet_pick(variable base, variable n);
+procedure greet_turn;
+
+// Охрана и ополчение говорят по очереди, не все разом (Егор 2026-10-15): пока не прошло 3,5 с после чужой реплики,
+// очередь занята (вернет 0, попробует позже). Половина из тех, кто ждал, так и промолчит: у ворот не хор.
+procedure greet_turn begin
+   variable last;
+   last := get_sfall_global_int(GV_GREET_UP);
+   if (last and get_uptime >= last and get_uptime < last + GREET_GAP_MS) then return 0;
+   set_sfall_global(GV_GREET_UP, get_uptime);
+   return 1;
+end
 
 procedure greet_pick(variable base, variable n) begin
    variable k;

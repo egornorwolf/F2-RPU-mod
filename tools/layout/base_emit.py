@@ -174,6 +174,50 @@ WORK = try_place(HUT, T(104, 89), taken); taken |= occ(WORK); L2 += WORK
 GAR = try_place(TRUCK, T(82, 96), taken); taken |= occ(GAR); L2 += GAR
 L3 = []
 ARS = try_place(BOOTH, T(106, 96), taken); taken |= occ(ARS); L3 += ARS
+# Стены палаток (ybk, ylf, yrt) — широкие картинки, а блоки из mbclose стоят через клетку: в 0.9.10 сквозь правую палатку
+# проходили (Егор 2026-10-15). Добавляем невидимые блоки под нижней частью каждой стены палатки (как f2msolid в лагере)
+import render as _R
+PID_WBLOCK = 50332270   # art\walls\block.frm
+def wall_foot(o, frac=0.75):
+    a, ox, oy = _R.frm(_R.fidpath(o['fid']), o.get('rot', 0))
+    bx, by = _R.hexxy(o['tile']); out = set()
+    for q in ring(o['tile'], 5):
+        x, y = _R.hexxy(q); px = a.width // 2 + x - bx - ox; py = a.height - 1 + y - by - oy
+        if 0 <= px < a.width and a.height * frac <= py < a.height and a.getpixel((px, py))[3]: out.add(q)
+    return out
+def seal_tent(piece):
+    """Закрывает щели в стенах палатки: от середины палатки наружу можно выйти только через вход (передний ряд).
+    Кратчайший путь середина -> наружу (вход закрыт), на нем клетка с наибольшим числом соседних стен — щель, ставим блок."""
+    walls = {o['tile'] for o in piece if o['pid'] >> 24 == 3}
+    xs = [xy(t)[0] for t in walls]; ys = [xy(t)[1] for t in walls]
+    x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+    center = T((x0 + x1) // 2, (y0 + y1) // 2)
+    have = blk_of(piece) | BLK_KEEP
+    ent = {t for t in ring(center, 8) if xy(t)[1] >= y1 - 1 and x0 + 2 <= xy(t)[0] <= x1 - 2 and t not in have}
+    def inb(t): return x0 - 1 <= xy(t)[0] <= x1 + 1 and y0 - 1 <= xy(t)[1] <= y1 + 1
+    add = []
+    for _ in range(30):
+        blk = have | ent | set(add)
+        prev = {center: None}; q = [center]; out = None
+        while q and out is None:
+            t = q.pop(0)
+            for r in range(6):
+                n = tdir(t, r, 1)
+                if n in prev or n in blk: continue
+                prev[n] = t
+                if not inb(n): out = n; break
+                q.append(n)
+        if out is None: break
+        path = []; t = prev[out]
+        while t is not None and t != center: path.append(t); t = prev[t]
+        gap = max(path, key=lambda t: (sum(tdir(t, r, 1) in have for r in range(6)), -_td(t, center)))
+        add.append(gap)
+    assert len(add) < 30, 'палатку не закрыть'
+    assert center not in add
+    return [dict(pid=PID_WBLOCK, tile=t, flags=pflags(PID_WBLOCK), fid=pfid(PID_WBLOCK)) for t in sorted(add)]
+for _tent in (CMD_TENT, BAR_TENT):
+    _x = seal_tent(_tent); _tent += _x; L1 += _x
+    print('блоков к палатке', len(_x))
 for k, v in (('командир', CMD_TENT), ('казарма', BAR_TENT), ('мастерская', WORK), ('гараж', GAR), ('арсенал', ARS)):
     if not v: print(k, 'НЕ ВСТАЛ'); continue
     xs = [xy(o['tile'])[0] for o in v]; ys = [xy(o['tile'])[1] for o in v]
@@ -211,14 +255,21 @@ CMD = min(inside, key=lambda t: (_td(t, tc), -xy(t)[1]))
 # Хэнк на базе: перед палаткой командира, снаружи
 front = [t for t in R3 if t not in OCC3 and xy(t)[1] >= tb[3] + 1 and t not in RESERVED]
 HANK = min(front, key=lambda t: (_td(t, T((tb[0] + tb[2]) // 2, tb[3] + 2)), xy(t)))
-# гарнизон: 12 мест по лагерю, друг от друга не ближе 3 клеток, не вплотную к постройкам
+# гарнизон: 12 мест по лагерю, друг от друга не ближе 3 клеток, не вплотную к постройкам.
+# 0.9.11 (Егор 2026-10-15: двое стояли «на скалах», налетчики у стены лицом в скалу): места не ближе 2 клеток к скалам
+# и деревьям и не выше ряда y 89 (под скалой), первые двое — дозор на въезде в лагерь, лицом к дороге (на юг).
+# Места одни и те же на всех уровнях базы (свободны и достижимы при всех постройках 3-го уровня)
+NEAR_KEEP = set(); [NEAR_KEEP.update(ring(t, 2)) for t in BLK_KEEP]
 cand = sorted([t for t in OUT3 if in_camp(t) and t not in OCC3W and t not in RESERVED and t not in ring(CMD, 1) and t not in ring(HANK, 1)
-               and 84 <= xy(t)[1] <= 99 and 68 <= xy(t)[0] <= 112], key=lambda t: (xy(t)[1], xy(t)[0]))
-# по лагерю равномерно: каждое следующее место — самое далекое от уже выбранных (первое — у входа в лагерь)
-SPAWN = [min(cand, key=lambda t: _td(t, T(88, 98)))]
+               and t not in NEAR_KEEP and 89 <= xy(t)[1] <= 103 and 68 <= xy(t)[0] <= 112], key=lambda t: (xy(t)[1], xy(t)[0]))
+SPAWN = [min(cand, key=lambda t: _td(t, T(90, 101))), min(cand, key=lambda t: _td(t, T(80, 101)))]
 while len(SPAWN) < 12:
     SPAWN.append(max(cand, key=lambda t: (min(_td(t, s) for s in SPAWN + [CMD, HANK]), -t)))
 assert len(SPAWN) == 12, len(SPAWN)
+for t in SPAWN:
+    for lv, rr in REACH.items(): assert t in rr, ('место гарнизона недостижимо', xy(t), lv)
+# лицом к въезду (герой входит с юга): юго-восток (2), если въезд правее на экране (меньше x), иначе юго-запад (3)
+ROT = [2 if xy(HERO)[0] < xy(t)[0] else 3 for t in SPAWN]
 print('командир', xy(CMD), 'Хэнк', xy(HANK), 'гарнизон', [xy(t) for t in SPAWN])
 if IMG:
     for lv in (1, 2, 3):
@@ -245,12 +296,16 @@ h = ['// Сгенерировано tools/layout/base_emit.py: военная б
      f'#define BASE_CMD      ({CMD})   // {xy(CMD)}: командир в своей палатке',
      f'#define BASE_HANK     ({HANK})   // {xy(HANK)}: Хэнк на базе, пока идет стройка',
      f'#define BASE_SPAWNS   ({len(SPAWN)})', '',
-     'procedure base_spawn(variable i);', 'procedure base_clear_x(variable pid, variable tile);', 'procedure base_clear_list;',
+     'procedure base_spawn(variable i);', 'procedure base_rot(variable i);', 'procedure base_clear_x(variable pid, variable tile);', 'procedure base_clear_list;',
      'procedure base_lv1;', 'procedure base_lv2;', 'procedure base_lv3;', '']
 h.append('// Места гарнизона (по лагерю, у построек)')
 h.append('procedure base_spawn(variable i) begin')
 for i, t in enumerate(SPAWN): h.append(f'   {"if" if i == 0 else "else if"} (i == {i}) then return {t};   // {xy(t)}')
 h.append(f'   return {SPAWN[0]};'); h.append('end'); h.append('')
+h.append('// Куда смотрит боец на месте i: на въезд в лагерь (юг)')
+h.append('procedure base_rot(variable i) begin')
+for i, r in enumerate(ROT): h.append(f'   if (i == {i}) then return {r};')
+h.append('   return 2;'); h.append('end'); h.append('')
 h.append(f'// Расчистка (уровень 1): {len(clear)} объектов лагеря банды. base_clear_x убирает объект (вещи из ящиков — в сундук, f2mlair.ssl)')
 h.append('procedure base_clear_list begin')
 for o in sorted(clear, key=lambda o: o['tile']): h.append(f'   call base_clear_x({o["pid"]}, {o["tile"]});   // {name(o)}')

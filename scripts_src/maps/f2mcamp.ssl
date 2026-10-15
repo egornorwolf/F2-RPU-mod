@@ -31,6 +31,8 @@
 #include "f2msolid.h"
 #include "f2mheal.h"
 #include "f2marmr.h"
+#include "f2mloot.h"
+#include "f2mpost.h"
 
 
 procedure start;
@@ -81,6 +83,12 @@ procedure map_enter_p_proc begin
    if (not get_sfall_global_int(GV_TOWN_PEOPLE)) then call camp_people_put;
    // Набег 1.3: пора, а герой был в отлучке — считаем его до расстановки людей (погибший житель исчезнет с карты)
    if (raid_due) then call raid_do;
+   // Разведка у Рика (0.9.11): герой согласился и уходил из лагеря — награда при возвращении
+   if (get_sfall_global_int(GV_SCOUT) == 1 and get_sfall_global_int(GV_RAID_AWAY)) then begin
+      set_sfall_global(GV_SCOUT, 2);
+      give_exp_points(SCOUT_XP);
+      display_msg(message_str(SCRIPT_F2MCGRD, 266) + SCOUT_XP + message_str(SCRIPT_F2MCGRD, 267));
+   end
    set_sfall_global(GV_RAID_AWAY, 0);
    if (get_sfall_global_int(GV_FENCE)) then call lay_fence;
    // До 0.5.6 палатку героя ставили сразу: в таких сохранениях она уже стоит, считаем ее построенной
@@ -94,10 +102,13 @@ procedure map_enter_p_proc begin
    call bld_commit;
    call bld_apply;
    call bld_fire_light;
+   call loot_sync;    // добыча в сундуках зданий (0.9.11)
    call solid_sync;   // невидимые блоки у костров, бака и насоса (0.9.7)
    call sam_enter;
    call farm_enter;
    call remn_arrive;
+   call base_guards;   // трое с базы в охрану (0.9.11)
+   call north_post;
    call shovel_put;
    set_sfall_global(GV_SET_SYNC, 0);
    // Следы набега, угнанный фургон, главарь у ворот (1.3а)
@@ -111,6 +122,7 @@ procedure map_enter_p_proc begin
    call gore_update(1);
    call heal_tick;
    call camp_spread(0);
+   call mil_posts(0);
    if (get_sfall_global_int(GV_BOSS_NOTE) == 2) then begin
       set_sfall_global(GV_BOSS_NOTE, 1);
       display_msg("Рик обыскал главаря налетчиков: «Знаем, где их нора. Старый карьер в горах, день пути на северо-восток».");
@@ -379,10 +391,15 @@ end
 procedure map_update_p_proc begin
    Lighting;
    if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE and not is_loading_game) then call heal_tick;
-   if (not combat_is_initialized) then call solid_sync;
+   if (not combat_is_initialized) then begin
+      call solid_sync;
+      if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE and not is_loading_game) then call loot_sync;   // сундук здания, достроенного при герое
+   end
    // днем жители у палаток и на огородах, ночью в палатках (f2mhome.h)
    if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE and not is_loading_game) then begin
       call camp_spread(1);
+      call north_post;
+      call mil_posts(1);
       call armor_dress_camp;   // Рик купил боевую броню охране (f2marmr.h)
       call gore_fence_corpses;   // частокол только что встал: тела с его линии за забор
       call gore_update(0);   // кровь сохнет, собаки едят тела (f2mgore.h)

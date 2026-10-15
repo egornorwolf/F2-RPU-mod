@@ -43,6 +43,18 @@ _lair = f"{out}/maps/f2mlair.map"
 _d = bytearray(open(_lair, "rb").read())
 struct.pack_into(">i", _d, 20, int(re.search(r"#define LAIR_HERO\s+\((\d+)\)", _lay).group(1)))
 struct.pack_into(">i", _d, 28, 5)
+# Крыши палаток банды (тест 0.9.10, Егор 2026-10-15): после расчистки (база 1) палатки банды сносятся, а крыши —
+# это плитки карты, скрипт их убрать не может. Они висели в воздухе и не совпадали с армейскими палатками базы.
+# Палатки на этой карте теперь без крыш (как армейские палатки базы): крышу каждой клетки уровня 0 ставим в 1 («нет крыши»)
+_nlv, _ngv = struct.unpack_from(">i", _d, 32)[0], struct.unpack_from(">i", _d, 48)[0]   # заголовок: 32 число локальных, 48 глобальных переменных
+_toff = 0xEC + 4 * (_ngv + _nlv)
+_roofs = 0
+for _s in range(10000):
+    _v = struct.unpack_from(">I", _d, _toff + 4 * _s)[0]
+    if (_v >> 16) & 0x0FFF not in (0, 1):
+        struct.pack_into(">I", _d, _toff + 4 * _s, (1 << 16) | (_v & 0xFFFF))
+        _roofs += 1
+assert _roofs == 83, _roofs   # все крыши mountn5 стоят над палатками лагеря банды
 open(_lair, "wb").write(_d)
 
 
