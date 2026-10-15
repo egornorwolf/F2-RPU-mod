@@ -192,6 +192,11 @@ procedure bld_commit begin
             u -= 1;
             call bld_set_level(u, get_sfall_global_int(GV_JOB_L(j)));
             display_msg(message_str(SCRIPT_F2MCFRM, 590) + message_str(SCRIPT_F2MCFRM, bld_name(u, get_sfall_global_int(GV_JOB_L(j)))) + ".");
+            // Квест 1.5 «Укрепить базу»: расчистка карьера достроена (Егор 2026-10-15: конец большого квеста 1000-1500)
+            if (u == U_BASE_UNIT and get_sfall_global_int(GV_JOB_L(j)) == 1) then begin
+               give_exp_points(BASE_XP);
+               display_msg(message_str(SCRIPT_F2MCFRM, 591) + BASE_XP + message_str(SCRIPT_F2MCFRM, 592));
+            end
          end
          n += 1;
       end

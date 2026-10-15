@@ -1,0 +1,136 @@
+// Командир военной базы в карьере (1.5, npc-cards.md «Командир базы»): ветеран в боевой броне у своей палатки.
+// Тот же скрипт у Хэнка на базе: прораб стоит в карьере, только пока там идет стройка и герой здесь (Егор 2026-10-15),
+// говорит, сколько осталось. Ставит их скрипт карты f2mlair.ssl.
+#define SCRIPT_REALNAME "f2mbcmd"
+#include "define.h"
+#include "f2mod.h"
+#define NAME                    SCRIPT_F2MBCMD
+#include "command.h"
+#include "sfall.h"
+#include "define_extra.h"
+#include "scenepid.h"
+#include "f2mcv.h"
+#include "f2mcamp.h"
+#include "f2mset.h"
+#include "f2mpay.h"
+#include "f2mraid.h"
+#include "f2mlair.h"
+#include "f2marmr.h"
+
+procedure start;
+procedure critter_p_proc;
+procedure talk_p_proc;
+procedure look_at_p_proc;
+procedure description_p_proc;
+procedure destroy_p_proc;
+procedure Node001;
+procedure Node010;
+procedure Node011;
+procedure Node020;
+procedure Node030;
+procedure Node999;
+procedure garr_count;
+
+#define LVAR_HOME       (0)     // место (клетка + 1)
+#define is_hank         (obj_pid(self_obj) == PID_DOCK_WORKER)
+#define GV_BCMD_MET     "f2mbcmet"
+
+procedure start begin
+end
+
+procedure look_at_p_proc begin
+   script_overrides;
+   if (is_hank) then display_msg(mstr(150));
+   else display_msg(mstr(100));
+end
+
+procedure description_p_proc begin
+   script_overrides;
+   if (is_hank) then display_msg(mstr(151));
+   else display_msg(mstr(101));
+end
+
+procedure critter_p_proc begin
+   variable h;
+   if (combat_is_initialized or is_hank) then return;
+   if (not local_var(LVAR_HOME)) then set_local_var(LVAR_HOME, tile_num(self_obj) + 1);
+   h := local_var(LVAR_HOME) - 1;
+   if (tile_distance(tile_num(self_obj), h) > 3 and not anim_busy(self_obj)) then animate_move_obj_to_tile(self_obj, h, 0);
+end
+
+procedure destroy_p_proc begin
+   if (not is_hank) then set_sfall_global(GV_BCMD_DEAD, 1);
+end
+
+procedure talk_p_proc begin
+   variable j, h;
+   if (is_hank) then begin
+      j := bld_job_of(U_BASE);
+      h := 0;
+      if (j) then h := bld_job_left(j);
+      if (h > 0) then float_msg(self_obj, mstr(160) + h + mstr(161), FLOAT_MSG_NORMAL);
+      else floater(162);
+      return;
+   end
+   start_gdialog(NAME, self_obj, 4, -1, -1);
+   gSay_Start;
+      call Node001;
+   gSay_End;
+   end_dialogue;
+end
+
+procedure Node001 begin
+   if (get_sfall_global_int(GV_BCMD_MET)) then Reply(111);
+   else Reply(110);
+   set_sfall_global(GV_BCMD_MET, 1);
+   NOption(112, Node010, 4);
+   NOption(113, Node020, 4);
+   NOption(114, Node999, 4);
+   NLowOption(115, Node030);
+end
+
+// Кто ты (предыстория, 2 реплики)
+procedure Node010 begin
+   Reply(120);
+   NOption(121, Node011, 4);
+end
+
+procedure Node011 begin
+   Reply(122);
+   NOption(123, Node001, 4);
+end
+
+// Гарнизон: сколько в строю из скольких мест
+procedure Node020 begin
+   variable lv, cap, n, t;
+   lv := base_level;
+   if (lv > get_sfall_global_int(GV_BASE_INVITE)) then lv := get_sfall_global_int(GV_BASE_INVITE);
+   cap := base_cap(lv);
+   n := garr_count;
+   if (cap <= 0) then t := mstr(136);
+   else begin
+      t := mstr(131) + n + mstr(132) + cap + mstr(133);
+      if (n < cap) then t += mstr(134);
+   end
+   if (armor_bought) then t += mstr(135);
+   Reply(t);
+   NOption(123, Node001, 4);
+end
+
+procedure Node030 begin
+   Reply(130);
+   NLowOption(114, Node999);
+end
+
+procedure Node999 begin
+end
+
+// Свои бойцы на карте (без командира и Хэнка)
+procedure garr_count begin
+   variable c, n := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (c != dude_obj and c != self_obj and not obj_in_party(c) and not is_critter_dead(c) and obj_pid(c) != PID_DOCK_WORKER
+          and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then n += 1;
+   end
+   return n;
+end

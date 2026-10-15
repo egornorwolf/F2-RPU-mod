@@ -18,6 +18,7 @@
 #include "f2mpay.h"
 #include "f2mfine.h"
 #include "f2mgreet.h"
+#include "f2marmr.h"
 
 procedure start;
 procedure critter_p_proc;
@@ -42,6 +43,13 @@ procedure Node020;
 procedure Node021;
 procedure Node022;
 procedure Node023;
+procedure Node024;
+procedure Node025;
+procedure Node026;
+procedure Node027;
+procedure armor_pay(variable who);
+procedure armor_raiders;
+procedure armor_count;
 procedure militia_pay(variable who);
 procedure militia_put(variable n);
 procedure defense_text;
@@ -58,6 +66,13 @@ variable called;   // когда Рик в последний раз звал г
 // Повторный налет отбит (Егор 2026-10-15): Рик говорит, что пора искать логово, раз за каждый налет
 #define raid2_talk_due  (get_sfall_global_int("f2mraid2") == 2 and get_sfall_global_int("f2mlairs") < 2 \
                          and get_sfall_global_int("f2mr2tld") < get_sfall_global_int("f2mr2num"))
+
+// Боевая броня бывшим налетчикам и всей охране (Егор 2026-10-15): после стройки базы, если бывшие налетчики у нас есть
+// (люди Кейна после мира или остатки банды у поста). Денег не хватает — пункт остается
+#define GV_ARMOR_TOLD   "f2marmtd"
+#define armor_due       (bld_level(U_BASE_UNIT) >= 1 and not armor_bought and armor_raiders)
+#define armor_total     (ARMOR_PRICE * armor_count)
+variable go_armor;
 
 // Сколько ополченцев можно нанять: четверо, но не больше свободных мест у поста (там уже могут жить бывшие налетчики, 1.4б)
 #define hire_n          ((milit_free < MILITIA_COUNT) * milit_free + (milit_free >= MILITIA_COUNT) * MILITIA_COUNT)
@@ -142,6 +157,8 @@ procedure talk_p_proc begin
          call Node022;
       else if (base_invite_due) then
          call Node020;
+      else if (armor_due and not get_sfall_global_int(GV_ARMOR_TOLD)) then
+         call Node024;
       else
          call Node001;
    gSay_End;
@@ -155,6 +172,11 @@ procedure talk_p_proc begin
       if (go_militia == MILITIA_COUNT) then display_msg(mstr(188));
       else display_msg(mstr(194) + go_militia + mstr(195));
       go_militia := 0;
+   end
+   if (go_armor) then begin
+      go_armor := 0;
+      call armor_dress_camp;
+      display_msg(mstr(246));
    end
 end
 
@@ -192,6 +214,7 @@ procedure Node001 begin
    set_sfall_global(GV_CHIEF_MET, 1);
    NOption(133, Node002, 4);
    if (can_hire) then NOption(136, Node010, 4);
+   if (armor_due) then NOption(247, Node024, 4);
    NOption(134, Node999, 4);
    NLowOption(135, Node999);
 end
@@ -232,6 +255,65 @@ procedure Node023 begin
    NOption(141, Node001, 4);
    NOption(134, Node999, 4);
    NLowOption(135, Node999);
+end
+
+// Обновки: боевая броня на каждого бойца, цена из меню снаряжения (guards.md, 3), платит герой, касса или вскладчину
+procedure Node024 begin
+   variable c, p;
+   set_sfall_global(GV_ARMOR_TOLD, 1);
+   p := armor_total;
+   c := pay_cash_now;
+   Reply(mstr(240) + " " + mstr(241) + armor_count + mstr(242) + ARMOR_PRICE + mstr(243) + p + mstr(244));
+   if (can_pay_hero(p)) then NOption(mstr(193) + p + mstr(189), Node025, 4);
+   if (can_pay_cash(p)) then NOption(mstr(182) + c + mstr(185), Node026, 4);
+   if (can_pay_split(p)) then NOption(mstr(183) + c + mstr(184) + (p - c) + mstr(189), Node027, 4);
+   NOption(186, Node001, 4);
+   NLowOption(135, Node999);
+end
+
+procedure armor_pay(variable who) begin
+   call pay_do(armor_total, who);
+   set_sfall_global(GV_BASE_ARMOR, 1);
+   go_armor := 1;
+   Reply(245);
+   NOption(141, Node999, 4);
+   NLowOption(135, Node999);
+end
+
+procedure Node025 begin
+   call armor_pay(PAY_HERO);
+end
+
+procedure Node026 begin
+   call armor_pay(PAY_CASH);
+end
+
+procedure Node027 begin
+   call armor_pay(PAY_SPLIT);
+end
+
+// Бывшие налетчики у нас: люди Кейна после мира (гарнизон карьера) или остатки банды у поста (модели дикарей)
+procedure armor_raiders begin
+   variable c, a;
+   if (get_sfall_global_int("f2mlairh") == 2) then return 1;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      a := obj_art_fid(c) bwand 0xFFF;
+      if (armor_is_guard(c) and not is_critter_dead(c) and (a == (FID_NMWARR bwand 0xFFF) or a == (FID_NMPRMB bwand 0xFFF))) then return 1;
+   end
+   return 0;
+end
+
+// Сколько бойцов одевать: охрана лагеря, гарнизон базы (по последнему приходу или по местам) и наемник в погребе
+procedure armor_count begin
+   variable c, n := 0, lv, b;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (armor_is_guard(c) and not is_critter_dead(c) and not obj_in_party(c)) then n += 1;
+   end
+   lv := bld_level(U_BASE_UNIT);
+   if (lv > get_sfall_global_int(GV_BASE_INVITE)) then lv := get_sfall_global_int(GV_BASE_INVITE);
+   b := (lv >= 1) * (4 + 2 * lv);
+   if (get_sfall_global_int("f2mbgarr") > b) then b := get_sfall_global_int("f2mbgarr");
+   return n + b + get_sfall_global_int("f2mcmerc");
 end
 
 // Как с обороной: что уже есть, и подсказка про ополчение и спутника

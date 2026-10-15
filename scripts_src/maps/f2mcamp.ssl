@@ -30,6 +30,7 @@
 #include "f2mremn.h"
 #include "f2msolid.h"
 #include "f2mheal.h"
+#include "f2marmr.h"
 
 
 procedure start;
@@ -382,6 +383,7 @@ procedure map_update_p_proc begin
    // днем жители у палаток и на огородах, ночью в палатках (f2mhome.h)
    if (get_sfall_global_int(GV_CARAVAN) == CARAVAN_DONE and not is_loading_game) then begin
       call camp_spread(1);
+      call armor_dress_camp;   // Рик купил боевую броню охране (f2marmr.h)
       call gore_fence_corpses;   // частокол только что встал: тела с его линии за забор
       call gore_update(0);   // кровь сохнет, собаки едят тела (f2mgore.h)
    end

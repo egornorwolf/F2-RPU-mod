@@ -2,6 +2,8 @@
 // Пока банда жива — логово «Ржавых шакалов»: пост у входа, патруль, палатки, Кейн в глубине у скалы,
 // за ним сундук с тайником, ящик со складом (там яд), бочка с водой, под камнями погреб с припасами.
 // После квеста — военная база героя: гарнизон по уровню базы (строит Хэнк, f2mbld.h).
+// Постройки базы (f2mbasel.h, tools/layout/base_emit.py): 1 — расчистка и две армейские палатки (командир, казарма),
+// 2 — мастерская и гараж, 3 — арсенал. Ставятся при входе на карту или сразу, если стройка кончилась при герое.
 #define SCRIPT_REALNAME "f2mlair"
 #include "define.h"
 #include "updatmap.h"
@@ -18,6 +20,8 @@
 #include "f2mraid.h"
 #include "f2mlair.h"
 #include "f2mlairl.h"
+#include "f2mbasel.h"
+#include "f2marmr.h"
 
 procedure start;
 procedure map_enter_p_proc;
@@ -30,6 +34,14 @@ procedure lair_loot;
 procedure garrison_alive;
 procedure garrison_put;
 procedure garrison_soldier(variable tile, variable i, variable lv);
+procedure map_update_p_proc;
+procedure base_apply;
+procedure base_find(variable pid);
+procedure base_clear;
+procedure base_regroup;
+procedure base_people;
+procedure base_cmd_put;
+procedure base_hank;
 
 procedure start begin
 end
@@ -75,8 +87,141 @@ procedure map_enter_p_proc begin
          call lair_cellar_face;   // камни в сторону: виден лаз с лестницей
          display_msg(lair_msg(222));
       end
+   end else begin
+      call base_apply;
+      call base_people;
+   end
+end
+
+// Стройка базы кончилась, пока герой в карьере: постройки встают сразу, Хэнк уходит в лагерь
+procedure map_update_p_proc begin
+   if (is_loading_game or combat_is_initialized or not lair_done) then return;
+   if (get_sfall_global_int(GV_BASE_SHOW) < base_level and get_sfall_global_int(GV_BASE_SHOW) < BASE_TOP_LEVEL) then begin
+      gfade_out(1);
+      call base_apply;
+      call base_people;
+      gfade_in(1);
    end else
-      call garrison_put;
+      call base_hank;
+end
+
+// Постройки базы по уровню (один раз на каждый уровень; карта сохраняется)
+procedure base_apply begin
+   variable lv;
+   lv := get_sfall_global_int(GV_BASE_SHOW);
+   while (lv < base_level and lv < BASE_TOP_LEVEL) do begin
+      lv += 1;
+      if (lv == 1) then begin
+         call base_clear;
+         call base_lv1;
+         call base_regroup;
+      end else if (lv == 2) then
+         call base_lv2;
+      else
+         call base_lv3;
+      set_sfall_global(GV_BASE_SHOW, lv);
+   end
+end
+
+// Предмет лагеря банды убираем; что было в ящике — в сундук Кейна (он остается, Егор 2026-10-15)
+procedure base_clear_x(variable pid, variable tile) begin
+   variable o, box;
+   o := tile_contains_pid_obj(tile, 0, pid);
+   if (not o) then return;
+   box := tile_contains_pid_obj(LAIR_CHEST, 0, PID_CHEST);
+   if (box and box != o and obj_type(o) == 0) then begin
+      if (obj_item_subtype(o) == item_type_container) then move_obj_inven_to_obj(o, box);
+   end
+   if (o != box) then destroy_object(o);
+end
+
+// Расчистка (база 1): тела, бочка, ящики банды, палатки и мусор уходят; вещи с тел и с земли — в сундук
+procedure base_clear begin
+   variable c, box;
+   box := tile_contains_pid_obj(LAIR_CHEST, 0, PID_CHEST);
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (c != dude_obj and is_critter_dead(c)) then begin
+         if (box) then move_obj_inven_to_obj(c, box);
+         destroy_object(c);
+      end
+   end
+   call base_clear_x(PID_LAIR_WATER, LAIR_WATER);
+   call base_clear_x(PID_CONTAINER_WOOD_CRATE, LAIR_STORE);
+   call base_clear_x(PID_CONTAINER_WOOD_CRATE, LAIR_DYNBOX);
+   call base_clear_list;
+   if (box) then begin
+      foreach (c in list_as_array(LIST_GROUNDITEMS)) begin
+         if (c != box and elevation(c) == 0) then begin
+            if (obj_item_subtype(c) != item_type_container) then add_obj_to_inven(box, c);
+         end
+      end
+   end
+end
+
+// Свои в карьере до расчистки стояли по лагерю банды: бойцов гарнизона ставит заново garrison_put (у каждого
+// запомнено старое место), бывших налетчиков Кейна переводим к местам базы
+procedure base_regroup begin
+   variable c, i := 0;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (c != dude_obj and not is_critter_dead(c) and not obj_in_party(c)
+          and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then begin
+         if (obj_pid(c) == PID_MILITIA_MALE or obj_pid(c) == PID_MILITIA_FEMALE) then destroy_object(c);
+         else if (obj_pid(c) == PID_RAIDER_MALE) then begin
+            move_to(c, cv_free_tile(base_spawn(BASE_SPAWNS - 1 - i % BASE_SPAWNS)), 0);
+            i += 1;
+         end
+      end
+   end
+end
+
+// Люди базы: гарнизон, командир, Хэнк (пока строит), броня, если Рик ее купил
+procedure base_people begin
+   variable c;
+   call garrison_put;
+   call base_cmd_put;
+   call base_hank;
+   if (armor_bought) then begin
+      foreach (c in list_as_array(LIST_CRITTERS)) begin
+         if (c != dude_obj and not is_critter_dead(c) and not obj_in_party(c) and obj_pid(c) != PID_DOCK_WORKER
+             and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then call armor_dress(c);
+      end
+   end
+end
+
+procedure base_find(variable pid) begin
+   variable c;
+   foreach (c in list_as_array(LIST_CRITTERS)) begin
+      if (obj_pid(c) == pid and not is_critter_dead(c)) then return c;
+   end
+   return 0;
+end
+
+// Командир базы (npc-cards.md): ветеран в боевой броне, стоит у своей палатки; погиб — больше не приходит
+procedure base_cmd_put begin
+   variable obj;
+   if (get_sfall_global_int(GV_BASE_SHOW) < 1 or get_sfall_global_int(GV_BCMD_DEAD) or base_find(PID_BASE_CMD)) then return;
+   obj := create_object_sid(PID_BASE_CMD, cv_free_tile(BASE_CMD), 0, SCRIPT_F2MBCMD);
+   critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
+   art_change_fid_num(obj, FID_HMCMBT bwand 0xFFF);
+   add_obj_to_inven(obj, create_object(PID_COMBAT_ARMOR, 0, 0));
+   wield_obj_critter(obj, obj_carrying_pid_obj(obj, PID_COMBAT_ARMOR));
+   call cv_arm(obj, PID_ASSAULT_RIFLE, PID_5MM_JHP);
+   call cv_stims(obj, 2);
+   set_critter_base_stat(obj, STAT_max_hp, 80);
+   critter_heal(obj, 200);
+   anim(obj, ANIMATE_ROTATION, 2);
+end
+
+// Хэнк на базе только пока там стройка и герой здесь (Егор 2026-10-15); в остальное время он в лагере
+procedure base_hank begin
+   variable h;
+   h := base_find(PID_DOCK_WORKER);
+   if (base_building and not h) then begin
+      h := create_object_sid(PID_DOCK_WORKER, cv_free_tile(BASE_HANK), 0, SCRIPT_F2MBCMD);
+      critter_add_trait(h, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
+      anim(h, ANIMATE_ROTATION, 2);
+   end else if (h and not base_building) then
+      destroy_object(h);
 end
 
 // Гарнизон ест из запасов поселения: считаем, сколько живых осталось на базе
@@ -178,8 +323,8 @@ end
 procedure garrison_alive begin
    variable c, n := 0;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (c != dude_obj and not obj_in_party(c) and not is_critter_dead(c)
-          and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then n += 1;
+      if (c != dude_obj and not obj_in_party(c) and not is_critter_dead(c) and obj_pid(c) != PID_BASE_CMD
+          and obj_pid(c) != PID_DOCK_WORKER and has_trait(TRAIT_OBJECT, c, OBJECT_TEAM_NUM) == TEAM_PLAYER) then n += 1;
    end
    return n;
 end
@@ -191,7 +336,7 @@ procedure garrison_put begin
    if (lv > get_sfall_global_int(GV_BASE_INVITE)) then lv := get_sfall_global_int(GV_BASE_INVITE);   // бойцов присылает Рик
    n := base_cap(lv) - garrison_alive;
    while (i < n) do begin
-      call garrison_soldier(lair_spawn(i % LAIR_SPAWNS), i, lv);
+      call garrison_soldier(base_spawn(i % BASE_SPAWNS), i, lv);
       i += 1;
    end
    set_sfall_global(GV_BASE_GARR, garrison_alive);
@@ -204,7 +349,7 @@ procedure garrison_soldier(variable tile, variable i, variable lv) begin
    if (fem) then obj := create_object_sid(PID_MILITIA_FEMALE, cv_free_tile(tile), 0, SCRIPT_F2MGARR);
    else obj := create_object_sid(PID_MILITIA_MALE, cv_free_tile(tile), 0, SCRIPT_F2MGARR);
    critter_add_trait(obj, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
-   if (lv >= 3) then art := fem * FID_HFCMBT + (not fem) * FID_HMCMBT;
+   if (lv >= 3 or armor_bought) then art := fem * FID_HFCMBT + (not fem) * FID_HMCMBT;
    else if (lv == 2) then art := fem * FID_HFMETL + (not fem) * FID_HMMETL;
    else art := fem * FID_HFLTHR + (not fem) * FID_HMLTHR;
    art_change_fid_num(obj, art bwand 0xFFF);

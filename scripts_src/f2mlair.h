@@ -69,6 +69,11 @@
 #define LAIR_OLD_CRATE  (18702)     // 102, 93: ящик со скриптом случайной встречи из mountn5, убираем
 #define U_BASE          (U_BASE_UNIT)   // военная база в f2mbld.h (вне U_COUNT: на карту лагеря не ставится)
 #define BASE_TOP_LEVEL  (3)         // 4-й уровень (штаб) — по квесту, позже
+#define GV_BASE_SHOW    "f2mbshow"  // какой уровень базы уже стоит на карте карьера (постройки f2mbasel.h)
+#define GV_BCMD_DEAD    "f2mbcmdk"  // 1 = командир базы погиб: больше не появится (military-base.md, раздел 6)
+#define GV_CELL_MERC    "f2mcmerc"  // 1 = наш наемник встал в погребе (Егор 2026-10-15: пока база строится и потом)
+#define PID_BASE_CMD    (16777574)  // Mercenary Captain: командир базы (npc-cards.md), вид HMCMBT
+#define base_building   (bld_job_of(U_BASE) != 0)   // бригада Хэнка сейчас строит базу
 
 #define lair_msg(n)     message_str(SCRIPT_F2MLAIR, n)
 #define lair_done       (get_sfall_global_int(GV_LAIR) >= LAIR_DONE)

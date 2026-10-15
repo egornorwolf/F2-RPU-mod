@@ -26,3 +26,4 @@ f2mrat.int     ; F2mod garden rats and their hole                # local_vars=0
 f2mthief.int   ; F2mod night thief Tommy Lark                    # local_vars=1
 f2mremn.int    ; F2mod gang remnants encounter map              # local_vars=0
 f2mremc.int    ; F2mod gang remnants (savages)                  # local_vars=0
+f2mbcmd.int    ; F2mod base commander and Hank at the base         # local_vars=1
