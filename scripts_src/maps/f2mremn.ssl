@@ -1,4 +1,4 @@
-// Встреча с остатками банды (квест 1.4б, Егор 2026-10-09): через 60 дней после взрыва погреба
+// Встреча с остатками банды (квест 1.4б, Егор 2026-10-09): через 30 дней после логова (Егор 2026-10-15; в тесте сразу, REMN_TEST_NOW)
 // первая случайная встреча в пустыне — вожак и 4 бойца, уже как дикари. Карта — копия desert2.
 // Вожак заговаривает сам (f2mremc). Уговоренные бойцы при уходе героя идут в лагерь (GV_REMN_JOIN).
 #define SCRIPT_REALNAME "f2mremn"
@@ -77,7 +77,7 @@ procedure remn_put begin
    call gang_setup(obj, REMN_ART_LEAD);
    call cv_arm(obj, PID_HUNTING_RIFLE, PID_223_FMJ);
    if (get_sfall_global_int(GV_REMN_KANE)) then begin
-      set_critter_base_stat(obj, STAT_max_hp, 70);   // Кейн, отощавший за два месяца
+      set_critter_base_stat(obj, STAT_max_hp, 70);   // Кейн, отощавший за месяц
       critter_heal(obj, 200);
    end
    anim(obj, ANIMATE_ROTATION, 4);

@@ -43,7 +43,7 @@ procedure map_enter_p_proc begin
    // Герой поднялся из погреба: ставим его у лаза
    if (get_sfall_global_int(GV_CELL_BACK)) then begin
       set_sfall_global(GV_CELL_BACK, 0);
-      override_map_start_hex(cv_free_tile(LAIR_CELLAR), 0, 2);
+      override_map_start_hex(cv_free_tile(LAIR_CELL_OUT), 0, 2);
    end
    // Динамит переехал в погреб (Егор 2026-10-08): ящик наверху из сборки 0.8.1 убираем
    if (get_sfall_global_int(GV_LAIR_DYN) == 1) then begin

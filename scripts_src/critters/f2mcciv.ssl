@@ -6,6 +6,7 @@
 #define NAME                    SCRIPT_F2MCCIV
 #include "command.h"
 #include "sfall.h"
+#include "define_extra.h"
 #include "f2mcdead.h"
 #include "f2mcamp.h"
 #include "f2mgreet.h"
@@ -20,6 +21,10 @@ procedure description_p_proc;
 procedure destroy_p_proc;
 procedure is_child;
 procedure use_stim;
+procedure bar_stock;
+procedure Node010;
+procedure Node011;
+procedure Node999;
 
 variable greeted;
 
@@ -53,7 +58,7 @@ end
 
 procedure critter_p_proc begin
    variable k;
-   if (not greeted and not combat_is_initialized and self_can_see_dude
+   if (not greeted and not combat_is_initialized and self_can_see_dude and not get_sfall_global_int(GV_BURY_ON)
        and tile_distance_objs(self_obj, dude_obj) < 5 and random(0, 3) == 0) then begin
       greeted := 1;
       if (cur_map_index == MAP_F2MOD_CAMP and not is_child) then
@@ -71,7 +76,7 @@ procedure critter_p_proc begin
 end
 
 procedure talk_p_proc begin
-   variable it;
+   variable it, k;
    // хозяйка медальона у дома героя (2.6, Егор 2026-10-11): медальон у героя — отдать, нет — просит найти вора
    if (cur_map_index == MAP_F2MOD_CAMP and thief_victim_on and not get_sfall_global_int(GV_CARAVAN_HOSTILE)
        and tile_distance(tile_num(self_obj), THIEF_VICTIM_SPOT) <= 1 and not is_child) then begin
@@ -81,8 +86,31 @@ procedure talk_p_proc begin
          destroy_object(it);
          set_sfall_global(GV_LOCKET_BACK, 1);
          floater(301);
+         // конец квеста 2.6 (Егор 2026-10-15: раньше не давал ничего): 300 опыта и дух +5 навсегда (как за похороны:
+         // постоянная прибавка f2msmbon, и сразу в текущий дух f2msmorl; имена GV — f2mset.h)
+         give_exp_points(300);
+         set_sfall_global("f2msmbon", get_sfall_global_int("f2msmbon") + 5);
+         set_sfall_global("f2msmorl", get_sfall_global_int("f2msmorl") + 5);
+         if (get_sfall_global_int("f2msmorl") > 50) then set_sfall_global("f2msmorl", 50);
+         display_msg(mstr(302) + 300 + mstr(303));
       end else
          floater(300);
+      return;
+   end
+   // работник бара за стойкой (до Ноя): торгует выпивкой
+   if (cur_map_index == MAP_F2MOD_CAMP and get_sfall_global_int(GV_BAR_TEND) and not get_sfall_global_int(GV_NOAH_HERE)
+       and not get_sfall_global_int(GV_CARAVAN_HOSTILE) and not is_child
+       and tile_distance(tile_num(self_obj), get_sfall_global_int(GV_BAR_TEND)) <= 1) then begin
+      call bar_stock;
+      k := get_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS);
+      // торговать движок дает только существу с флагом «бартер» в прототипе: у жителей его нет — включаем на время разговора
+      set_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS, k bwor CFLG_BARTER);
+      start_gdialog(NAME, self_obj, 4, -1, -1);
+      gSay_Start;
+         call Node010;
+      gSay_End;
+      end_dialogue;
+      set_proto_data(obj_pid(self_obj), PROTO_CR_FLAGS, k);
       return;
    end
    if (get_sfall_global_int(GV_CARAVAN_HOSTILE)) then
@@ -146,4 +174,41 @@ procedure destroy_p_proc begin
       set_local_var(LVAR_STIM_USED, 1);
       add_obj_to_inven(self_obj, create_object(PID_STIMPAK, 0, 0));
    end
+end
+
+// Бар до Ноя (Егор 2026-10-15): раз в неделю завоз выпивки тому, кто стоит за стойкой. Товар лежит у работника
+// (как у торговцев игры), крышки на сдачу — до 50
+#define BAR_BEER    (6)
+#define BAR_BOOZE   (3)
+#define BAR_GAMMA   (1)
+#define BAR_CAPS    (50)
+procedure bar_stock begin
+   variable n;
+   if (get_sfall_global_int(GV_BAR_WEEK) == game_time / ONE_GAME_WEEK + 1) then return;
+   set_sfall_global(GV_BAR_WEEK, game_time / ONE_GAME_WEEK + 1);
+   n := obj_is_carrying_obj_pid(self_obj, PID_BEER);
+   if (n < BAR_BEER) then add_mult_objs_to_inven(self_obj, create_object(PID_BEER, 0, 0), BAR_BEER - n);
+   n := obj_is_carrying_obj_pid(self_obj, PID_BOOZE);
+   if (n < BAR_BOOZE) then add_mult_objs_to_inven(self_obj, create_object(PID_BOOZE, 0, 0), BAR_BOOZE - n);
+   n := obj_is_carrying_obj_pid(self_obj, PID_GAMMA_GULP_BEER);
+   if (n < BAR_GAMMA) then add_mult_objs_to_inven(self_obj, create_object(PID_GAMMA_GULP_BEER, 0, 0), BAR_GAMMA - n);
+   n := item_caps_total(self_obj);
+   if (n < BAR_CAPS) then item_caps_adjust(self_obj, BAR_CAPS - n);
+end
+
+procedure Node010 begin
+   Reply(random(310, 312));
+   NOption(313, Node011, 4);
+   NOption(314, Node999, 4);
+   NLowOption(315, Node011);
+end
+
+procedure Node011 begin
+   gdialog_mod_barter(0);
+   Reply(316);
+   NOption(314, Node999, 4);
+   NLowOption(314, Node999);
+end
+
+procedure Node999 begin
 end

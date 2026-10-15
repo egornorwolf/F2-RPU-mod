@@ -503,3 +503,43 @@ for q in sorted(SOLID):
     o.append(f'   call solid_set({q}, {cond});')
 o += ['end', '#endif', '']
 open(os.path.join(ROOT, 'scripts_src/f2msolid.h'), 'w', encoding='utf-8').write('\n'.join(o))
+
+# ---- места 0.9.10 (Егор 2026-10-15): мирных ставим с видимой стороны построек (юг, восток), не за стенами.
+# Дэйв у колодцев (на огородах на него лезли крысы), вор-рабочий днем у огородов и у колодца (носит воду), ночью у колодца,
+# Сэм на улице перед палаткой старосты (на месте, где стоял вор), хозяйка медальона у южной стены дома героя.
+# Клетки свободны при всех уровнях (1, 2 и смеси), до них можно дойти от въезда, не на местах людей, блоках и сундуках.
+SB2 = SB
+taken = set(pp_all) | {t for v in RSPOT.values() for t in v} | SB2
+def walk_ok(t):
+    if t in blk_all or t in taken or ring(t, 1) & (set(people(CFG1).values()) | set(people(CFG2).values())): return False
+    for cfg in [CFG1, CFG2] + [{u: random.Random(70 + i).choice([1, 2]) for u in U} for i in range(10)]:
+        if t not in flood(ENTRANCE, blocked(world(cfg)) | {GRAVE} | SB2): return False
+    return True
+def south_spot(anchor, rmax=6, prefer=None):
+    """Свободная клетка у anchor; ближе к anchor и южнее (видимая сторона)."""
+    cand = sorted(ring(anchor, rmax), key=lambda t: (tdist(t, anchor) - (xy(t)[1] - xy(anchor)[1]) * 0.5, xy(t)))
+    for t in cand:
+        if prefer and xy(t)[1] < xy(anchor)[1]: continue
+        if walk_ok(t): taken.add(t); return t
+    raise AssertionError(('нет места', xy(anchor)))
+W0, W1 = 9952, 9944
+DAVE = south_spot(tdir(W0, 2, 2), 4, prefer=True)
+THIEF_WELL = south_spot(tdir(W1, 2, 2), 4, prefer=True)
+g1 = center(U[2]['lv'][2]); THIEF_GARDEN = south_spot(T(round(g1[0]) - 3, round(g1[1]) + 4), 4)
+SAM_OUT = south_spot(tdir(FIRE2, 4, 3), 3)
+hh = U[19]['lv'][2] + U[19]['lv'][1]
+hx = round(sum(xy(o[1])[0] for o in hh) / len(hh)); hy = max(xy(o[1])[1] for o in hh if o[0] >> 24 in (2, 3))
+VICTIM = south_spot(T(hx, hy + 2), 4, prefer=True)
+print('места 0.9.10: Дэйв', xy(DAVE), 'вор у колодца', xy(THIEF_WELL), 'вор у огорода', xy(THIEF_GARDEN),
+      'Сэм', xy(SAM_OUT), 'хозяйка медальона', xy(VICTIM))
+o = ['// Сгенерировано tools/layout/levels_emit.py: места людей с видимой стороны построек (0.9.10, Егор 2026-10-15).',
+     '// Свободны при всех уровнях зданий, до них можно дойти от въезда. Не править руками.',
+     '#ifndef F2MSPOT2_H', '#define F2MSPOT2_H',
+     f'#define SPOT_DAVE      ({DAVE})   // {xy(DAVE)}: старший фермер у колодцев',
+     f'#define SPOT_THIEF_W   ({THIEF_WELL})   // {xy(THIEF_WELL)}: вор-рабочий у нового колодца',
+     f'#define SPOT_THIEF_G   ({THIEF_GARDEN})   // {xy(THIEF_GARDEN)}: вор-рабочий у первого огорода',
+     f'#define SPOT_SAM_OUT   ({SAM_OUT})   // {xy(SAM_OUT)}: радист перед палаткой старосты',
+     f'#define SPOT_VICTIM    ({VICTIM})   // {xy(VICTIM)}: хозяйка медальона у южной стены дома героя',
+     '#endif', '']
+open(os.path.join(ROOT, 'scripts_src/f2mspot2.h'), 'w', encoding='utf-8').write('\n'.join(o))
+assert f'#define THIEF_VICTIM_SPOT   ({VICTIM})' in open(os.path.join(ROOT, 'scripts_src/f2mod.h'), encoding='utf-8').read(), VICTIM

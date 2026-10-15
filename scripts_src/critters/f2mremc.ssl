@@ -36,7 +36,9 @@ procedure Node060;
 procedure Node999;
 
 #define is_kane         (get_sfall_global_int(GV_REMN_KANE))
-#define is_blast        (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_BLAST)   // иначе ушли из карьера миром
+#define is_blast        (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_BLAST)
+#define is_fight        (get_sfall_global_int(GV_LAIR_HOW) == LAIR_HOW_FIGHT)   // карьер взят боем, они были в дозоре
+#define is_poison       (get_sfall_global_int(GV_LAIR_POISON))                  // иначе ушли из карьера миром
 #define self_hostile    (has_trait(TRAIT_OBJECT, self_obj, OBJECT_TEAM_NUM) != TEAM_PLAYER)
 
 variable talked;
@@ -116,16 +118,20 @@ procedure fight_lead begin
 end
 
 procedure Node001 begin
-   if (is_blast) then begin
-      if (is_kane) then Reply(110);
+   if (is_fight) then begin
+      if (is_poison) then Reply(119);   // Егор 2026-10-15: «Наших ребят отравили, Кейна и ребят ты грохнул...»
+      else Reply(122);
+   end else if (is_blast) then begin
+      if (is_poison) then Reply(125);
       else Reply(111);
    end else begin
       if (not is_kane) then Reply(117);
+      else if (is_poison) then Reply(123);                             // ушел по договору после яда
       else if (get_sfall_global_int(GV_LAIR_BRIBE)) then Reply(118);   // откупился
       else Reply(116);                                                // уговорил Красноречием
    end
    NOption(112, Node010, 4);   // добить
-   NOption(113, Node020, 4);   // позвать в поселение
+   NOption(mstr(126) + REMN_SPEECH + "] " + mstr(113), Node020, 4);   // позвать в поселение
    NOption(114, Node060, 4);   // мимо
    NLowOption(115, Node020);
 end
@@ -139,7 +145,8 @@ end
 
 // Позвать в поселение: вожак отказывается, герой говорит с бойцами
 procedure Node020 begin
-   if (is_kane and is_blast) then Reply(130);
+   if (is_fight) then Reply(137);
+   else if (is_kane and is_blast) then Reply(130);
    else if (is_blast) then Reply(133);
    else if (is_kane) then Reply(135);
    else Reply(136);

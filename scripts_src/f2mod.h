@@ -17,7 +17,9 @@
 #define is_escort_map(m)    ((m) >= MAP_F2MOD_ESCORT and (m) <= MAP_F2MOD_ESCORT3)
 #define AREA_F2MOD_TOWN     (62)    // [Area 62]: песочница для обкатки стройки (только с f2mod_test.dat)
 #define MAP_F2MOD_TOWN      (178)   // [Map 178]: карта песочницы f2mtown
-#define AREA_F2MOD_LAIR     (63)    // [Area 63]: карьер в горах (логово налетчиков, потом военная база)
+#define AREA_F2MOD_LAIR     (63)    // [Area 63]: карьер в горах (логово налетчиков). Вкладка справа: надпись WM_RAID (474)
+#define AREA_F2MOD_BASE     (64)    // [Area 64]: та же точка и та же карта — военная база с 1-го уровня (вкладка WM_MLTRY, 378);
+                                    // логово (63) тогда прячется (gl_f2mod.ssl base_title), Егор 2026-10-15
 #define MAP_F2MOD_LAIR      (180)   // [Map 180]: карта карьера f2mlair (копия mountn5)
 #define MAP_F2MOD_REMN      (182)   // [Map 182]: встреча с остатками банды f2mremn (копия desert2), через 60 дней после взрыва погреба
 #define MAP_F2MOD_CELL      (181)   // [Map 181]: погреб под логовом f2mcell (копия пещеры CAVE7), спуск по лестнице
@@ -86,7 +88,7 @@
 #define WELL_FIX_SKILL      (50)    // Ремонт для починки старого колодца
 #define WELL_PARTS_PRICE    (20)    // детали у прораба
 #define CAMP_WATER_DAYS     (14)    // воды из бочек каравана на 2 недели
-#define WATER_XP            (200)   // квест «Вода»: первый рабочий колодец
+#define WATER_XP            (300)   // квест «Вода»: первый рабочий колодец
 
 // Массив случайных попаданий по каравану: объект -> 1, если по нему попали не прицельно
 #define ARR_CARAVAN_HITS    "f2mhits"
@@ -104,10 +106,10 @@
 #define CARAVAN_FAILED      (3)     // караванщик погиб в пути
 #define CARAVAN_MIN_LEVEL   (10)
 #define CARAVAN_PRICE       (500)
-#define CARAVAN_XP_TALK     (500)   // опыт за координаты уговором
-#define CARAVAN_XP_BUY      (200)   // опыт за купленные координаты
+#define CARAVAN_XP_TALK     (1200)   // опыт за координаты уговором
+#define CARAVAN_XP_BUY      (1000)   // опыт за купленные координаты
 #define CARAVAN_ESCORT_PAY  (300)   // плата за сопровождение
-#define CARAVAN_XP_ESCORT   (500)   // опыт за сопровождение
+#define CARAVAN_XP_ESCORT   (1500)   // опыт за сопровождение
 #define ESCORT_STAGES       (3)
 #define ESCORT_LEVEL_STEP   (8)     // +1 враг на участке за каждые 8 уровней героя сверх 10-го
 #define ESCORT_EXTRA_MAX    (2)     // но не больше двух лишних
@@ -178,9 +180,13 @@
 // Собаки на трупы (f2mgore.h) идут поверх любых. Имена GV строками: заголовки крыс, стаи и вора подключены не везде
 #define EVT_GAP_HOURS       (168)
 // Ночной вор (2.6): у женщины украли медальон. Пока он не вернулся к ней, она стоит у дома героя (Егор 2026-10-11).
-// Клетка снаружи у дома героя, свободная на всех его уровнях (бывшее место стола радиста, levels_emit.py)
-#define THIEF_VICTIM_SPOT   (11639)
+// Клетка у южной (видимой) стены дома героя, свободная на всех его уровнях (0.9.10, = SPOT_VICTIM в f2mspot2.h, levels_emit.py)
+#define THIEF_VICTIM_SPOT   (14045)
 #define GV_LOCKET_BACK      "f2mlockt"  // 1 = медальон отдан хозяйке
+// Бар до бармена Ноя (Егор 2026-10-15): за стойкой первый взрослый житель продает выпивку как торговец
+#define GV_BAR_TEND         "f2mbartd"  // клетка у стойки, где сейчас стоит работник бара (0 — бар закрыт), ставит camp_spread
+#define GV_BAR_WEEK         "f2mbarwk"  // неделя последнего завоза выпивки (+1)
+#define GV_NOAH_HERE        "f2mnoahh"  // 1 = бармен Ной пришел (бар 3-го уровня): с ним торгует только он
 #define thief_victim_on     (get_sfall_global_int("f2mthfst") >= 1 and not get_sfall_global_int(GV_LOCKET_BACK))
 #define WILD_GAP_HOURS      (720)   // стая мутантов у забора — раз в месяц (Егор 2026-10-11)
 // TEST: на время тестов собак у тел и стаи мутантов нет (Егор 2026-10-11). В релизе поставить 0

@@ -7,7 +7,11 @@
 #ifndef F2MTHIEF_H
 #define F2MTHIEF_H
 
-#define GV_THIEF        "f2mthfst"  // 0 тихо, 1 кражи идут, 2 вор на карте этой ночью, 3 прогнан, 4 убит, 5 остался работать
+#include "f2mspot2.h"
+
+#define GV_THIEF        "f2mthfst"  // 0 тихо, 1 кражи идут, 2 вор на карте этой ночью, 3 прогнан, 4 убит, 5 остался работать, 6 помощник в лавке
+#define GV_THIEF_HABIT  "f2mthfhb"  // «Привычка» (quests-detailed.md 2.8): 1 = опять таскает крышки из кассы, Тед жалуется
+#define GV_SHOP_BONUS   "f2mshopb"  // прибыль лавки, %: бывший вор помогает в лавке (+5), учтет рынок, когда его построят
 #define GV_THIEF_WEEK   "f2mthfwk"  // неделя, за которую воровство уже посчитали (+1)
 #define GV_THIEF_SEEN   "f2mthfsn"  // 1 = герой заметил его этой ночью (Восприятие или скрытность)
 #define GV_THIEF_HOUR   "f2mthfhr"  // раньше этого часа вор снова не выйдет (спугнули — ждет следующей ночи)
@@ -18,12 +22,19 @@
 #define THIEF_GONE      (3)
 #define THIEF_DEAD      (4)
 #define THIEF_WORKS     (5)
+#define THIEF_SHOP      (6)
+#define thief_worker    (get_sfall_global_int(GV_THIEF) == THIEF_WORKS or get_sfall_global_int(GV_THIEF) == THIEF_SHOP)
 
 #define PID_THIEF       (16777454)  // Raider: модель меняем на NMMAXZ (кожаная куртка), анимации ножа есть
 #define THIEF_SNEAK     (50)        // Скрытность: подойти незамеченным
 #define THIEF_PE        (7)         // Восприятие: заметить его в темноте за несколько клеток
 #define THIEF_SPEECH    (50)        // Красноречие: оставить работать
-#define THIEF_XP        (150)
+#define THIEF_XP        (100)       // поймал (мелкий шаг); конец квеста — медальон хозяйке (THIEF_END_XP)
+#define THIEF_END_XP    (300)
+#define THIEF_END_MORALE (5)
+#define HABIT_CHANCE    (25)        // в неделю: тащит 10–30 крышек из кассы
+#define HABIT_SPEECH    (50)
+#define HABIT_XP        (100)
 #define THIEF_CAPS      (20)        // украденные крышки возвращаются герою
 #define THIEF_WEEK_LOSS (50)        // крышек из кассы за неделю, пока вор на свободе
 
@@ -74,10 +85,11 @@ procedure thief_put begin
    set_sfall_global(GV_THIEF_SEEN, 0);
 end
 
-// Оставленный отрабатывать (Егор 2026-10-11: остается в лагере обычным рабочим): днем у огородов, ночью у костра
+// Оставленный отрабатывать (Егор 2026-10-15: как обычный житель, не у костра старосты): днем носит воду от колодца
+// к огороду (каждые 20 минут туда и назад), огородов нет или ночь — у колодца. Места f2mspot2.h, видимая сторона
 procedure thief_work_spot begin
-   if (not camp_night and bld_shown(U_GARDEN) >= 1) then return tile_num_in_direction(lvl_spot(1, bld_shown(U_GARDEN), 0), 3, 2);
-   return tile_num_in_direction(camp_fire, 4, 3);
+   if (not camp_night and bld_shown(U_GARDEN) >= 1 and (game_time / (ONE_GAME_MINUTE * 20)) % 2) then return SPOT_THIEF_G;
+   return SPOT_THIEF_W;
 end
 
 // Рабочий на карте (в сохранениях 0.9.2-0.9.8 он уходил с карты — возвращаем)
@@ -102,9 +114,25 @@ end
 
 // Из глобального скрипта: жалобы, ночные выходы вора и недельная убыль кассы
 procedure thief_tick begin
-   variable cash;
-   if (get_sfall_global_int(GV_THIEF) == THIEF_WORKS and cur_map_index == MAP_F2MOD_CAMP and not combat_is_initialized) then
+   variable cash, c;
+   // выгнали через Теда («Привычка»): уходит с карты
+   if (get_sfall_global_int(GV_THIEF) == THIEF_GONE) then begin
+      c := thief_obj;
+      if (c and not combat_is_initialized) then destroy_object(c);
+   end
+   if (thief_worker and cur_map_index == MAP_F2MOD_CAMP and not combat_is_initialized) then
       call thief_put_worker;
+   // «Привычка»: оставленный отрабатывать раз в неделю с шансом 25% тащит 10–30 крышек из кассы, пока его не пристроят в лавку или не выгонят
+   if (get_sfall_global_int(GV_THIEF) == THIEF_WORKS and get_sfall_global_int(GV_THIEF_WEEK) != set_weeks_now + 1) then begin
+      set_sfall_global(GV_THIEF_WEEK, set_weeks_now + 1);
+      if (random(1, 100) <= HABIT_CHANCE) then begin
+         cash := random(10, 30);
+         if (cash > get_sfall_global_int(GV_SET_CASH)) then cash := get_sfall_global_int(GV_SET_CASH);
+         set_sfall_global(GV_SET_CASH, get_sfall_global_int(GV_SET_CASH) - cash);
+         set_sfall_global(GV_THIEF_HABIT, 1);
+         if (cur_map_index == MAP_F2MOD_CAMP) then display_msg(thief_msg(207));
+      end
+   end
    if (not set_founded or thief_done or get_sfall_global_int(GV_SET_ABANDON) != ABANDON_NO) then return;
    // Кражи начинаются, когда жилье доросло до 2-го уровня
    if (get_sfall_global_int(GV_THIEF) == THIEF_NONE) then begin

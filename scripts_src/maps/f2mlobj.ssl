@@ -118,7 +118,8 @@ procedure use_obj_on_p_proc begin
       if (get_sfall_global_int(GV_LAIR_POISON)) then display_msg(mstr(234));
       else if (has_skill(dude_obj, SKILL_SCIENCE) < LAIR_POISON_SKILL and has_skill(dude_obj, SKILL_FIRST_AID) < LAIR_POISON_SKILL) then
          display_msg(mstr(232));
-      else if (noticed) then begin
+      // Без режима скрытности у бочки заметят всегда, пока в карьере кто-то жив (Егор 2026-10-15): яд не попал, сразу бой
+      else if (noticed or (not dude_is_sneaking and lair_gang_alive(0) > 0)) then begin
          display_msg(mstr(250));
          call lair_alarm;
       end else begin
@@ -167,7 +168,7 @@ procedure poison_water begin
    set_sfall_global(GV_LAIR_GANG, lair_gang_alive(0));
    gfade_in(1);
    display_msg(mstr(233));
-   give_exp_points(250);
+   give_exp_points(100);   // шаг большого квеста (Егор 2026-10-15: шаги 25-100)
 end
 
 // Заряд под запасами банды: фитиль шипит, рванет, когда герой выберется наверх (карта логова, f2mlair.ssl)

@@ -30,7 +30,7 @@
 #define RAID_TRACK_SKILL    (50)    // Скиталец: прочитать следы
 #define WAGON_HOURS         (168)   // угнанный фургон Тед покупает с ближайшим караваном (раз в неделю)
 #define BOSS_SPEECH         (60)    // Красноречие: имя Кейна и слабость банды
-#define BOSS_XP_SPEECH      (200)
+#define BOSS_XP_SPEECH      (100)
 #define BURY_MORALE         (5)     // похоронили погибшего: дух +5%
 #define GANG_SIZE           (20)    // бойцы Кейна на краю карты
 

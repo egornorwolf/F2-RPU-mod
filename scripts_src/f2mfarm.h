@@ -5,6 +5,7 @@
 #ifndef F2MFARM_H
 #define F2MFARM_H
 #include "f2mhome.h"   // camp_night: ночь в лагере
+#include "f2mspot2.h"  // места с видимой стороны (0.9.10)
 
 #define GV_FARM         "f2mfarst"  // 0 нет, 1 живет в лагере, 9 погиб
 #define GV_FARM_NEWS    "f2mfarnw"  // 1 = сказать герою при входе, что пришел старший фермер
@@ -31,13 +32,18 @@
 #define RATS_SEAL_REPAIR (60)       // Ремонт: заделать подкоп (иначе кувалда, монтировка, взрывчатка, Сила 8+)
 #define RATS_SEAL_ST    (8)         // Сила: обрушить свод норы руками
 #define RATS_SEAL_XP    (50)        // нору закрыли, когда крыс нет
+#define GV_HOLE_REWARD  "f2mholrw"  // награда Дэйва за нору (Егор 2026-10-15): 1 — герой закрыл, Дэйв зовет; 2 — выдана
+#define HOLE_REWARD_XP  (300)       // конец малого квеста: стимпак, 2 мяса на палочке, 25 крышек и 300 опыта
+#define HOLE_REWARD_CAPS (25)
+#define HOLE_DAVE_XP    (25)        // нору завалил сам Дэйв по просьбе героя: опыт за мелкий шаг
+#define HOLE_DAVE_HOURS (3)
 #define BRAH_OUTDOOR    (50)        // Скиталец: найти по следам наверняка
 #define BRAH_CHANCE     (50)        // без навыка и с охраной — половина на половину
 #define BRAH_PAY        (50)        // пастуху
 #define BRAH_PAY_CHANCE (60)
 #define BRAH_BUY        (100)       // новый брамин у каравана
 #define BRAH_SPEECH     (40)
-#define BRAH_XP         (150)
+#define BRAH_XP         (300)
 #define BRAH_LOSS       (10)        // % еды за неделю, если брамина так и не нашли
 #define BRAH_MORALE     (4)         // дух: минус, если брамина решили не искать (Егор 2026-10-09)
 
@@ -46,6 +52,7 @@
 
 procedure farm_obj;
 procedure farm_spot;
+procedure garden_spot;
 procedure farm_put;
 procedure farm_loss(variable pct);
 procedure rats_alive_but(variable except);
@@ -66,8 +73,13 @@ procedure farm_obj begin
    return 0;
 end
 
-// Место фермера: на первом огороде, а пока огородов нет — у костра
+// Место фермера (Егор 2026-10-15): у колодцев, а не на грядках, куда лезут крысы
 procedure farm_spot begin
+   return SPOT_DAVE;
+end
+
+// Первый огород (а пока огородов нет — у костра): туда лезут крысы, под забором у него нора
+procedure garden_spot begin
    if (bld_shown(U_GARDEN) >= 1) then return lvl_spot(1, bld_shown(U_GARDEN), 0);
    return tile_num_in_direction(camp_fire, 1, 2);
 end
@@ -111,7 +123,7 @@ end
 
 // Нора под забором у первого огорода: через нее крысы и лезут
 procedure rats_hole begin
-   return tile_num_in_direction(farm_spot, 0, 4);
+   return tile_num_in_direction(garden_spot, 0, 4);
 end
 
 // Нора на карте (место у огорода могло смениться с уровнем огорода, ищем по всей карте)
@@ -130,13 +142,14 @@ procedure rats_hole_clear begin
    if (h) then destroy_object(h);
 end
 
-// Нору закрыли (Егор 2026-10-09, 2026-10-11): how 0 — взрыв рядом (граната, кроме ЭМИ; динамит, пластид), 1 — взрывчатка в нору,
+// Нору закрыли (Егор 2026-10-09, 2026-10-11, 2026-10-15): 5 — завалил сам Дэйв по просьбе героя (без награды); how 0 — взрыв рядом (граната, кроме ЭМИ; динамит, пластид), 1 — взрывчатка в нору,
 // 2 — Ремонт 60, 3 — кувалда или монтировка, 4 — Сила 8+. Крысы больше не приходят.
 // Нора — декорация: ее убираем и в бою, крысы на грядках дерутся дальше (существ посреди боя не трогаем).
 // Крысы лезут, а боя нет — уходят в пустошь, урожай почти цел
 procedure rats_seal(variable how) begin
    if (not rats_hole_obj) then return;
    set_sfall_global(GV_RATS_SEALED, 1);
+   if (how != 5 and farm_here and not get_sfall_global_int(GV_HOLE_REWARD)) then set_sfall_global(GV_HOLE_REWARD, 1);   // Дэйв позовет за наградой
    call rats_hole_clear;
    if (get_sfall_global_int(GV_RATS) == 1 and combat_is_initialized) then begin
       display_msg(farm_msg(211));
@@ -150,6 +163,9 @@ procedure rats_seal(variable how) begin
       if (how) then gfade_in(1);
       if (how >= 2) then display_msg(farm_msg(205 + how));   // 207 Ремонт, 208 кувалда или монтировка, 209 Сила
       else display_msg(farm_msg(206));
+   end else if (how == 5) then begin
+      give_exp_points(HOLE_DAVE_XP);
+      display_msg(farm_msg(217) + HOLE_DAVE_XP + farm_msg(202));
    end else begin
       give_exp_points(RATS_SEAL_XP);
       display_msg(farm_msg(212 + how) + RATS_SEAL_XP + farm_msg(202));
@@ -164,7 +180,7 @@ procedure rats_spawn begin
    set_sfall_global(GV_RATS_HOUR, bld_hour + RATS_HOURS);
    t := rats_hole;
    if (not rats_hole_obj) then create_object_sid(PID_RAT_HOLE, t, 0, SCRIPT_F2MRAT);   // нора с прошлого раза — та же
-   g := tile_num_in_direction(farm_spot, 0, 2);
+   g := tile_num_in_direction(garden_spot, 0, 2);
    while (i < FARM_RATS) do begin
       create_object_sid(PID_RAT_PEST, cv_free_tile(tile_num_in_direction(g, i % 6, 1 + i / 3)), 0, SCRIPT_F2MRAT);
       i += 1;

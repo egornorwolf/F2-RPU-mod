@@ -78,6 +78,9 @@ procedure Node046;
 procedure Node047;
 procedure Node048;
 procedure Node049;
+procedure Node050;
+procedure Node051;
+procedure Node052;
 procedure raid_options;
 procedure raid_open;
 procedure raid_price;
@@ -121,7 +124,7 @@ procedure critter_p_proc begin
    if (not combat_is_initialized) then begin
       if (cv_fight) then return;
    end
-   if (not said_hello and self_can_see_dude and not on_escort) then begin
+   if (not said_hello and self_can_see_dude and not on_escort and not get_sfall_global_int(GV_BURY_ON)) then begin
       said_hello := 1;
       if (get_sfall_global_int(GV_CARAVAN_LAST) == CARAVAN_LAST_ABANDONED) then
          floater(random(106, 108));
@@ -438,6 +441,7 @@ procedure Node020 begin
    NOption(224, Node023, 4);
    NOption(264, Node024, 4);
    if (raid_open) then NOption(438, Node041, 4);
+   if (get_sfall_global_int("f2mthfhb") == 1 and get_sfall_global_int("f2mthfst") == 5) then NOption(450, Node050, 4);
    NOption(225, Node999, 4);
    NLowOption(226, Node022);
    NLowOption(132, Node999);
@@ -533,6 +537,8 @@ procedure ted_news begin
    call ted_bit(19, get_sfall_global_int("f2mbrast") == 3);
    call ted_bit(20, get_sfall_global_int("f2mdogon"));
    call ted_bit(21, get_sfall_global_int(GV_MIL_HIRED));
+   call ted_bit(22, get_sfall_global_int(GV_RAID2) == RAID2_DONE);
+   call ted_bit(23, get_sfall_global_int("f2mthfhb") == 1 and get_sfall_global_int("f2mthfst") == 5);
    return news_txt;
 end
 
@@ -731,7 +737,9 @@ end
 // ---- Набег 1.3 ----
 
 // Что еще можно сделать после набега: похоронить, пойти по следам, вернуть запасы
+// Только после самого набега (Егор 2026-10-15: «Про набег» был до набега)
 procedure raid_open begin
+   if (not get_sfall_global_int(GV_RAID)) then return 0;
    return (get_sfall_global_int(GV_RAID_DEAD) and not get_sfall_global_int(GV_RAID_BURY))
        or not get_sfall_global_int(GV_RAID_TRACK)
        or (raid_price > 0 and not get_sfall_global_int(GV_RAID_PAID));
@@ -855,4 +863,31 @@ procedure Node046 begin
 end
 
 procedure Node999 begin
+end
+
+// «Привычка» (quests-detailed.md 2.8): оставленный отрабатывать вор опять таскает из кассы. Пристроить в лавку
+// (Красноречие 50: лавка +5%) или выгнать. Имена GV строками: f2mthief.h этот скрипт не подключает
+#define THF_HABIT_XP    (100)
+procedure Node050 begin
+   Reply(451);
+   if (has_skill(dude_obj, SKILL_SPEECH) >= 50) then NOption(452, Node051, 4);
+   NOption(453, Node052, 4);
+   NOption(454, Node020, 4);
+end
+
+procedure Node051 begin
+   set_sfall_global("f2mthfst", 6);
+   set_sfall_global("f2mthfhb", 2);
+   set_sfall_global("f2mshopb", 5);
+   give_exp_points(THF_HABIT_XP);
+   Reply(mstr(455) + THF_HABIT_XP + mstr(457));
+   NOption(225, Node999, 4);
+end
+
+procedure Node052 begin
+   set_sfall_global("f2mthfst", 3);
+   set_sfall_global("f2mthfhb", 2);
+   give_exp_points(THF_HABIT_XP);
+   Reply(mstr(456) + THF_HABIT_XP + mstr(457));
+   NOption(225, Node999, 4);
 end

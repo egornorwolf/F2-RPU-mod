@@ -175,18 +175,24 @@ procedure keypress_handler begin
          display_msg("F2mod: ночной вор ходит у хижин.");
       end
    end else if (key == DIK_D) then begin
-      // TEST: логово взято взрывом погреба 60 дней назад, ушли вожак и 4 бойца: следующая случайная встреча — остатки банды (1.4б).
-      // Ctrl+Shift+D — вожак Кейн, Ctrl+D — вожак из бойцов
+      // TEST: следующая случайная встреча — остатки банды (1.4б). 0.9.10 (Егор 2026-10-15): Кейн ведет их, только если ушел
+      // по договору. Ctrl+Shift+D — Кейн ушел без боя с 4 бойцами; Ctrl+D — карьер взят боем, дозор: старший и 3 бойца.
+      // Погреб не трогаем (раньше клавиша ставила «взорван», и Хэнк предлагал расчистку без взрыва)
       set_sfall_global("f2mlairs", 2);
-      set_sfall_global("f2mlairh", 4);
-      set_sfall_global("f2mlairc", 2);
       set_sfall_global("f2mremst", 0);
-      set_sfall_global("f2mremnn", 5);   // ушли вожак и 4 бойца
-      set_sfall_global("f2mremkn", (key_pressed(DIK_LSHIFT) or key_pressed(DIK_RSHIFT)));
-      if (bld_hour > 60 * 24) then set_sfall_global("f2mlairf", bld_hour - 60 * 24);
+      if (key_pressed(DIK_LSHIFT) or key_pressed(DIK_RSHIFT)) then begin
+         set_sfall_global("f2mlairh", 3);
+         set_sfall_global("f2mremnn", 5);
+         set_sfall_global("f2mremkn", 1);
+      end else begin
+         set_sfall_global("f2mlairh", 1);
+         set_sfall_global("f2mremnn", 4);
+         set_sfall_global("f2mremkn", 0);
+      end
+      if (bld_hour > 30 * 24) then set_sfall_global("f2mlairf", bld_hour - 30 * 24);
       else set_sfall_global("f2mlairf", 1);
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_LAIR, MARK_STATE_KNOWN);
-      display_msg("F2mod: погреб логова взорван 60 дней назад. Выйди на карту мира: первая случайная встреча будет с остатками банды.");
+      display_msg("F2mod: логово взято месяц назад. Выйди на карту мира: первая случайная встреча будет с остатками банды.");
    end else if (key == DIK_T) then begin
       mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_TOWN, MARK_STATE_KNOWN);
       display_msg("F2mod: на карте мира открыта Песочница стройки (рядом со Скалистым приютом).");

@@ -32,6 +32,7 @@ procedure gang_remove;
 procedure gang_remove_but(variable keep);
 procedure raid2_due;
 procedure raid2_put;
+procedure raid2_won;
 
 procedure raid_hours_since_found begin
    return game_time / ONE_GAME_HOUR - get_sfall_global_int(GV_CAMP_DAY);
@@ -215,12 +216,27 @@ procedure gang_remove_but(variable keep) begin
 end
 
 // Повторный налет: через 7 дней после отказа Кейну, пока логово не взято. Без Кейна, 5 бойцов.
+// Отбили — через неделю снова, каждый раз на одного больше, но не больше 10 (Егор 2026-10-15).
+// Кончаются, когда логово взято (бой, мир, откуп или взрыв). Героя нет в лагере — налет ждет его (как и раньше).
 // Сохранения до 0.9.9 (часа отказа нет): отсчет с первой проверки
 #define RAID2_HOURS         (7 * 24)
 #define RAID2_SIZE          (5)
+#define RAID2_MAX           (10)
+#define GV_RAID2_NUM        "f2mr2num"  // сколько повторных налетов уже отбито
+#define GV_RAID2_END        "f2mr2end"  // час (+1), когда отбит последний повторный налет
+#define raid2_size          ((RAID2_SIZE + get_sfall_global_int(GV_RAID2_NUM) > RAID2_MAX) * RAID2_MAX \
+                             + (RAID2_SIZE + get_sfall_global_int(GV_RAID2_NUM) <= RAID2_MAX) * (RAID2_SIZE + get_sfall_global_int(GV_RAID2_NUM)))
 procedure raid2_due begin
    variable h;
-   if (get_sfall_global_int(GV_BOSS) != BOSS_LEFT or get_sfall_global_int(GV_RAID2) or get_sfall_global_int("f2mlairs") >= 2) then return 0;
+   if (get_sfall_global_int(GV_BOSS) != BOSS_LEFT or get_sfall_global_int(GV_RAID2) == RAID2_ON or get_sfall_global_int("f2mlairs") >= 2) then return 0;
+   if (get_sfall_global_int(GV_RAID2) == RAID2_DONE) then begin
+      h := get_sfall_global_int(GV_RAID2_END);
+      if (not h) then begin
+         set_sfall_global(GV_RAID2_END, game_time / ONE_GAME_HOUR + 1);
+         return 0;
+      end
+      return game_time / ONE_GAME_HOUR + 1 >= h + RAID2_HOURS;
+   end
    h := get_sfall_global_int(GV_BOSS_LEFT_H);
    if (not h) then begin
       set_sfall_global(GV_BOSS_LEFT_H, game_time / ONE_GAME_HOUR + 1);
@@ -229,15 +245,27 @@ procedure raid2_due begin
    return game_time / ONE_GAME_HOUR + 1 >= h + RAID2_HOURS;
 end
 
-// Пятеро у южных ворот, сразу в бой
+// Отбили: следующий через неделю и на одного больше
+#define RAID2_XP        (100)   // каждый отбитый повторный налет — шаг (Егор 2026-10-15: шаги 25-100)
+procedure raid2_won begin
+   set_sfall_global(GV_RAID2, RAID2_DONE);
+   give_exp_points(RAID2_XP);
+   display_msg(message_str(SCRIPT_F2MRDR, 143) + RAID2_XP + message_str(SCRIPT_F2MRDR, 144));
+   set_sfall_global(GV_RAID2_NUM, get_sfall_global_int(GV_RAID2_NUM) + 1);
+   set_sfall_global(GV_RAID2_END, game_time / ONE_GAME_HOUR + 1);
+end
+
+// У южных ворот в 3 ряда, сразу в бой
 procedure raid2_put begin
-   variable i := 0, obj;
+   variable i := 0, obj, n;
+   n := raid2_size;
    set_sfall_global(GV_RAID2, RAID2_ON);
-   while (i < RAID2_SIZE) do begin
+   while (i < n) do begin
       obj := gang_raider(RAID_GATE_OUT + (i % 3) * 2 - 2 + (i / 3) * 200, i + 1);
       anim(obj, ANIMATE_ROTATION, 1);
       i += 1;
    end
+   return n;
 end
 
 #endif

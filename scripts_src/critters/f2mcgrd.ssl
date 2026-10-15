@@ -40,6 +40,8 @@ procedure Node012;
 procedure Node013;
 procedure Node020;
 procedure Node021;
+procedure Node022;
+procedure Node023;
 procedure militia_pay(variable who);
 procedure militia_put(variable n);
 procedure defense_text;
@@ -52,6 +54,10 @@ variable called;   // когда Рик в последний раз звал г
 // База в карьере построена или улучшена, а бойцов туда Рик еще не прислал (0.9.9, Егор 2026-10-11)
 #define GV_BASE_INVITE  "f2mbinvt"
 #define base_invite_due (get_sfall_global_int("f2mlairs") >= 2 and bld_level(U_BASE_UNIT) > get_sfall_global_int(GV_BASE_INVITE))
+
+// Повторный налет отбит (Егор 2026-10-15): Рик говорит, что пора искать логово, раз за каждый налет
+#define raid2_talk_due  (get_sfall_global_int("f2mraid2") == 2 and get_sfall_global_int("f2mlairs") < 2 \
+                         and get_sfall_global_int("f2mr2tld") < get_sfall_global_int("f2mr2num"))
 
 // Сколько ополченцев можно нанять: четверо, но не больше свободных мест у поста (там уже могут жить бывшие налетчики, 1.4б)
 #define hire_n          ((milit_free < MILITIA_COUNT) * milit_free + (milit_free >= MILITIA_COUNT) * MILITIA_COUNT)
@@ -94,12 +100,12 @@ procedure critter_p_proc begin
       if (cv_fight) then return;
    end
    // Зовет героя, как другие с делом: база ждет бойцов
-   if (is_chief and base_invite_due and not combat_is_initialized and tile_distance_objs(self_obj, dude_obj) <= 15
+   if (is_chief and base_invite_due and not combat_is_initialized and not get_sfall_global_int(GV_BURY_ON) and tile_distance_objs(self_obj, dude_obj) <= 15
        and self_can_see_dude and (not called or get_uptime >= called + 20000 or get_uptime < called)) then begin
       called := get_uptime;
       floater(196);
    end
-   if (not warned and not in_camp and self_can_see_dude and tile_distance_objs(self_obj, dude_obj) < 6) then begin
+   if (not warned and not in_camp and self_can_see_dude and not get_sfall_global_int(GV_BURY_ON) and tile_distance_objs(self_obj, dude_obj) < 6) then begin
       warned := 1;
       floater(random(102, 104));
    end
@@ -122,7 +128,8 @@ procedure talk_p_proc begin
       return;
    end
    if (not is_chief) then begin
-      floater(greet_pick(170, 6));
+      if (get_sfall_global_int("f2mraid2") == 2 and get_sfall_global_int("f2mlairs") < 2) then floater(greet_pick(220, 3));
+      else floater(greet_pick(170, 6));
       return;
    end
    start_gdialog(NAME, self_obj, 4, -1, -1);
@@ -131,6 +138,8 @@ procedure talk_p_proc begin
          call fine_node;
       else if (get_sfall_global_int(GV_RAID) and not (get_sfall_global_int(GV_RAID_TOLD) bwand 2)) then
          call Node003;
+      else if (raid2_talk_due) then
+         call Node022;
       else if (base_invite_due) then
          call Node020;
       else
@@ -203,13 +212,36 @@ procedure Node021 begin
    NLowOption(135, Node999);
 end
 
+// После повторного налета: в следующий раз их будет больше, не отобьемся — надо брать логово
+procedure Node022 begin
+   variable t;
+   set_sfall_global("f2mr2tld", get_sfall_global_int("f2mr2num"));
+   if (get_sfall_global_int("f2mr2num") >= 2) then t := mstr(211);
+   else t := mstr(210);
+   if (get_sfall_global_int("f2mlairs") >= 1) then t := t + " " + mstr(212);
+   else t := t + " " + mstr(213);
+   Reply(t);
+   NOption(214, Node023, 4);
+   if (can_hire) then NOption(151, Node010, 4);
+   NOption(215, Node023, 4);
+   NLowOption(135, Node999);
+end
+
+procedure Node023 begin
+   Reply(216);
+   NOption(141, Node001, 4);
+   NOption(134, Node999, 4);
+   NLowOption(135, Node999);
+end
+
 // Как с обороной: что уже есть, и подсказка про ополчение и спутника
 procedure defense_text begin
    variable t, f, m;
    f := get_sfall_global_int(GV_FENCE);
    m := get_sfall_global_int(GV_SET_MILIT);
    if (not f and not m) then begin
-      if (cv_is_dead(CV_SLOT_GUARD) or cv_is_dead(CV_SLOT_SARA)) then t := mstr(142);
+      if (get_sfall_global_int(GV_RAID)) then t := mstr(147);   // налетчики уже нашли лагерь (причина и следствие, 2026-10-15)
+      else if (cv_is_dead(CV_SLOT_GUARD) or cv_is_dead(CV_SLOT_SARA)) then t := mstr(142);
       else t := mstr(140);
    end else if (f and m) then
       t := mstr(145);

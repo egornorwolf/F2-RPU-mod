@@ -46,6 +46,13 @@ procedure Node018;
 procedure Node012;
 procedure Node013;
 procedure Node014;
+procedure Node019;
+procedure Node026;
+procedure Node027;
+procedure Node028;
+procedure Node029;
+procedure tents_free;
+procedure do_build_all;
 procedure Node020;
 procedure Node021;
 procedure Node030;
@@ -133,6 +140,7 @@ procedure build_reply(variable k);
 variable greeted;
 variable sel := -1;        // выбранное место в диалоге
 variable go_build := -1;   // что строить после диалога
+variable go_all := 0;      // все свободные палатки разом после диалога (Егор 2026-10-15)
 variable helped;           // герой помогал сам
 variable go_fence;         // строить частокол после диалога
 variable go_bury;          // похороны после диалога: какая речь (f2mbury.h)
@@ -167,7 +175,7 @@ procedure critter_p_proc begin
          animate_move_obj_to_tile(self_obj, HANK_SPOT, 0);
       return;
    end
-   if (not greeted and not combat_is_initialized and self_can_see_dude
+   if (not greeted and not combat_is_initialized and self_can_see_dude and not get_sfall_global_int(GV_BURY_ON)
        and tile_distance_objs(self_obj, dude_obj) < 6) then begin
       greeted := 1;
       floater(random(102, 104));
@@ -229,6 +237,7 @@ procedure talk_p_proc begin
       return;
    end
    go_build := -1;
+   go_all := 0;
    go_bury := 0;
    go_l1 := -1;
    go_wait := 0;
@@ -238,6 +247,7 @@ procedure talk_p_proc begin
    gSay_End;
    end_dialogue;
    if (go_build >= 0) then call do_build;
+   if (go_all) then call do_build_all;
    if (go_fence) then call do_fence;
    if (go_bury) then call bury_start(go_bury);
    if (go_l1 >= 0) then call do_l1;
@@ -316,8 +326,9 @@ procedure Node001 begin
    NOption(114, Node030, 4);
    if (get_sfall_global_int(GV_RAID_DEAD) and not get_sfall_global_int(GV_RAID_BURY)) then NOption(300, Node050, 4);
    // Погреб в карьере взорван зарядом героя (1.4): расчистить, пока там не строят базу.
-   // 0.9.9: только после настоящего взрыва (f2mcellc = 2), а не по тестовой клавише остатков банды
-   if (get_sfall_global_int("f2mlairc") == 2 and get_sfall_global_int("f2mcellc") == 2 and not get_sfall_global_int(GV_CELL_OPEN) and bld_level(U_BASE_UNIT) < 1) then
+   // 0.9.9: только после настоящего взрыва (f2mcellc = 2), а не по тестовой клавише остатков банды.
+   // 0.9.10: и логово взято именно взрывом (f2mlairh = 4); тестовая клавиша погреб больше не трогает
+   if (get_sfall_global_int("f2mlairc") == 2 and get_sfall_global_int("f2mcellc") == 2 and get_sfall_global_int("f2mlairh") == 4 and not get_sfall_global_int(GV_CELL_OPEN) and bld_level(U_BASE_UNIT) < 1) then
       NOption(800, Node140, 4);
    NOption(115, Node999, 4);
    NLowOption(116, Node010);
@@ -352,6 +363,7 @@ procedure Node010 begin
          NOption(123, Node013, 4);
    end
    if (t >= 0) then NOption(124, Node017, 4);
+   if (tents_free >= 2) then NOption(mstr(141) + tents_free + mstr(142) + (tents_free * kind_price(KIND_TENT)) + mstr(143), Node019, 4);
    if (h) then NOption(202, Node018, 4);
    if (not get_sfall_global_int(GV_FENCE)) then NOption(128, Node040, 4);
    NOption(125, Node001, 4);
@@ -932,4 +944,94 @@ procedure Node081 begin
    end
    NOption(433, Node060, 4);
    NLowOption(117, Node999);
+end
+
+// ---- Все палатки разом (Егор 2026-10-15, как «шатры разом», реплика 442) ----
+
+// Сколько мест под палатки еще пусто (палатка героя не в счет)
+procedure tents_free begin
+   variable i, n := 0;
+   i := BUILD_TENT;
+   while (i < BUILD_HERO) do begin
+      if (not camp_built(i)) then n += 1;
+      i += 1;
+   end
+   return n;
+end
+
+// Цена и срок: по палатке за место, бригада ставит по три часа на каждую; помочь можно и на все сразу
+procedure Node019 begin
+   variable n;
+   n := tents_free;
+   if (n < 1) then begin
+      call Node010;
+      return;
+   end
+   sel_price := n * kind_price(KIND_TENT);
+   Reply(mstr(144) + n + mstr(145) + sel_price + mstr(146) + (n * kind_hours(KIND_TENT)) + mstr(147));
+   if (can_help(KIND_TENT)) then NOption(135, Node026, 4);
+   if (can_pay_hero(sel_price)) then NOption(425, Node027, 4);
+   if (can_pay_cash(sel_price)) then NOption(mstr(426) + pay_cash_now + mstr(427), Node028, 4);
+   if (can_pay_split(sel_price)) then NOption(mstr(428) + pay_cash_now + mstr(429) + (sel_price - pay_cash_now) + mstr(430), Node029, 4);
+   NOption(139, Node010, 4);
+   NLowOption(117, Node999);
+end
+
+// Помогает сам: бесплатно, как с одной палаткой (Сила и Выносливость), опыт за каждую
+procedure Node026 begin
+   helped := 1;
+   go_all := 1;
+   Reply(152);
+   NOption(153, Node999, 4);
+   NLowOption(154, Node999);
+end
+
+procedure Node027 begin
+   call pay_do(sel_price, PAY_HERO);
+   helped := 0;
+   go_all := 1;
+   Reply(165);
+   NOption(166, Node999, 4);
+end
+
+procedure Node028 begin
+   call pay_do(sel_price, PAY_CASH);
+   helped := 0;
+   go_all := 1;
+   Reply(165);
+   NOption(166, Node999, 4);
+end
+
+procedure Node029 begin
+   call pay_do(sel_price, PAY_SPLIT);
+   helped := 0;
+   go_all := 1;
+   Reply(165);
+   NOption(166, Node999, 4);
+end
+
+// Экран гаснет, проходит время на все палатки, все стоят
+procedure do_build_all begin
+   variable i, n := 0, h;
+   go_all := 0;
+   h := tents_free * kind_hours(KIND_TENT);
+   if (helped) then h := bld_help_hours(h);
+   gfade_out(1);
+   game_time_advance(h * ONE_GAME_HOUR);
+   i := BUILD_TENT;
+   while (i < BUILD_HERO) do begin
+      if (not camp_built(i)) then begin
+         call camp_set_built(i);
+         call lay_slot(i);
+         n += 1;
+      end
+      i += 1;
+   end
+   call camp_spread(0);
+   gfade_in(1);
+   display_msg(mstr(193) + n + mstr(194));
+   if (helped) then begin
+      give_exp_points(kind_xp(KIND_TENT) * n);
+      display_msg(mstr(195) + (kind_xp(KIND_TENT) * n) + mstr(196));
+   end
 end

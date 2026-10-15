@@ -6,6 +6,8 @@
 #ifndef F2MSAM_H
 #define F2MSAM_H
 
+#include "f2mspot2.h"
+
 #define GV_SAM          "f2msamst"  // SAM_* ниже
 #define GV_SAM_HOUR     "f2msamhr"  // когда радио будет готово: game_time / ONE_GAME_HOUR
 #define GV_SAM_NEWS     "f2msamnw"  // сказать герою при входе: 1 радист пришел, 2 приходил, но жить негде
@@ -90,10 +92,12 @@ procedure sam_table_unit begin
    return -1;
 end
 
-// Где стоит радист: у своего стола, пока стола нет — на прежнем месте у костра
+// Где стоит радист: стол в палатке старосты — Сэм на улице перед ней (Егор 2026-10-15: на месте, где стоял вор,
+// с видимой стороны; f2mspot2.h), пока стола нет — на прежнем месте у костра
 procedure sam_home begin
    variable u;
    u := get_sfall_global_int(GV_SAM_TABLE) - 1;
+   if (u == U_CENTRE and radio_sam(u)) then return SPOT_SAM_OUT;
    if (u >= 0 and radio_sam(u)) then return radio_sam(u);
    return BLD_SAM;
 end

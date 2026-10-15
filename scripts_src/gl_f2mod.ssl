@@ -92,6 +92,7 @@ end
 // Набег идет, пока герой где-то еще (на другой карте). Главарь приходит при герое в лагере:
 // ждем, пока закрыты диалог, бой и окна, экран гаснет, Кейн у ворот.
 procedure raid_tick begin
+   variable st;
    if (cur_map_index != MAP_F2MOD_CAMP) then begin
       if (raid_due) then call raid_do;
       return;
@@ -100,9 +101,10 @@ procedure raid_tick begin
    // Повторный налет (0.9.9): ждет героя в лагере, одно событие за раз
    if (raid2_due and not combat_is_initialized and (get_game_mode bwand 0x3FFFFD) == 0 and not evt_busy) then begin
       gfade_out(1);
-      call raid2_put;
+      st := raid2_put;
       gfade_in(1);
-      display_msg(message_str(SCRIPT_F2MRDR, 140));
+      if (get_sfall_global_int(GV_RAID2_NUM)) then display_msg(message_str(SCRIPT_F2MRDR, 141) + st + message_str(SCRIPT_F2MRDR, 142));
+      else display_msg(message_str(SCRIPT_F2MRDR, 140));
       return;
    end
    if (not boss_due or combat_is_initialized or (get_game_mode bwand 0x3FFFFD) != 0) then return;
@@ -178,10 +180,13 @@ procedure cell_tick begin
 end
 
 // Карьер после стройки базы на карте мира — «Военная база» (0.9.9, Егор: название не менялось)
+// Военная база (Егор 2026-10-15): с 1-го уровня на карте мира не карьер, а база — свой кружок с названием
+// и вкладка в списке городов справа. Это отдельная Area 64 на той же точке с той же картой, логово (Area 63) прячем
 procedure base_title begin
    if (base_titled or not lair_done or base_level < 1) then return;
    base_titled := 1;
-   set_town_title(AREA_F2MOD_LAIR, "Военная база");
+   mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_BASE, MARK_STATE_KNOWN);
+   mark_area_known(MARK_TYPE_TOWN, AREA_F2MOD_LAIR, MARK_STATE_INVISIBLE);
 end
 
 // Радист пришел, пока герой в лагере: ждем, пока закрыты окна и нет боя, экран гаснет, Сэм у старосты
@@ -260,7 +265,7 @@ procedure encounter_handler begin
    map_id := get_sfall_arg;
    special := get_sfall_arg;
    if (event != 0 or special) then return;
-   // Остатки банды (1.4б): через 60 дней после взрыва погреба, один раз
+   // Остатки банды (1.4б): через 30 дней после логова (в тесте сразу), один раз
    if (remn_due) then begin
       set_sfall_return(MAP_F2MOD_REMN);
       set_sfall_return(1);
@@ -302,6 +307,15 @@ procedure explosion_handler begin
    ev := get_sfall_arg;
    att := get_sfall_arg;    // нападающий
    tile := get_sfall_arg;   // клетка взрыва
+   // Погреб логова (Егор 2026-10-15): динамит, брошенный рядом со штабелем запасов или оставленный тикать в соседнем ящике,
+   // поджигает запасы — это тот же заряд: рванет, когда герой выберется наверх (f2mlair.ssl). Ящик взрывается на своей клетке
+   if (ev == 0 and cur_map_index == MAP_F2MOD_CELL and not lair_done and not get_sfall_global_int(GV_CELL_CHARGE)
+       and tile_distance(tile, CELL_STACK) <= CELL_BOOM_DIST) then begin
+      set_sfall_global(GV_CELL_CHARGE, 1);
+      display_msg(message_str(SCRIPT_F2MLOBJ, 258));
+      float_msg(dude_obj, message_str(SCRIPT_F2MLOBJ, 259), FLOAT_MSG_YELLOW);
+      return;
+   end
    if (ev != 0 or cur_map_index != MAP_F2MOD_CAMP or get_sfall_global_int(GV_RATS_BOOM)) then return;
    h := rats_hole_obj;
    if (not h or tile_distance(tile_num(h), tile) > 2) then return;

@@ -1,5 +1,7 @@
 // Кейн в логове (квест 1.4, npc-cards.md). Заговаривает сам, когда герой дошел до него без тревоги
-// (пропуск часового или Скрытность). Пути: союз (Красноречие 75), уход без боя (Красноречие 100 или 75 и 1000 крышек), бой.
+// (пропуск часового или Скрытность). Пути: мир (Красноречие 75), уход без боя (Красноречие 100 или 75 и 1000 крышек), бой.
+// После яда в бочке пороги ниже: 60 и 85 (Егор 2026-10-15). Требования видны в пунктах: «[Красноречие 75]».
+// Кейн остается жив только при договоре (мир или уход без боя); к себе его не берем: при мире он уходит один.
 #define SCRIPT_REALNAME "f2mkane"
 #include "define.h"
 #include "f2mod.h"
@@ -107,12 +109,16 @@ procedure talk_p_proc begin
 end
 
 procedure Node001 begin
-   if (get_sfall_global_int(GV_LAIR_PASS)) then Reply(110);
-   else Reply(111);   // герой подкрался незамеченным
-   NOption(120, Node010, 4);
-   if (has_skill(dude_obj, SKILL_SPEECH) >= LAIR_SPEECH_FREE
-       or (has_skill(dude_obj, SKILL_SPEECH) >= LAIR_SPEECH_ALLY and dude_caps >= LAIR_BRIBE)) then
-      NOption(121, Node020, 4);
+   variable t;
+   if (get_sfall_global_int(GV_LAIR_PASS)) then t := mstr(110);
+   else t := mstr(111);   // герой подкрался незамеченным
+   if (get_sfall_global_int(GV_LAIR_POISON)) then t := mstr(112) + " " + t;   // вода была отравлена
+   Reply(t);
+   NOption(mstr(125) + lair_speech_ally + "] " + mstr(120), Node010, 4);
+   if (has_skill(dude_obj, SKILL_SPEECH) >= lair_speech_free) then
+      NOption(mstr(125) + lair_speech_free + "] " + mstr(121), Node020, 4);
+   else if (has_skill(dude_obj, SKILL_SPEECH) >= lair_speech_ally and dude_caps >= LAIR_BRIBE) then
+      NOption(mstr(125) + lair_speech_ally + mstr(126) + LAIR_BRIBE + mstr(127) + mstr(121), Node020, 4);
    NOption(122, Node030, 4);
    NOption(123, Node040, 4);
    NLowOption(124, Node030);
@@ -120,7 +126,7 @@ end
 
 // Давай договоримся (Красноречие 75)
 procedure Node010 begin
-   if (has_skill(dude_obj, SKILL_SPEECH) >= LAIR_SPEECH_ALLY) then begin
+   if (has_skill(dude_obj, SKILL_SPEECH) >= lair_speech_ally) then begin
       Reply(130);
       NOption(131, Node011, 4);
    end else begin
@@ -136,7 +142,7 @@ end
 
 // Уходите без боя: Красноречие 100 даром, 75 — с 1000 крышек
 procedure Node020 begin
-   if (has_skill(dude_obj, SKILL_SPEECH) < LAIR_SPEECH_FREE) then begin
+   if (has_skill(dude_obj, SKILL_SPEECH) < lair_speech_free) then begin
       item_caps_adjust(dude_obj, -LAIR_BRIBE);
       item_caps_adjust(self_obj, LAIR_BRIBE);
       set_sfall_global(GV_LAIR_BRIBE, 1);
@@ -167,15 +173,20 @@ end
 procedure Node999 begin
 end
 
-// Союз: банда переходит к герою и держит карьер (будущая база), Кейн командует
+// Мир: банда переходит к герою и держит карьер (будущая база). Кейн жив, но под героем не ходит: уходит один
+// (Егор 2026-10-15: к себе его не берем). Остатков банды после мира нет: все его люди у нас
 procedure kane_ally begin
    variable c;
    foreach (c in list_as_array(LIST_CRITTERS)) begin
-      if (is_gang(c) and not is_critter_dead(c)) then
+      if (c != self_obj and is_gang(c) and not is_critter_dead(c)) then
          critter_add_trait(c, TRAIT_OBJECT, OBJECT_TEAM_NUM, TEAM_PLAYER);
    end
+   gfade_out(1);
+   game_time_advance(ONE_GAME_HOUR);
    call lair_finish(LAIR_HOW_ALLY);
+   gfade_in(1);
    display_msg(mstr(160));
+   destroy_object(self_obj);   // последним, как в kane_leave
 end
 
 // Уходят без боя: экран гаснет на час, банда собирается и уходит, тайник за Кейном остается

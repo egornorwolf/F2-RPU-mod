@@ -32,7 +32,7 @@
 #define LAIR_KNOWN      (1)
 #define LAIR_DONE       (2)
 #define LAIR_HOW_FIGHT  (1)
-#define LAIR_HOW_ALLY   (2)     // Кейн сдался, его люди — гарнизон карьера, сам он командир
+#define LAIR_HOW_ALLY   (2)     // мир с Кейном: его люди — гарнизон карьера и наша охрана, сам Кейн ушел один (Егор 2026-10-15)
 #define LAIR_HOW_PEACE  (3)     // ушли без боя (Красноречие 100 или 75 и 1000 крышек)
 #define LAIR_HOW_BLAST  (4)     // погреб взорван, банда ушла без еды
 
@@ -46,11 +46,18 @@
 #define LAIR_POISON_SKILL (50)  // Наука или Первая помощь: доза яда на бочку
 #define LAIR_DYN_SKILL  (40)    // Ремонт или Наука: заряд в погреб
 #define LAIR_DYN_COUNT  (2)
+#define LAIR_CELL_OUT   (18714) // 114, 93: тут встает герой, поднявшись из погреба: на 3 клетки ниже лаза, вне камней (Егор 2026-10-15:
+                                // после взрыва стоял посреди завала). Клетка свободна и достижима (lair_emit.py FREE, проверено картинкой)
+#define CELL_BOOM_DIST  (4)     // взрыв на столько клеток от штабеля (брошенный динамит, ящик рядом) поджигает запасы
 #define LAIR_PE         (7)     // Восприятие: заметить погреб под камнями
 #define LAIR_SPEECH_ALLY (75)
 #define LAIR_SPEECH_FREE (100)
+#define LAIR_POISON_EASE (15)   // после яда в бочке (Егор 2026-10-15): мир 75 -> 60, «уходите без боя» 100 -> 85
+#define lair_speech_ally (LAIR_SPEECH_ALLY - LAIR_POISON_EASE * (get_sfall_global_int(GV_LAIR_POISON) != 0))
+#define lair_speech_free (LAIR_SPEECH_FREE - LAIR_POISON_EASE * (get_sfall_global_int(GV_LAIR_POISON) != 0))
 #define LAIR_BRIBE      (1000)
-#define LAIR_XP         (5000)
+#define LAIR_XP         (1500)  // большой квест (Егор 2026-10-15: конец большого квеста 1000-1500; было 5000)
+#define LAIR_PATROL     (4)     // дозор банды: вожак из старших бойцов и трое, вернулись в карьер после боя (1.4б)
 #define LAIR_TRACK_HOURS (12)   // банда ушла от ворот: через 12 часов Рик знает, где логово (Егор 2026-10-11, было трое суток)
 
 #define PID_LAIR_WATER  (33554983)  // Barrel (бочка, одна клетка)
@@ -143,6 +150,12 @@ procedure lair_finish(variable how) begin
    set_sfall_global(GV_LAIR_ALARM, 0);
    set_sfall_global(GV_LAIR_GANG, 0);
    set_sfall_global(GV_CELL_GANG, 0);
+   // Взяли боем: дозор банды был в пустыне и вернулся к трупам — это и есть остатки банды (Егор 2026-10-15:
+   // «Кейна и ребят ты грохнул, пока мы в дозоре были»), ведет старший боец
+   if (how == LAIR_HOW_FIGHT) then begin
+      set_sfall_global(GV_REMN_MEN, LAIR_PATROL);
+      set_sfall_global(GV_REMN_KANE, 0);
+   end
    give_exp_points(LAIR_XP);
    display_msg(lair_msg(210) + LAIR_XP + lair_msg(211));
    float_msg(dude_obj, lair_msg(212), FLOAT_MSG_YELLOW);
@@ -163,9 +176,11 @@ procedure lair_cellar_face begin
    rocks := tile_contains_pid_obj(LAIR_CELLAR, 0, PID_LAIR_CELLAR);
    hole := tile_contains_pid_obj(LAIR_CELLAR, 0, PID_CELL_HOLE);
    c := get_sfall_global_int(GV_LAIR_CELLAR);
+   // Сначала новый объект, потом старый: камни могут звать это из своего же скрипта (лопата), а скрипт,
+   // убравший свой объект, дальше не идет (0.9.9: после лопаты лестница так и не появлялась)
    if (c == 1 or (c == 2 and cell_open)) then begin
-      if (rocks) then destroy_object(rocks);
       if (not hole) then create_object_sid(PID_CELL_HOLE, LAIR_CELLAR, 0, SCRIPT_F2MLOBJ);
+      if (rocks) then destroy_object(rocks);
    end else begin
       if (hole) then destroy_object(hole);
       if (not rocks) then create_object_sid(PID_LAIR_CELLAR, LAIR_CELLAR, 0, SCRIPT_F2MLOBJ);
@@ -196,7 +211,8 @@ procedure lair_gang_leave(variable keep) begin
    end
    if (get_sfall_global_int(GV_LAIR_CELLAR) != 2) then n += get_sfall_global_int(GV_CELL_GANG);   // сторожа погреба уходят с бандой
    set_sfall_global(GV_REMN_MEN, n);
-   set_sfall_global(GV_REMN_KANE, kane);
+   // Кейн жив и ведет остатки только при договоре (уходите без боя): Егор 2026-10-15. После взрыва ведет старший боец
+   set_sfall_global(GV_REMN_KANE, kane and keep != 0);
    foreach (c in list_as_array(LIST_CRITTERS)) begin
       if (c != keep and is_gang(c) and not is_critter_dead(c)) then destroy_object(c);
    end

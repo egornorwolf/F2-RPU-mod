@@ -1,7 +1,8 @@
 // Остатки банды (квест 1.4б, Егор 2026-10-09; карточка «Остатки банды» в docs/npc-cards.md).
-// Банда ушла из карьера живой (взрыв погреба, откуп или мир) — хотя бы вожак и один боец: через 60 дней
-// первая случайная встреча в пустыне — вожак и до 4 бойцов, уже как дикари.
-// Вожак (Кейн, если был жив при взрыве) не идет к герою ни за что; бойцов можно уговорить (Красноречие 60),
+// Банда ушла из карьера живой (взрыв погреба или уход без боя) или карьер взят боем, пока дозор был в пустыне
+// (Егор 2026-10-15): через 30 дней первая случайная встреча в пустыне — вожак и до 4 бойцов, уже как дикари.
+// Вожак — Кейн, только если ушел по договору (уход без боя), иначе старший боец. К герою не идет ни за что;
+// бойцов можно уговорить (Красноречие 60, после яда не ниже),
 // тогда с вожаком бой один на один, а бойцы приходят в лагерь ополченцами.
 // Подключать после define.h, command.h, sfall.h, f2mod.h, f2mcv.h, f2mset.h (в нем f2mbld.h), f2mraid.h и f2mlair.h.
 #ifndef F2MREMN_H
@@ -11,7 +12,8 @@
 #define GV_REMN_FIGHT   "f2mremfg"  // 1 = бой на карте встречи начался: враждебные остатки идут на героя сами
 #define GV_REMN_JOIN    "f2mremjn"  // сколько бойцов из остатков идут в лагерь: встанут у ворот при входе
 
-#define REMN_DAYS       (60)
+#define REMN_DAYS       (30)
+#define REMN_TEST_NOW   (1)         // TEST: встреча на первой же случайной встрече после логова; перед релизом 0
 #define REMN_MEN        (4)
 #define REMN_SPEECH     (60)
 #define REMN_XP         (300)
@@ -35,7 +37,7 @@ procedure remn_arrive;
 procedure remn_due begin
    variable how;
    how := get_sfall_global_int(GV_LAIR_HOW);
-   if (get_sfall_global_int(GV_REMN) or (how != LAIR_HOW_BLAST and how != LAIR_HOW_PEACE)) then return 0;
+   if (get_sfall_global_int(GV_REMN) or (how != LAIR_HOW_BLAST and how != LAIR_HOW_PEACE and how != LAIR_HOW_FIGHT)) then return 0;
    // сохранения до 0.9.3: ни час ухода, ни число ушедших не записаны — отсчет с этой минуты, вожак и 4 бойца
    if (not get_sfall_global_int(GV_LAIR_FIN)) then begin
       set_sfall_global(GV_LAIR_FIN, bld_hour);
@@ -43,6 +45,7 @@ procedure remn_due begin
       return 0;
    end
    if (get_sfall_global_int(GV_REMN_MEN) < 2) then return 0;
+   if (REMN_TEST_NOW) then return 1;
    return bld_hour >= get_sfall_global_int(GV_LAIR_FIN) + REMN_DAYS * 24;
 end
 

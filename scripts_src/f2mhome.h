@@ -80,6 +80,7 @@ procedure camp_spread(variable walk) begin
       end
    end
    // Работники (Егор 2026-10-09): бармен у стойки с 6:00 до полуночи, медик у стола с 6:00 до 21:00 — первые взрослые по списку
+   set_sfall_global(GV_BAR_TEND, 0);
    if (game_time_hour >= 600 and lvl_staff(U_BAR, bld_shown(U_BAR))) then tend := 1;
    if (not camp_night and lvl_staff(U_MED, bld_shown(U_MED))) then medic := 1;
    i := 0;
@@ -93,6 +94,7 @@ procedure camp_spread(variable walk) begin
          end else if (tend == 1 and not camp_is_child(c)) then begin
             t := lvl_staff(U_BAR, bld_shown(U_BAR));
             tend := 2;
+            set_sfall_global(GV_BAR_TEND, t);
          end else if (medic == 1 and not camp_is_child(c)) then begin
             t := lvl_staff(U_MED, bld_shown(U_MED));
             medic := 2;
